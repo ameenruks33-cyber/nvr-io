@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { applyAppUpdate } from '@/lib/apply-app-update';
 
 export type AppUpdateInfo = {
   app: string;
@@ -13,6 +14,14 @@ export type AppUpdateInfo = {
   notes?: string[];
   force?: boolean;
   updateUrl?: string;
+  iconsUpdated?: boolean;
+  icons?: {
+    favicon?: string;
+    icon192?: string;
+    icon512?: string;
+    apple?: string;
+    logo?: string;
+  };
 };
 
 const STORAGE_KEY = 'nvr_app_version';
@@ -62,19 +71,7 @@ export function UpdateNotifier() {
   const applyUpdate = useCallback(async (info: AppUpdateInfo) => {
     setBusy(true);
     try {
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        reg?.active?.postMessage({
-          type: 'ACK_UPDATE',
-          version: info.version,
-        });
-        reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      localStorage.setItem(STORAGE_KEY, info.version);
-      window.location.assign(safeUpdatePath(info.updateUrl));
-      setTimeout(() => window.location.reload(), 80);
+      await applyAppUpdate(info, safeUpdatePath(info.updateUrl) + '?updated=1');
     } finally {
       setBusy(false);
     }
@@ -83,10 +80,11 @@ export function UpdateNotifier() {
   const maybeNotify = useCallback(async (info: AppUpdateInfo) => {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
+    const icon = info.icons?.icon192 || '/icon-192.png';
     if (!('serviceWorker' in navigator)) {
       new Notification(info.title, {
         body: info.message,
-        icon: '/icon-192.png',
+        icon,
         tag: `nvr-update-${info.version}`,
       });
       return;
@@ -94,8 +92,8 @@ export function UpdateNotifier() {
     const reg = await navigator.serviceWorker.ready;
     await reg.showNotification(info.title, {
       body: info.message,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon,
+      badge: icon,
       tag: `nvr-update-${info.version}`,
       data: { url: safeUpdatePath(info.updateUrl), version: info.version },
       requireInteraction: true,

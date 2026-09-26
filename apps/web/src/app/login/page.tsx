@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, setSession } from '@/lib/api';
+import { APP_ICONS } from '@/lib/app-branding';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,11 +55,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-ink-900/90 p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image
-            src="/logo.jpg"
+            src={APP_ICONS.logo}
             alt="NVR.io"
             width={112}
             height={112}
-            className="rounded-3xl shadow-lg shadow-blue-500/20"
+            className="rounded-3xl shadow-lg shadow-red-500/25"
+            unoptimized
             priority
           />
           <p className="mt-4 font-display text-3xl text-white">NVR.io</p>

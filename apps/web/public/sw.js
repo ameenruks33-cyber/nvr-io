@@ -1,6 +1,6 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'nvr-io-shell-v3';
-const PRECACHE = ['/', '/login', '/app', '/manifest.webmanifest', '/icon-192.png'];
+const CACHE = 'nvr-io-shell-v1-1-10';
+const PRECACHE = ['/', '/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
 const VERSION_STORE = 'nvr-sw-version';
 
@@ -76,11 +76,18 @@ async function notifyClients(info) {
 
 async function showUpdateNotification(info) {
   // Works when the user previously granted notification permission
+  const icon =
+    info.icons?.icon192 &&
+    typeof info.icons.icon192 === 'string' &&
+    info.icons.icon192.startsWith('/') &&
+    !info.icons.icon192.startsWith('//')
+      ? info.icons.icon192
+      : '/icon-192.png';
   try {
     await self.registration.showNotification(info.title || 'NVR.io update available', {
       body: info.message || 'A new version is ready. Tap to update.',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon,
+      badge: icon,
       tag: `nvr-update-${info.version}`,
       renotify: true,
       requireInteraction: Boolean(info.force),

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
+import { APP_ICONS } from '@/lib/app-branding';
 import { useEffect, useState } from 'react';
 
 const links = [
@@ -55,11 +56,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-ink-900/90 px-3 py-2 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
-            src="/logo.jpg"
+            src={APP_ICONS.logo}
             alt="NVR.io"
             width={40}
             height={40}
             className="rounded-xl"
+            unoptimized
             priority
           />
           <span className="font-display text-xl text-white">NVR.io</span>
@@ -111,11 +113,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-white/10 bg-ink-900/80 p-4 md:flex">
         <div className="mb-8 flex items-center gap-3">
           <Image
-            src="/logo.jpg"
+            src={APP_ICONS.logo}
             alt="NVR.io"
             width={48}
             height={48}
             className="rounded-xl"
+            unoptimized
             priority
           />
           <div>

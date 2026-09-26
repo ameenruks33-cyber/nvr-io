@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { APP_ICONS } from '@/lib/app-branding';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -99,11 +100,12 @@ export default function InstallAppPage() {
       <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-ink-900/95 p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image
-            src="/logo.jpg"
+            src={APP_ICONS.logo}
             alt="NVR.io"
             width={128}
             height={128}
-            className="rounded-3xl shadow-lg shadow-blue-500/25"
+            className="rounded-3xl shadow-lg shadow-red-500/25"
+            unoptimized
             priority
           />
           <p className="mt-4 font-display text-4xl text-white">Install NVR.io</p>
