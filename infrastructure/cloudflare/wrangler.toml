@@ -1,0 +1,14 @@
+name = "nvr-io"
+compatibility_date = "2026-09-26"
+account_id = "" # filled by: npx wrangler whoami / login
+
+# Cloudflare R2 — private photo/document storage (S3-compatible)
+[[r2_buckets]]
+binding = "NVR_UPLOADS"
+bucket_name = "nvr-io-uploads"
+preview_bucket_name = "nvr-io-uploads-preview"
+
+# Optional: Workers site / Pages project name for DNS docs
+[vars]
+APP_NAME = "NVR.io"
+ENVIRONMENT = "production"

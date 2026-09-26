@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Local default: SQLite (no Postgres password needed).
+  // For production, switch provider to "postgresql" and use Docker Compose.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  COLLECTOR
+}
+
+enum LoanStatus {
+  ACTIVE
+  COMPLETED
+  CLOSED
+}
+
+enum DocumentType {
+  CUSTOMER_PHOTO
+  PASSPORT_SCAN
+  AADHAAR_SCAN
+  OTHER
+}
+
+enum NotificationType {
+  LOAN_COMPLETED
+  REPAYMENT_RECEIVED
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String?
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+  repayments    Repayment[]    @relation("CollectedBy")
+  auditLogs     AuditLog[]
+  customers     Customer[]     @relation("RegisteredBy")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Customer {
+  id                String   @id @default(cuid())
+  customerCode      String   @unique @map("customer_code")
+  name              String
+  phone             String
+  address           String
+  passportEncrypted String   @map("passport_encrypted")
+  aadhaarEncrypted  String   @map("aadhaar_encrypted")
+  photoStorageId    String?  @map("photo_storage_id")
+  latitude          Float
+  longitude         Float
+  locationAccuracy  Float?   @map("location_accuracy")
+  consentVersion    String   @map("consent_version")
+  registeredById    String?  @map("registered_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  registeredBy  User?          @relation("RegisteredBy", fields: [registeredById], references: [id])
+  loans         Loan[]
+  documents     Document[]
+  notifications Notification[]
+
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
+}
+
+model Loan {
+  id               String     @id @default(cuid())
+  customerId       String     @map("customer_id")
+  principalAmount  Decimal    @map("principal_amount")
+  dailyPayment     Decimal    @map("daily_payment")
+  totalPayable     Decimal    @map("total_payable")
+  amountCollected  Decimal    @default(0) @map("amount_collected")
+  remainingAmount  Decimal    @map("remaining_amount")
+  status           LoanStatus @default(ACTIVE)
+  openedAt         DateTime   @default(now()) @map("opened_at")
+  completedAt      DateTime?  @map("completed_at")
+  closedAt         DateTime?  @map("closed_at")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  repayments    Repayment[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([customerId])
+  @@map("loans")
+}
+
+model Repayment {
+  id             String   @id @default(cuid())
+  loanId         String   @map("loan_id")
+  amount         Decimal  @map("amount")
+  collectedById  String   @map("collected_by")
+  collectedAt    DateTime @default(now()) @map("collected_at")
+  latitude       Float?
+  longitude      Float?
+  receiptNumber  String   @unique @map("receipt_number")
+  notes          String?
+  idempotencyKey String?  @unique @map("idempotency_key")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  loan        Loan @relation(fields: [loanId], references: [id])
+  collectedBy User @relation("CollectedBy", fields: [collectedById], references: [id])
+
+  @@index([loanId])
+  @@map("repayments")
+}
+
+model Document {
+  id               String       @id @default(cuid())
+  customerId       String       @map("customer_id")
+  documentType     DocumentType @map("document_type")
+  storageKey       String       @map("storage_key")
+  encryptionStatus String       @default("server") @map("encryption_status")
+  mimeType         String?      @map("mime_type")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@map("documents")
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  customerId String?           @map("customer_id")
+  loanId    String?            @map("loan_id")
+  type      NotificationType
+  message   String
+  sentAt    DateTime?          @map("sent_at")
+  status    NotificationStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  customer Customer? @relation(fields: [customerId], references: [id])
+  loan     Loan?     @relation(fields: [loanId], references: [id])
+
+  @@index([loanId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  recordType String   @map("record_type")
+  recordId   String?  @map("record_id")
+  ipAddress  String?  @map("ip_address")
+  deviceId   String?  @map("device_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([recordType, recordId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jithu-buy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jithu
+      POSTGRES_PASSWORD: jithu_dev_password
+      POSTGRES_DB: jithu_buy
+    ports:
+      - "5432:5432"
+    volumes:
+      - jithu_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jithu -d jithu_buy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  jithu_pg_data:

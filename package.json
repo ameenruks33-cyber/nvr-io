@@ -1,0 +1,27 @@
+{
+  "name": "jithu-buy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NVR.io — personal records and payment tracking",
+  "workspaces": [
+    "apps/*",
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w @jithu-buy/backend",
+    "dev:web": "npm run dev -w @jithu-buy/web",
+    "build": "npm run build -w @jithu-buy/backend && npm run build -w @jithu-buy/web",
+    "db:generate": "npm run prisma:generate -w @jithu-buy/backend",
+    "db:migrate": "npm run prisma:migrate -w @jithu-buy/backend",
+    "db:seed": "npm run prisma:seed -w @jithu-buy/backend",
+    "test": "npm run test -w @jithu-buy/backend",
+    "lint": "npm run lint -w @jithu-buy/web",
+    "cloud:setup": "node scripts/setup-cloud.mjs",
+    "cloud:deploy:web": "npx vercel deploy --prod --cwd apps/web",
+    "cloud:deploy:api": "npx vercel deploy --prod --cwd backend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
