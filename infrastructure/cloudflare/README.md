@@ -38,6 +38,9 @@ Account ID (Wrangler): `5be1df0639fc9310e4a1f27f5da95400`
 
 (As of first cloud setup, step 1 was still required — bucket create fails with code 10042 until R2 is enabled.)
 
-## Domains
+## Auto updates
 
-Point your domain's nameservers to Cloudflare, then add the domain in Vercel → Domains.
+After the GitHub repo is linked to Vercel, every `git push` to `main` refreshes production.
+Point Cloudflare DNS at Vercel so the CDN follows those deploys automatically.
+
+See `docs/DEPLOYMENT.md` for the full auto-ship pipeline (Cursor hook + `npm run ship`).

@@ -19,7 +19,9 @@
     "lint": "npm run lint -w @jithu-buy/web",
     "cloud:setup": "node scripts/setup-cloud.mjs",
     "cloud:deploy:web": "npx vercel deploy --prod --cwd apps/web",
-    "cloud:deploy:api": "npx vercel deploy --prod --cwd backend"
+    "cloud:deploy:api": "npx vercel deploy --prod --cwd backend",
+    "build:web": "npm run build -w @jithu-buy/web",
+    "ship": "node scripts/auto-ship.cjs"
   },
   "engines": {
     "node": ">=20"

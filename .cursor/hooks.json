@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "node .cursor/hooks/auto-ship-check.cjs",
+        "timeout": 30
+      }
+    ]
+  }
+}

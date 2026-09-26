@@ -1,0 +1,19 @@
+---
+description: Auto-ship NVR.io changes to GitHub so Vercel/Cloudflare stay updated
+alwaysApply: true
+---
+
+# Auto-ship (GitHub → Vercel → Cloudflare)
+
+When you finish a task that changed first-party code or docs in this repo:
+
+1. Commit safe files (never `.env`, secrets, `*.db`, `.vercel`).
+2. `git push origin main` (request approval if the environment requires it).
+3. Do **not** require a manual `vercel deploy` for routine updates — both Vercel projects are Git-connected to `ameenruks33-cyber/nvr-io`, so a push to `main` triggers production builds.
+4. Cloudflare sits in front when DNS is pointed at Vercel; R2/wrangler config lives under `infrastructure/cloudflare/`. Enabling R2 in the Cloudflare dashboard is still a one-time manual step if not done.
+5. Optional local command: `npm run ship`
+
+After push, report the live URLs:
+- Web: https://nvr-io-web.vercel.app
+- API: https://nvr-io-api.vercel.app
+- Repo: https://github.com/ameenruks33-cyber/nvr-io

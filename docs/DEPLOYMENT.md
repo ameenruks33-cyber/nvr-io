@@ -1,51 +1,60 @@
-# Deployment — Vercel + Cloudflare
+# Deployment — auto GitHub → Vercel → Cloudflare
 
-## Automatic setup
+## How updates ship (automatic)
 
-From the repo root (browser login windows will open):
-
-```bash
-npm run cloud:setup
+```text
+Edit code (Cursor / locally)
+  → git commit + git push origin main
+      → GitHub repo ameenruks33-cyber/nvr-io
+          → Vercel Git Integration auto-builds production
+                • nvr-io-web  → https://nvr-io-web.vercel.app
+                • nvr-io-api  → https://nvr-io-api.vercel.app
+          → Cloudflare (when your domain CNAMEs to Vercel) serves the new CDN edge
 ```
 
-This will:
-1. Log in to **Vercel**
-2. Link the **web** app (`apps/web`) and **API** (`backend`)
-3. Log in to **Cloudflare** (Wrangler)
-4. Create the **R2** bucket `nvr-io-uploads`
+In this workspace:
 
-## After setup (you must do once)
+- Cursor rule `.cursor/rules/auto-ship.mdc` — agent pushes after meaningful changes  
+- Cursor stop hook `.cursor/hooks/` — reminds the agent to ship if the tree is dirty  
+- `npm run ship` — commit (if needed) + push in one command  
 
-1. Create a **Neon Postgres** database (https://neon.tech or Vercel → Storage → Neon).
-2. Before cloud DB push, set Prisma to Postgres temporarily:
-   - In `backend/prisma/schema.prisma` set `provider = "postgresql"`
-   - Set `DATABASE_URL` to your Neon URL
-   - Run `cd backend && npx prisma db push && npx prisma db seed`
-3. In **both** Vercel projects → Settings → Environment Variables, paste values from `.env.production.example`.
-4. Create Cloudflare R2 API tokens; set `R2_*` on the API project.
-5. In Cloudflare DNS, CNAME your domain to Vercel; add the domain in Vercel → Domains.
-6. Deploy:
+You do **not** need a manual `vercel deploy` for routine updates once Git is linked.
+
+## One-time links (already done for this project)
+
+| Service | Status |
+|---------|--------|
+| GitHub `ameenruks33-cyber/nvr-io` | Connected |
+| Vercel `nvr-io-web` | Git-connected |
+| Vercel `nvr-io-api` | Git-connected (`rootDirectory=backend`) |
+| Neon `nvr-io-db` | Attached to API |
+| Cloudflare Wrangler | Logged in; enable R2 in dashboard for uploads |
+
+## Optional GitHub Actions backup
+
+Add repo secrets if you want Actions to deploy as a second path:
+
+- `VERCEL_TOKEN` (from https://vercel.com/account/tokens)
+- `VERCEL_ORG_ID` = `team_JSFALASfsTpSVJhhfE3PLgxz`
+- `VERCEL_WEB_PROJECT_ID` = `prj_Ob7gOci2u1c1GzuA3BBbjbI6otzk`
+- `VERCEL_API_PROJECT_ID` = `prj_6oEGaCXH2PSJniLepXMkEv2Hm6bd`
+
+Workflow: `.github/workflows/deploy.yml`
+
+## Cloudflare
+
+See `infrastructure/cloudflare/README.md`:
+
+1. Point domain nameservers to Cloudflare  
+2. CNAME `@` / `www` / `api` → Vercel DNS targets (orange cloud)  
+3. SSL/TLS **Full (strict)**  
+4. Enable R2 once, create `nvr-io-uploads`, set `R2_*` on the API project  
+
+CDN content refreshes automatically when Vercel publishes a new deployment.
+
+## Manual deploy (emergency only)
 
 ```bash
 npm run cloud:deploy:web
 npm run cloud:deploy:api
 ```
-
-## GitHub Actions
-
-Add repository secrets:
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_WEB_PROJECT_ID`
-- `VERCEL_API_PROJECT_ID`
-
-Push to `main` deploys automatically (see `.github/workflows/deploy.yml`).
-
-## Local vs cloud
-
-| | Local | Cloud |
-|--|-------|-------|
-| Web | `npm run dev:web` | Vercel |
-| API | `npm run dev:api` | Vercel serverless |
-| DB | SQLite `file:./dev.db` | Neon Postgres |
-| Files | `./uploads` | Cloudflare R2 |
