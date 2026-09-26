@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { RepaymentsService } from './repayments.service';
 import { CreateRepaymentDto } from './dto/create-repayment.dto';
@@ -36,7 +36,9 @@ export class RepaymentsController {
 
   @Get('repayments')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  listRecent() {
-    return this.repayments.listRecent();
+  listRecent(@Query('limit') limit?: string) {
+    const n = limit ? Number(limit) : 20;
+    const safe = Number.isFinite(n) ? Math.min(Math.max(Math.floor(n), 1), 100) : 20;
+    return this.repayments.listRecent(safe);
   }
 }

@@ -9,6 +9,7 @@ type Row = {
   amount: string | number;
   receiptNumber: string;
   collectedAt: string;
+  notes?: string | null;
   collectedBy: { name: string };
   loan: {
     customer: { name: string; customerCode: string };
@@ -19,7 +20,7 @@ export default function RepaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
-    api<Row[]>('/repayments').then(setRows);
+    api<Row[]>('/repayments?limit=50').then(setRows);
   }, []);
 
   return (
@@ -32,26 +33,47 @@ export default function RepaymentsPage() {
               <th className="px-4 py-3">Receipt</th>
               <th className="px-4 py-3">Customer</th>
               <th className="px-4 py-3">Amount</th>
+              <th className="px-4 py-3">Note</th>
               <th className="px-4 py-3">Collector</th>
               <th className="px-4 py-3">When</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-white/5">
-                <td className="px-4 py-3 font-mono text-xs">
-                  {row.receiptNumber}
-                </td>
-                <td className="px-4 py-3">
-                  {row.loan.customer.customerCode} · {row.loan.customer.name}
-                </td>
-                <td className="px-4 py-3">{money(Number(row.amount))}</td>
-                <td className="px-4 py-3">{row.collectedBy.name}</td>
-                <td className="px-4 py-3 text-slate-400">
-                  {new Date(row.collectedAt).toLocaleString()}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const a = Number(row.amount);
+              const ok = a >= 100 && a <= 1800;
+              return (
+                <tr key={row.id} className="border-t border-white/5">
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {row.receiptNumber}
+                  </td>
+                  <td className="px-4 py-3">
+                    {row.loan.customer.customerCode} · {row.loan.customer.name}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center gap-1.5 ${
+                        ok ? 'text-teal-200' : 'text-red-200'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          ok ? 'bg-teal-400' : 'bg-red-400'
+                        }`}
+                      />
+                      {money(a)}
+                    </span>
+                  </td>
+                  <td className="max-w-[200px] truncate px-4 py-3 text-slate-400">
+                    {row.notes?.trim() || '—'}
+                  </td>
+                  <td className="px-4 py-3">{row.collectedBy.name}</td>
+                  <td className="px-4 py-3 text-slate-400">
+                    {new Date(row.collectedAt).toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

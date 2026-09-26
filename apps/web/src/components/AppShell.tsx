@@ -21,6 +21,7 @@ type NavLink = {
 const links: NavLink[] = [
   { href: '/dashboard', label: 'Home' },
   { href: '/gallery', label: 'Gallery' },
+  { href: '/collections', label: 'Collection' },
   { href: '/customers', label: 'People' },
   { href: '/loans', label: 'Records' },
   { href: '/repayments', label: 'Receipts' },
@@ -61,13 +62,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mobileBottomLinks = useMemo(() => {
     const base = [
       { href: '/dashboard', label: 'Home' },
-      { href: '/gallery', label: 'Gallery' },
+      { href: '/collections', label: 'Collect' },
       { href: '/customers', label: 'People' },
     ];
     if (isSuperAdmin) {
       return [...base, { href: '/settings', label: 'Settings' }];
     }
-    return [...base, { href: '/notifications', label: 'Notes' }];
+    return [...base, { href: '/gallery', label: 'Gallery' }];
   }, [isSuperAdmin]);
 
   useEffect(() => {

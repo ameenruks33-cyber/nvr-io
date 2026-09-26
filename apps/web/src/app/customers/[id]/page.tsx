@@ -42,6 +42,7 @@ export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [amount, setAmount] = useState('100');
+  const [notes, setNotes] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -53,6 +54,10 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [params.id]);
+
+  const amountNum = Number(amount);
+  const amountOk =
+    Number.isFinite(amountNum) && amountNum >= 100 && amountNum <= 1800;
 
   async function collect(e: FormEvent) {
     e.preventDefault();
@@ -68,12 +73,15 @@ export default function CustomerDetailPage() {
         method: 'POST',
         body: JSON.stringify({
           amount: Number(amount),
+          notes: notes.trim() || undefined,
           idempotencyKey: crypto.randomUUID(),
         }),
       });
       setMessage(
         `Saved ${result.receiptNumber}: ${money(result.collected)} collected`,
       );
+      setNotes('');
+      setAmount('100');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save payment');
@@ -168,21 +176,55 @@ export default function CustomerDetailPage() {
               </p>
 
               {open ? (
-                <form onSubmit={collect} className="mt-5 flex flex-wrap gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-32 rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
-                  >
-                    Save payment
-                  </button>
+                <form onSubmit={collect} className="mt-5 space-y-3">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="block text-sm">
+                      <span className="text-slate-400">Amount (AED)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className={`mt-1 w-32 rounded-lg border bg-ink-950 px-3 py-2 ring-2 ${
+                          amountOk
+                            ? 'border-teal-500/40 ring-teal-500/40'
+                            : 'border-red-500/40 ring-red-500/50'
+                        }`}
+                      />
+                    </label>
+                    <span
+                      className={`mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${
+                        amountOk
+                          ? 'bg-teal-900/50 text-teal-200'
+                          : 'bg-red-900/50 text-red-200'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          amountOk ? 'bg-teal-400' : 'bg-red-400'
+                        }`}
+                      />
+                      {amountOk ? '100–1800 AED' : 'Outside 100–1800'}
+                    </span>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
+                    >
+                      Save payment
+                    </button>
+                  </div>
+                  <label className="block text-sm">
+                    <span className="text-slate-400">Note (optional)</span>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      maxLength={500}
+                      placeholder="Add a note if needed…"
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                    />
+                  </label>
                 </form>
               ) : (
                 <p className="mt-4 text-sm text-slate-400">Target reached</p>
@@ -199,20 +241,42 @@ export default function CustomerDetailPage() {
           <div className="rounded-2xl border border-white/10 bg-ink-900/70 p-5">
             <h2 className="font-display text-xl text-white">History</h2>
             <ul className="mt-4 space-y-2 text-sm">
-              {(loan?.repayments || []).map((r, idx) => (
-                <li
-                  key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 py-2"
-                >
-                  <span>
-                    #{idx + 1} · {r.receiptNumber}
-                  </span>
-                  <span>{money(Number(r.amount))}</span>
-                  <span className="text-slate-400">
-                    {new Date(r.collectedAt).toLocaleString()}
-                  </span>
-                </li>
-              ))}
+              {(loan?.repayments || []).map((r, idx) => {
+                const a = Number(r.amount);
+                const ok = a >= 100 && a <= 1800;
+                return (
+                  <li
+                    key={r.id}
+                    className="border-b border-white/5 py-2 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        #{idx + 1} · {r.receiptNumber}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 ${
+                          ok ? 'text-teal-200' : 'text-red-200'
+                        }`}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            ok ? 'bg-teal-400' : 'bg-red-400'
+                          }`}
+                        />
+                        {money(a)}
+                      </span>
+                      <span className="text-slate-400">
+                        {new Date(r.collectedAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {r.notes?.trim() ? (
+                      <p className="mt-1 text-xs text-slate-400">
+                        Note: {r.notes}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
               {!loan?.repayments?.length ? (
                 <li className="text-slate-500">No payments yet</li>
               ) : null}
