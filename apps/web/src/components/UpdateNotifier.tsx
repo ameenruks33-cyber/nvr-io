@@ -16,7 +16,8 @@ export type AppUpdateInfo = {
 };
 
 const STORAGE_KEY = 'nvr_app_version';
-const CHECK_MS = 60_000;
+const CHECK_MS = 20_000;
+const NOTIFY_ASKED_KEY = 'nvr_notify_asked';
 
 function cmpVersion(a: string, b: string) {
   const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
@@ -37,7 +38,6 @@ async function fetchUpdateFile(): Promise<AppUpdateInfo | null> {
   return res.json();
 }
 
-/** Only allow same-origin relative paths (blocks javascript:/https:// open redirects). */
 function safeUpdatePath(url?: string) {
   if (!url || typeof url !== 'string') return '/updates';
   if (!url.startsWith('/') || url.startsWith('//') || url.includes('\\')) {
@@ -46,23 +46,35 @@ function safeUpdatePath(url?: string) {
   return url;
 }
 
+function isInstalledPwa() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  );
+}
+
 export function UpdateNotifier() {
   const [update, setUpdate] = useState<AppUpdateInfo | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askNotify, setAskNotify] = useState(false);
 
   const applyUpdate = useCallback(async (info: AppUpdateInfo) => {
     setBusy(true);
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
+        reg?.active?.postMessage({
+          type: 'ACK_UPDATE',
+          version: info.version,
+        });
         reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
       localStorage.setItem(STORAGE_KEY, info.version);
       window.location.assign(safeUpdatePath(info.updateUrl));
-      // Hard reload after navigation target loads
-      setTimeout(() => window.location.reload(), 50);
+      setTimeout(() => window.location.reload(), 80);
     } finally {
       setBusy(false);
     }
@@ -70,10 +82,6 @@ export function UpdateNotifier() {
 
   const maybeNotify = useCallback(async (info: AppUpdateInfo) => {
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      // Don't force; install page can request permission
-      return;
-    }
     if (Notification.permission !== 'granted') return;
     if (!('serviceWorker' in navigator)) {
       new Notification(info.title, {
@@ -89,8 +97,13 @@ export function UpdateNotifier() {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: `nvr-update-${info.version}`,
-      data: { url: safeUpdatePath(info.updateUrl) },
-      requireInteraction: Boolean(info.force),
+      renotify: true,
+      data: { url: safeUpdatePath(info.updateUrl), version: info.version },
+      requireInteraction: true,
+      actions: [
+        { action: 'update', title: 'Update now' },
+        { action: 'later', title: 'Later' },
+      ],
     });
   }, []);
 
@@ -100,8 +113,14 @@ export function UpdateNotifier() {
       if (!info?.version) return;
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) {
-        // First run on this device — record current version, no nag
         localStorage.setItem(STORAGE_KEY, info.version);
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          reg?.active?.postMessage({
+            type: 'ACK_UPDATE',
+            version: info.version,
+          });
+        }
         setUpdate(null);
         return;
       }
@@ -112,29 +131,68 @@ export function UpdateNotifier() {
         setUpdate(null);
       }
     } catch {
-      /* offline / ignore */
+      /* offline */
     }
   }, [maybeNotify]);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => {
-          reg.update().catch(() => undefined);
-          reg.addEventListener('updatefound', () => {
-            const worker = reg.installing;
-            worker?.addEventListener('statechange', () => {
-              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-                void check();
-              }
+    async function setup() {
+      if (!('serviceWorker' in navigator)) {
+        void check();
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js', {
+          updateViaCache: 'none',
+        });
+        await reg.update();
+
+        // Background periodic checks on installed Android/Chrome PWAs
+        const anyReg = reg as ServiceWorkerRegistration & {
+          periodicSync?: {
+            register: (tag: string, opts: { minInterval: number }) => Promise<void>;
+          };
+        };
+        if (anyReg.periodicSync) {
+          try {
+            await anyReg.periodicSync.register('nvr-update-check', {
+              minInterval: 15 * 60 * 1000,
             });
+          } catch {
+            /* not granted / unsupported */
+          }
+        }
+
+        // Ask SW to check now
+        reg.active?.postMessage({ type: 'CHECK_UPDATE' });
+
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing;
+          worker?.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              void check();
+            }
           });
-        })
-        .catch(() => undefined);
+        });
+      } catch {
+        /* ignore */
+      }
+
+      void check();
     }
 
-    void check();
+    void setup();
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NVR_UPDATE_AVAILABLE' && event.data.update) {
+        const info = event.data.update as AppUpdateInfo;
+        setUpdate(info);
+        void maybeNotify(info);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+
     const timer = window.setInterval(() => void check(), CHECK_MS);
     const onFocus = () => void check();
     window.addEventListener('focus', onFocus);
@@ -142,43 +200,96 @@ export function UpdateNotifier() {
       if (document.visibilityState === 'visible') void check();
     });
 
+    // Installed app: gently ask once for notification permission so updates auto-arrive
+    if (
+      isInstalledPwa() &&
+      'Notification' in window &&
+      Notification.permission === 'default' &&
+      !localStorage.getItem(NOTIFY_ASKED_KEY)
+    ) {
+      setAskNotify(true);
+    }
+
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('focus', onFocus);
+      navigator.serviceWorker?.removeEventListener('message', onMessage);
     };
-  }, [check]);
+  }, [check, maybeNotify]);
 
-  if (!update) return null;
+  async function enableAutoUpdates() {
+    localStorage.setItem(NOTIFY_ASKED_KEY, '1');
+    setAskNotify(false);
+    if (!('Notification' in window)) return;
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      void check();
+    }
+  }
 
   return (
-    <div
-      role="status"
-      className="fixed inset-x-0 top-0 z-[100] border-b border-blue-400/40 bg-blue-950/95 px-3 py-3 shadow-lg backdrop-blur"
-    >
-      <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-white">{update.title}</p>
-          <p className="text-xs text-blue-100/90">
-            v{update.version} · {update.message}
-          </p>
+    <>
+      {askNotify ? (
+        <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-ink-950/95 px-3 py-3 backdrop-blur sm:bottom-auto sm:top-0 sm:border-b sm:border-t-0">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-200">
+              Allow notifications so new NVR.io updates are sent automatically to
+              this installed app.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem(NOTIFY_ASKED_KEY, '1');
+                  setAskNotify(false);
+                }}
+                className="rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={() => void enableAutoUpdates()}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white"
+              >
+                Enable auto updates
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href={safeUpdatePath(update.updateUrl)}
-            className="rounded-lg border border-white/20 px-3 py-2 text-xs text-blue-100 hover:bg-white/5"
-          >
-            Details
-          </Link>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void applyUpdate(update)}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-xs font-medium text-white hover:bg-blue-400 disabled:opacity-60"
-          >
-            {busy ? 'Updating…' : 'Update now'}
-          </button>
+      ) : null}
+
+      {update ? (
+        <div
+          role="status"
+          className="fixed inset-x-0 top-0 z-[100] border-b border-blue-400/40 bg-blue-950/95 px-3 py-3 shadow-lg backdrop-blur"
+        >
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-white">{update.title}</p>
+              <p className="text-xs text-blue-100/90">
+                v{update.version} · {update.message}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Link
+                href={safeUpdatePath(update.updateUrl)}
+                className="rounded-lg border border-white/20 px-3 py-2 text-xs text-blue-100 hover:bg-white/5"
+              >
+                Details
+              </Link>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void applyUpdate(update)}
+                className="rounded-lg bg-blue-500 px-4 py-2 text-xs font-medium text-white hover:bg-blue-400 disabled:opacity-60"
+              >
+                {busy ? 'Updating…' : 'Update now'}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }

@@ -25,6 +25,7 @@ export default function UpdatesPage() {
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
+        reg?.active?.postMessage({ type: 'ACK_UPDATE', version: info.version });
         reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
@@ -47,9 +48,8 @@ export default function UpdatesPage() {
       <div className="rounded-2xl border border-white/10 bg-ink-900/95 p-6 shadow-2xl">
         <p className="font-display text-3xl text-white">App updates</p>
         <p className="mt-2 text-sm text-slate-400">
-          Installed devices check this update file automatically. When a new
-          version is published, you get a banner (and a system notification if
-          allowed).
+          Installed devices get update alerts automatically. Allow notifications
+          once, then new versions are pushed to this phone when you ship.
         </p>
 
         <dl className="mt-6 space-y-2 text-sm">
