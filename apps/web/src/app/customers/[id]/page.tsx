@@ -91,13 +91,13 @@ export default function CustomerDetailPage() {
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
-        waNote = ' WhatsApp receipt sent automatically.';
+        waNote = ' Receipt sent to customer WhatsApp.';
+      } else if (wa?.deepLink) {
+        waNote = ' Opening WhatsApp to send receipt to customer…';
+        setWaLink(wa.deepLink);
+        window.open(wa.deepLink, '_blank', 'noopener,noreferrer');
       } else if (wa?.error) {
         waNote = ` ${wa.error}`;
-        if (wa.deepLink) setWaLink(wa.deepLink);
-      } else if (wa?.deepLink) {
-        waNote = ' WhatsApp auto-send is off — enable it in Settings.';
-        setWaLink(wa.deepLink);
       }
       setMessage(
         `Saved ${result.receiptNumber}: paid ${money(result.amount ?? amount)}. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,

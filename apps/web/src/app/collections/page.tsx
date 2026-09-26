@@ -159,15 +159,13 @@ export default function CollectionsPage() {
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
-        waNote =
-          ' WhatsApp receipt sent automatically to the customer.';
+        waNote = ' Receipt sent to customer WhatsApp.';
+      } else if (wa?.deepLink) {
+        waNote = ' Opening WhatsApp to send receipt to customer…';
+        setWaLink(wa.deepLink);
+        window.open(wa.deepLink, '_blank', 'noopener,noreferrer');
       } else if (wa?.error) {
         waNote = ` ${wa.error}`;
-        if (wa.deepLink) setWaLink(wa.deepLink);
-      } else if (wa?.deepLink) {
-        waNote =
-          ' WhatsApp auto-send is off — use the link to send manually, or enable it in Settings.';
-        setWaLink(wa.deepLink);
       }
       setMessage(
         `Collected ${money(result.amount || amountNum)}. Remaining balance ${money(result.remaining)} of ${money(target)}.${waNote}`,

@@ -17,7 +17,10 @@ export type WhatsAppReceiptInput = {
   amountPaid: number;
   remaining: number;
   principal: number;
+  /** Total collected so far (after this payment). */
+  totalCollected?: number;
   receiptNumber: string;
+  collectedAt?: Date | string;
   completed?: boolean;
 };
 
@@ -71,18 +74,43 @@ export class WhatsappService {
   }
 
   buildReceiptMessage(input: WhatsAppReceiptInput): string {
-    const paid = input.amountPaid.toFixed(2);
-    const remaining = input.remaining.toFixed(2);
-    const principal = input.principal.toFixed(2);
+    const paid = Number(input.amountPaid).toFixed(2);
+    const remaining = Number(input.remaining).toFixed(2);
+    const total = Number(input.principal).toFixed(2);
+    const when = input.collectedAt
+      ? new Date(input.collectedAt)
+      : new Date();
+    const dateTime = Number.isNaN(when.getTime())
+      ? new Date().toLocaleString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        })
+      : when.toLocaleString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        });
+
     const lines = [
-      'CrickHerose — collection receipt',
+      'CrickHerose — Collection Receipt',
       `Receipt: ${input.receiptNumber}`,
-      `Dear ${input.customerName},`,
-      `Amount paid: AED ${paid}`,
-      `Remaining balance: AED ${remaining} of AED ${principal}`,
+      `Name: ${input.customerName}`,
+      `Date & time: ${dateTime}`,
+      `Collected amount: AED ${paid}`,
+      `Total: AED ${total}`,
+      `Remaining balance: AED ${remaining}`,
     ];
-    if (input.completed || input.remaining <= 0) {
-      lines.push('Target completed. Thank you!');
+    if (input.completed || Number(input.remaining) <= 0) {
+      lines.push('Status: Target completed. Thank you!');
     } else {
       lines.push('Thank you for your payment.');
     }
@@ -215,26 +243,28 @@ export class WhatsappService {
     const deepLink = this.deepLink(digits, message);
     const cfg = await this.resolveConfig();
 
-    if (!cfg.configured || !cfg.enabled) {
-      this.logger.warn(
-        'WhatsApp auto-send not configured — enable it in Settings',
-      );
-      return {
-        digits,
-        deepLink,
-        message,
-        sent: false,
-        configured: false,
-        error:
-          'WhatsApp auto-send is off. Super admin: enable it in Settings.',
-      };
+    // Always try API when credentials exist (env or Settings)
+    if (cfg.configured && cfg.enabled) {
+      const apiResult =
+        cfg.provider === 'green-api'
+          ? await this.sendViaGreenApi(cfg, digits, message, deepLink)
+          : await this.sendViaMeta(cfg, digits, message, deepLink, input);
+      if (apiResult.sent) return apiResult;
+      // Keep deep link so collector can still deliver the same receipt
+      return { ...apiResult, deepLink, message };
     }
 
-    if (cfg.provider === 'green-api') {
-      return this.sendViaGreenApi(cfg, digits, message, deepLink);
-    }
-
-    return this.sendViaMeta(cfg, digits, message, deepLink, input);
+    this.logger.warn(
+      'WhatsApp API not configured — returning customer deep link',
+    );
+    return {
+      digits,
+      deepLink,
+      message,
+      sent: false,
+      configured: false,
+      error: undefined,
+    };
   }
 
   private async resolveConfig(): Promise<ResolvedConfig> {

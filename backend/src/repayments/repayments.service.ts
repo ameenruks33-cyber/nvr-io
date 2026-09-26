@@ -146,6 +146,7 @@ export class RepaymentsService {
     let whatsapp: {
       sent: boolean;
       deepLink: string | null;
+      message?: string;
       configured?: boolean;
       provider?: string;
       error?: string;
@@ -158,12 +159,15 @@ export class RepaymentsService {
         amountPaid,
         remaining,
         principal,
+        totalCollected: Number(result.loan.amountCollected),
         receiptNumber: result.repayment.receiptNumber,
+        collectedAt: result.repayment.collectedAt,
         completed: result.completed,
       });
       whatsapp = {
         sent: wa.sent,
         deepLink: wa.deepLink,
+        message: wa.message,
         configured: wa.configured,
         provider: wa.provider,
         error: wa.error,
