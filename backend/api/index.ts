@@ -33,6 +33,18 @@ async function bootstrap(): Promise<Express> {
     }),
   );
 
+  // Clear "Cannot GET /" when opening https://nvr-io-api.vercel.app/ in a browser
+  expressApp.get('/', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'nvr-io-api',
+      app: 'NVR.io',
+      timestamp: new Date().toISOString(),
+      health: '/api/health',
+      web: 'https://nvr-io-web.vercel.app',
+    });
+  });
+
   await app.init();
   cached = expressApp;
   return expressApp;

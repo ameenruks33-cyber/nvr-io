@@ -23,9 +23,21 @@ async function bootstrap() {
     }),
   );
 
+  // Clear "Cannot GET /" when opening the API host in a browser
+  const http = app.getHttpAdapter().getInstance();
+  http.get('/', (_req: unknown, res: { status: (n: number) => { json: (b: unknown) => void } }) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'nvr-io-api',
+      app: 'NVR.io',
+      timestamp: new Date().toISOString(),
+      health: '/api/health',
+      web: 'https://nvr-io-web.vercel.app',
+    });
+  });
+
   const port = Number(process.env.API_PORT || 4000);
   await app.listen(port);
-  // Do not log secrets or identity fields
   console.log(`NVR.io API listening on http://localhost:${port}/api`);
 }
 
