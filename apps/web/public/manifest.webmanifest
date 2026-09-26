@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "NVR.io",
   "short_name": "NVR.io",
   "description": "NVR.io — personal records and payment tracking",
@@ -26,12 +27,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/logo.jpg",
-      "sizes": "1024x1024",
-      "type": "image/jpeg",
-      "purpose": "any"
     }
   ]
 }

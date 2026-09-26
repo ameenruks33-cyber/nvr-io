@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, setSession } from '@/lib/api';
 
@@ -11,6 +12,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      Boolean(
+        (navigator as Navigator & { standalone?: boolean }).standalone,
+      );
+    setShowInstall(!standalone);
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -50,7 +64,17 @@ export default function LoginPage() {
           <p className="mt-4 font-display text-3xl text-white">NVR.io</p>
           <p className="mt-1 text-sm text-slate-400">Secure staff login</p>
         </div>
-        <form onSubmit={onSubmit} className="mt-8 space-y-4">
+
+        {showInstall ? (
+          <Link
+            href="/app"
+            className="mt-6 flex w-full items-center justify-center rounded-lg border border-blue-400/40 bg-blue-600/20 px-4 py-3.5 text-center text-sm font-medium text-blue-100 hover:bg-blue-600/30"
+          >
+            Install NVR.io on this phone
+          </Link>
+        ) : null}
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <label className="block text-sm">
             <span className="text-slate-300">Email / username</span>
             <input
