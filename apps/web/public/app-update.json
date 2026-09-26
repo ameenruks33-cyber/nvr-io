@@ -1,8 +1,8 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.30",
-  "build": "2026.09.26.14.52",
-  "releasedAt": "2026-09-26T14:52:24.020Z",
+  "version": "1.1.31",
+  "build": "2026.09.26.15.01",
+  "releasedAt": "2026-09-26T15:01:24.832Z",
   "title": "CrickHerose update available",
   "message": "Updates only on mobile app; clear notification after update",
   "notes": [
@@ -20,10 +20,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.30/favicon.png",
-    "icon192": "/icons/v1.1.30/icon-192.png",
-    "icon512": "/icons/v1.1.30/icon-512.png",
-    "apple": "/icons/v1.1.30/apple-touch-icon.png",
-    "logo": "/icons/v1.1.30/logo.jpg"
+    "favicon": "/icons/v1.1.31/favicon.png",
+    "icon192": "/icons/v1.1.31/icon-192.png",
+    "icon512": "/icons/v1.1.31/icon-512.png",
+    "apple": "/icons/v1.1.31/apple-touch-icon.png",
+    "logo": "/icons/v1.1.31/logo.jpg"
   }
 }

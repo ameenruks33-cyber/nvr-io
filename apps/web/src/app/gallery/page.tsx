@@ -109,6 +109,7 @@ export default function GalleryPage() {
   const [newPin, setNewPin] = useState('');
   const [newPinConfirm, setNewPinConfirm] = useState('');
   const [savingPin, setSavingPin] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
 
@@ -207,6 +208,28 @@ export default function GalleryPage() {
     setUnlocked(false);
   }
 
+  async function deletePhoto(id: string, caption?: string | null) {
+    const label = caption?.trim() || 'this photo';
+    if (
+      !window.confirm(
+        `Delete ${label} from the cloud gallery? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(id);
+    setError('');
+    try {
+      await api(`/gallery/${id}`, { method: 'DELETE' });
+      setItems((prev) => prev.filter((p) => p.id !== id));
+      setStatusMsg('Photo deleted from cloud gallery.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete photo');
+    } finally {
+      setDeletingId('');
+    }
+  }
+
   if (!unlocked && pinSet) {
     return (
       <AppShell>
@@ -260,11 +283,11 @@ export default function GalleryPage() {
         <div>
           <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
           <p className="mt-1 max-w-xl text-sm text-slate-400">
-            Watch-only. Photos are captured with Capture → cloud on{' '}
+            Watch cloud photos from{' '}
             <Link href="/customers/new" className="text-teal-300 underline">
               Add person
             </Link>
-            .
+            . Delete any old photo you no longer need.
           </p>
         </div>
         {pinSet ? (
@@ -363,7 +386,7 @@ export default function GalleryPage() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500">Watch only · from Add person</p>
+        <p className="text-xs text-slate-500">From Add person · can delete</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -376,7 +399,7 @@ export default function GalleryPage() {
               id={item.id}
               alt={item.caption || 'Cloud gallery item'}
             />
-            <div className="space-y-1 p-3 text-xs">
+            <div className="space-y-2 p-3 text-xs">
               <p className="truncate text-sm text-white">
                 {item.caption || 'Untitled'}
               </p>
@@ -384,6 +407,14 @@ export default function GalleryPage() {
                 {item.status}
                 {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
               </p>
+              <button
+                type="button"
+                disabled={deletingId === item.id}
+                onClick={() => void deletePhoto(item.id, item.caption)}
+                className="w-full rounded-lg bg-red-800/80 px-2 py-1.5 text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {deletingId === item.id ? 'Deleting…' : 'Delete'}
+              </button>
             </div>
           </article>
         ))}

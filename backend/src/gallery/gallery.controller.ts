@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -182,5 +183,11 @@ export class GalleryController {
       user,
       dto.note,
     );
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.gallery.remove(assertSafeId(String(id)), user);
   }
 }

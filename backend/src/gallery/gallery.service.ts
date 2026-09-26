@@ -302,4 +302,35 @@ export class GalleryService {
 
     return item;
   }
+
+  async remove(id: string, actor: AuthUser) {
+    const existing = await this.prisma.galleryItem.findUnique({
+      where: { id },
+      select: { id: true, storageKey: true, caption: true },
+    });
+    if (!existing) throw new NotFoundException('Gallery item not found');
+
+    await this.prisma.galleryItem.delete({ where: { id } });
+
+    await this.audit.log({
+      userId: actor.id,
+      action: 'GALLERY_DELETE',
+      recordType: 'gallery',
+      recordId: id,
+      metadata: { storageKey: existing.storageKey, caption: existing.caption },
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        type: 'SYSTEM',
+        message: `Cloud gallery photo deleted by ${actor.name}${
+          existing.caption ? ` — ${existing.caption}` : ''
+        }.`,
+        status: 'SENT',
+        sentAt: new Date(),
+      },
+    });
+
+    return { ok: true, id };
+  }
 }
