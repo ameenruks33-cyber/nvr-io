@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { StorageModule } from './storage/storage.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthController } from './health.controller';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -39,6 +40,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     NotificationsModule,
     AuditModule,
     DashboardModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

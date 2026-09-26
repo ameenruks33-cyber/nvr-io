@@ -13,8 +13,8 @@ const links = [
   { href: '/repayments', label: 'Receipts' },
   { href: '/reports', label: 'Summary' },
   { href: '/notifications', label: 'Notes' },
-  { href: '/users', label: 'Users' },
-  { href: '/audit', label: 'Activity' },
+  { href: '/users', label: 'Users', desktopOnly: true },
+  { href: '/audit', label: 'Activity', desktopOnly: true },
   { href: '/settings', label: 'Settings' },
   { href: '/app', label: 'Install' },
 ];
@@ -25,6 +25,8 @@ const mobileLinks = [
   { href: '/repayments', label: 'Receipts' },
   { href: '/settings', label: 'Settings' },
 ];
+
+const mobileMenuLinks = links.filter((l) => !('desktopOnly' in l && l.desktopOnly));
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -73,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {menuOpen ? (
         <nav className="rounded-2xl border border-white/10 bg-ink-900/95 p-3 md:hidden">
           <div className="grid grid-cols-2 gap-1">
-            {links.map((link) => {
+            {mobileMenuLinks.map((link) => {
               const active = pathname.startsWith(link.href);
               return (
                 <Link
