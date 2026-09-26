@@ -22,6 +22,9 @@ export default function NewCustomerPage() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraBusy, setCameraBusy] = useState(false);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [caption, setCaption] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState('');
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -76,40 +79,60 @@ export default function NewCustomerPage() {
     };
   }, [previewUrl]);
 
-  async function capturePersonPhoto() {
+  async function captureFrameBlob() {
     const video = videoRef.current;
     if (!video || !cameraOn) {
-      setError('Open the camera first.');
-      return;
+      throw new Error('Open the in-app camera first.');
     }
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not capture frame');
+    ctx.drawImage(video, 0, 0, w, h);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Capture failed'))),
+        'image/jpeg',
+        0.88,
+      );
+    });
+  }
+
+  async function captureAndUploadToCloud() {
+    setUploading(true);
     setError('');
+    setPhotoStatus('');
     try {
-      const w = video.videoWidth || 1280;
-      const h = video.videoHeight || 720;
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not capture frame');
-      ctx.drawImage(video, 0, 0, w, h);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Capture failed'))),
-          'image/jpeg',
-          0.88,
-        );
-      });
-
-      const file = new File([blob], `person-${Date.now()}.jpg`, {
+      const blob = await captureFrameBlob();
+      const file = new File([blob], `nvr-cloud-${Date.now()}.jpg`, {
         type: 'image/jpeg',
       });
+
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
       setPhoto(file);
-      stopCamera();
+
+      const fd = new FormData();
+      fd.append('file', file);
+      if (caption.trim()) fd.append('caption', caption.trim());
+
+      await api('/gallery/upload', {
+        method: 'POST',
+        body: fd,
+      });
+
+      setPhotoStatus(
+        'Photo set for this person and saved to cloud gallery.',
+      );
+      setCaption('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not capture photo');
+      setError(e instanceof Error ? e.message : 'Cloud capture failed');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -117,6 +140,7 @@ export default function NewCustomerPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPhoto(null);
+    setPhotoStatus('');
   }
 
   function requestLocation() {
@@ -255,9 +279,20 @@ export default function NewCustomerPage() {
         <div className="space-y-3 text-sm">
           <span className="text-slate-300">Customer photo</span>
           <p className="text-xs text-slate-500">
-            Use the in-app camera. Saved to private server storage — not the
-            device gallery, and not the cloud gallery.
+            Open camera here — Capture → cloud saves to the person and the
+            shared cloud gallery. Not the device Photos app.
           </p>
+
+          <label className="block text-sm">
+            <span className="text-slate-400">Caption (optional)</span>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2 outline-none ring-blue-500 focus:ring-2"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              maxLength={120}
+              placeholder="e.g. Passport scan — Ahmed"
+            />
+          </label>
 
           <div
             className={
@@ -286,10 +321,10 @@ export default function NewCustomerPage() {
             />
           ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <button
               type="button"
-              disabled={cameraBusy || loading}
+              disabled={cameraBusy || uploading || loading}
               onClick={() => void startCamera()}
               className="rounded-xl bg-blue-600 px-4 py-3.5 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
             >
@@ -301,7 +336,15 @@ export default function NewCustomerPage() {
             </button>
             <button
               type="button"
-              disabled={loading || cameraBusy}
+              disabled={!cameraOn || uploading || loading}
+              onClick={() => void captureAndUploadToCloud()}
+              className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
+            >
+              {uploading ? 'Uploading…' : 'Capture → cloud'}
+            </button>
+            <button
+              type="button"
+              disabled={uploading || cameraBusy || loading}
               onClick={() => {
                 const next = facing === 'environment' ? 'user' : 'environment';
                 setFacing(next);
@@ -314,22 +357,19 @@ export default function NewCustomerPage() {
           </div>
 
           {cameraOn ? (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void capturePersonPhoto()}
-                className="rounded-xl bg-teal-700/90 px-4 py-3 font-medium text-white hover:bg-teal-600"
-              >
-                Take photo
-              </button>
-              <button
-                type="button"
-                onClick={stopCamera}
-                className="text-xs text-slate-500 underline hover:text-slate-300"
-              >
-                Close camera
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={stopCamera}
+              className="text-xs text-slate-500 underline hover:text-slate-300"
+            >
+              Close camera
+            </button>
+          ) : null}
+
+          {photoStatus ? (
+            <p className="text-sm text-teal-200" role="status">
+              {photoStatus}
+            </p>
           ) : null}
 
           {photo ? (

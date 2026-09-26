@@ -1,8 +1,8 @@
 {
   "app": "NVR.io",
-  "version": "1.1.25",
-  "build": "2026.09.26.14.13",
-  "releasedAt": "2026-09-26T14:13:42.419Z",
+  "version": "1.1.26",
+  "build": "2026.09.26.14.21",
+  "releasedAt": "2026-09-26T14:21:33.024Z",
   "title": "NVR.io update available",
   "message": "Updates only on mobile app; clear notification after update",
   "notes": [
@@ -20,10 +20,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.25/favicon.png",
-    "icon192": "/icons/v1.1.25/icon-192.png",
-    "icon512": "/icons/v1.1.25/icon-512.png",
-    "apple": "/icons/v1.1.25/apple-touch-icon.png",
-    "logo": "/icons/v1.1.25/logo.jpg"
+    "favicon": "/icons/v1.1.26/favicon.png",
+    "icon192": "/icons/v1.1.26/icon-192.png",
+    "icon512": "/icons/v1.1.26/icon-512.png",
+    "apple": "/icons/v1.1.26/apple-touch-icon.png",
+    "logo": "/icons/v1.1.26/logo.jpg"
   }
 }

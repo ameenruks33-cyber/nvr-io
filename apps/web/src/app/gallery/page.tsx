@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession } from '@/lib/api';
 
@@ -71,23 +72,17 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
 }
 
 /**
- * Shared cloud gallery — PIN unlock, all staff read/write, admin verifies.
+ * Shared cloud gallery — PIN unlock, view & verify only.
+ * Capture camera lives on Add person.
  */
 export default function GalleryPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const [items, setItems] = useState<GalleryItem[]>([]);
-  const [caption, setCaption] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED'>(
     'PENDING',
   );
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraBusy, setCameraBusy] = useState(false);
-  const [facing, setFacing] = useState<'environment' | 'user'>('environment');
 
   const [pinSet, setPinSet] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -96,53 +91,6 @@ export default function GalleryPage() {
 
   const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const isSuperAdmin = role === 'SUPER_ADMIN';
-
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
-  }, []);
-
-  const startCamera = useCallback(
-    async (mode?: 'environment' | 'user') => {
-      const useFacing = mode || facing;
-      setError('');
-      setCameraBusy(true);
-      try {
-        stopCamera();
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error(
-            'Camera is not available. Open NVR.io in Chrome or Safari.',
-          );
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: useFacing },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setCameraOn(true);
-      } catch (e) {
-        setCameraOn(false);
-        setError(
-          e instanceof Error ? e.message : 'Could not open camera.',
-        );
-      } finally {
-        setCameraBusy(false);
-      }
-    },
-    [facing, stopCamera],
-  );
-
-  useEffect(() => () => stopCamera(), [stopCamera]);
 
   async function load() {
     try {
@@ -191,55 +139,6 @@ export default function GalleryPage() {
     }
   }
 
-  async function captureAndUpload() {
-    const video = videoRef.current;
-    if (!video || !cameraOn) {
-      setError('Open the in-app camera first.');
-      return;
-    }
-    setUploading(true);
-    setError('');
-    setStatusMsg('');
-    try {
-      const w = video.videoWidth || 1280;
-      const h = video.videoHeight || 720;
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not capture frame');
-      ctx.drawImage(video, 0, 0, w, h);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Capture failed'))),
-          'image/jpeg',
-          0.88,
-        );
-      });
-
-      const fd = new FormData();
-      fd.append('file', blob, `nvr-cloud-${Date.now()}.jpg`);
-      if (caption.trim()) fd.append('caption', caption.trim());
-
-      await api<GalleryItem>('/gallery/upload', {
-        method: 'POST',
-        body: fd,
-      });
-
-      setCaption('');
-      setStatusMsg(
-        'Saved to shared cloud gallery. Admins and users can view it; pending verification.',
-      );
-      setFilter('PENDING');
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Cloud upload failed');
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function setItemStatus(id: string, status: 'VERIFIED' | 'REJECTED') {
     try {
       await api(`/gallery/${id}/status`, {
@@ -260,7 +159,6 @@ export default function GalleryPage() {
   function lockGallery() {
     sessionStorage.removeItem(UNLOCK_KEY);
     setUnlocked(false);
-    stopCamera();
   }
 
   if (!unlocked) {
@@ -268,8 +166,8 @@ export default function GalleryPage() {
       <AppShell>
         <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
         <p className="mt-2 max-w-lg text-sm text-slate-400">
-          Enter the number password to open cloud photos. Admins and users both
-          unlock with the same PIN, then can view and add photos.
+          Enter the number password to open cloud photos. Capture new photos
+          from Add person.
         </p>
 
         {!pinSet ? (
@@ -325,8 +223,11 @@ export default function GalleryPage() {
         <div>
           <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
           <p className="mt-1 max-w-xl text-sm text-slate-400">
-            Shared cloud photos for admin and users. Capture new photos or
-            verify previous pending ones.
+            View and verify shared cloud photos. Capture from{' '}
+            <Link href="/customers/new" className="text-teal-300 underline">
+              Add person
+            </Link>
+            .
           </p>
         </div>
         <button
@@ -338,92 +239,16 @@ export default function GalleryPage() {
         </button>
       </div>
 
-      <div className="mt-6 space-y-4 rounded-2xl border border-blue-500/20 bg-ink-900/80 p-4">
-        <label className="block text-sm">
-          <span className="text-slate-300">Caption (optional)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            maxLength={120}
-            placeholder="e.g. Passport scan — Ahmed"
-          />
-        </label>
-
-        <div
-          className={
-            cameraOn
-              ? 'overflow-hidden rounded-xl border border-white/10 bg-black'
-              : 'contents'
-          }
-        >
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            autoPlay
-            className={
-              cameraOn ? 'aspect-[4/3] w-full object-cover' : 'hidden'
-            }
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <button
-            type="button"
-            disabled={cameraBusy || uploading}
-            onClick={() => void startCamera()}
-            className="rounded-xl bg-blue-600 px-4 py-3.5 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-          >
-            {cameraBusy
-              ? 'Opening camera…'
-              : cameraOn
-                ? 'Restart camera'
-                : 'Open camera'}
-          </button>
-          <button
-            type="button"
-            disabled={!cameraOn || uploading}
-            onClick={() => void captureAndUpload()}
-            className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
-          >
-            {uploading ? 'Uploading…' : 'Capture → cloud'}
-          </button>
-          <button
-            type="button"
-            disabled={uploading || cameraBusy}
-            onClick={() => {
-              const next = facing === 'environment' ? 'user' : 'environment';
-              setFacing(next);
-              if (cameraOn) void startCamera(next);
-            }}
-            className="rounded-xl border border-white/15 px-4 py-3.5 text-slate-200 hover:bg-white/5 disabled:opacity-60"
-          >
-            Flip camera
-          </button>
-        </div>
-
-        {cameraOn ? (
-          <button
-            type="button"
-            onClick={stopCamera}
-            className="text-xs text-slate-500 underline hover:text-slate-300"
-          >
-            Close camera
-          </button>
-        ) : null}
-
-        {statusMsg ? (
-          <p className="text-sm text-teal-200" role="status">
-            {statusMsg}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="text-sm text-red-300" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
+      {statusMsg ? (
+        <p className="mt-4 text-sm text-teal-200" role="status">
+          {statusMsg}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-4 text-sm text-red-300" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
@@ -495,8 +320,11 @@ export default function GalleryPage() {
 
       {!items.length ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          No photos in this filter. Capture one above — it goes to the shared
-          cloud for admin and users.
+          No photos in this filter. Capture with Open camera on{' '}
+          <Link href="/customers/new" className="text-teal-300 underline">
+            Add person
+          </Link>
+          .
         </p>
       ) : null}
     </AppShell>
