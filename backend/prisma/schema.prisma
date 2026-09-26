@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  // Local default: SQLite (no Postgres password needed).
-  // For production, switch provider to "postgresql" and use Docker Compose.
-  provider = "sqlite"
+  // Production: Neon/Postgres on Vercel. Local: Docker Compose or Neon.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

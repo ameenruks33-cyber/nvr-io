@@ -23,3 +23,12 @@ apps/mobile/.flutter-plugins-dependencies
 **/*.db-journal
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
+
+.env.vercel
+backend/.env.vercel
+**/.env.vercel
+
+backend/.agents/
+backend/skills-lock.json
+**/.agents/
+skills-lock.json
