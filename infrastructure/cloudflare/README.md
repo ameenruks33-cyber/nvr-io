@@ -28,10 +28,15 @@ Enable Cloudflare proxy (orange cloud) for CDN/WAF. Keep SSL/TLS mode **Full (st
 
 ## R2
 
-1. `npx wrangler login`
-2. `npx wrangler r2 bucket create nvr-io-uploads`
-3. Create R2 API token with Object Read/Write
-4. Set `STORAGE_DRIVER=r2` and R2_* env vars on the API project
+Account ID (Wrangler): `5be1df0639fc9310e4a1f27f5da95400`
+
+1. Enable R2 once in the Cloudflare dashboard: https://dash.cloudflare.com/?to=/:account/r2
+2. `npx wrangler login`
+3. `npx wrangler r2 bucket create nvr-io-uploads`
+4. Create R2 API token with Object Read/Write
+5. Set `STORAGE_DRIVER=r2` and R2_* env vars on the API project
+
+(As of first cloud setup, step 1 was still required — bucket create fails with code 10042 until R2 is enabled.)
 
 ## Domains
 
