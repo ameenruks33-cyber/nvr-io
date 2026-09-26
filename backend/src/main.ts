@@ -8,10 +8,19 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Web (nvr-io-web) and API (nvr-io-api) are different hosts — allow
+      // authenticated blob fetches for gallery / document images.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS || 'http://localhost:3000').split(','),
+    origin: (process.env.CORS_ORIGINS || 'http://localhost:3000')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
     credentials: true,
   });
   app.useGlobalPipes(

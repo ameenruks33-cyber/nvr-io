@@ -135,16 +135,6 @@ export class GalleryController {
     });
     if (!item) throw new NotFoundException('Gallery item not found');
 
-    // Shared cloud gallery — all authenticated staff can read
-    const stream = await this.storage.openStream(item.storageKey);
-
-    await this.audit.log({
-      userId: user.id,
-      action: 'GALLERY_ACCESS',
-      recordType: 'gallery',
-      recordId: item.id,
-    });
-
     res.set({
       'Content-Type': item.mimeType || 'image/jpeg',
       'Content-Disposition': 'inline',
@@ -152,10 +142,23 @@ export class GalleryController {
       Pragma: 'no-cache',
       'X-Content-Type-Options': 'nosniff',
       'X-Robots-Tag': 'noindex, nofollow, noarchive',
-      'Cross-Origin-Resource-Policy': 'same-site',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     });
 
-    return new StreamableFile(stream);
+    try {
+      const stream = await this.storage.openStream(item.storageKey);
+      await this.audit.log({
+        userId: user.id,
+        action: 'GALLERY_ACCESS',
+        recordType: 'gallery',
+        recordId: item.id,
+      });
+      return new StreamableFile(stream);
+    } catch {
+      throw new NotFoundException(
+        'Photo file is missing from cloud storage. Capture again from Add person.',
+      );
+    }
   }
 
   @Patch(':id/status')

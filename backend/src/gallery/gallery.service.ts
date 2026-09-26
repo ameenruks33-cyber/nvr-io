@@ -31,10 +31,14 @@ export class GalleryService {
   }
 
   async pinStatus() {
-    const s = await this.getSettings();
-    return {
-      pinSet: Boolean(s.galleryPinHash),
-    };
+    try {
+      const s = await this.getSettings();
+      return {
+        pinSet: Boolean(s.galleryPinHash),
+      };
+    } catch {
+      return { pinSet: false };
+    }
   }
 
   async setPin(pin: string, actor: AuthUser) {
