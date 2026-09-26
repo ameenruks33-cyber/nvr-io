@@ -251,26 +251,22 @@ export default function GalleryPage() {
           />
         </label>
 
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-black">
+        <div
+          className={
+            cameraOn
+              ? 'overflow-hidden rounded-xl border border-white/10 bg-black'
+              : 'contents'
+          }
+        >
           <video
             ref={videoRef}
             playsInline
             muted
             autoPlay
             className={
-              cameraOn
-                ? 'aspect-[4/3] w-full object-cover'
-                : 'hidden'
+              cameraOn ? 'aspect-[4/3] w-full object-cover' : 'hidden'
             }
           />
-          {!cameraOn ? (
-            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-slate-500">
-              <p>In-app camera is off</p>
-              <p className="text-xs text-slate-600">
-                We never open your phone gallery or file storage.
-              </p>
-            </div>
-          ) : null}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
