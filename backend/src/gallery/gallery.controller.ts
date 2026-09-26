@@ -18,12 +18,12 @@ import { GalleryStatus, UserRole } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
+import { Readable } from 'stream';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeId } from '../common/safe-input';
 import { GalleryService } from './gallery.service';
 import { StorageService } from '../storage/storage.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 
 class VerifyGalleryDto {
@@ -47,7 +47,6 @@ export class GalleryController {
   constructor(
     private readonly gallery: GalleryService,
     private readonly storage: StorageService,
-    private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
 
@@ -130,10 +129,7 @@ export class GalleryController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const safeId = assertSafeId(String(id));
-    const item = await this.prisma.galleryItem.findUnique({
-      where: { id: safeId },
-    });
-    if (!item) throw new NotFoundException('Gallery item not found');
+    const item = await this.gallery.getFilePayload(safeId);
 
     res.set({
       'Content-Type': item.mimeType || 'image/jpeg',
@@ -146,7 +142,13 @@ export class GalleryController {
     });
 
     try {
-      const stream = await this.storage.openStream(item.storageKey);
+      let stream: Readable;
+      if (item.imageBytes && item.imageBytes.length > 0) {
+        stream = Readable.from(Buffer.from(item.imageBytes));
+      } else {
+        stream = await this.storage.openStream(item.storageKey);
+      }
+
       await this.audit.log({
         userId: user.id,
         action: 'GALLERY_ACCESS',

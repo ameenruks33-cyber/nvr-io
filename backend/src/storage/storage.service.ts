@@ -104,8 +104,18 @@ export class StorageService implements OnModuleInit {
       return out.Body as Readable;
     }
 
-    const path = resolveSafeUploadPath(key);
-    return createReadStream(path);
+    // Use the same root as saveImage (incl. /tmp on Vercel)
+    const dest = join(this.localRoot, key);
+    if (!dest.startsWith(this.localRoot) || !existsSync(dest)) {
+      // Fallback to legacy uploads path helper
+      try {
+        const path = resolveSafeUploadPath(key);
+        return createReadStream(path);
+      } catch {
+        throw new Error('File missing');
+      }
+    }
+    return createReadStream(dest);
   }
 
   isRemote() {

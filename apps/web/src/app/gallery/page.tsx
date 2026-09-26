@@ -395,7 +395,7 @@ export default function GalleryPage() {
           <Link href="/customers/new" className="text-teal-300 underline">
             Add person
           </Link>
-          .
+          . Older photos taken before this fix may need a new capture.
         </p>
       ) : null}
     </AppShell>

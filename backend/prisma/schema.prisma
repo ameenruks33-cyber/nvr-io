@@ -215,6 +215,8 @@ model AppSetting {
 model GalleryItem {
   id           String        @id @default(cuid())
   storageKey   String        @map("storage_key")
+  /// Durable image bytes (Neon) — required on Vercel when R2 is not configured
+  imageBytes   Bytes?        @map("image_bytes")
   mimeType     String?       @map("mime_type")
   caption      String?
   note         String?

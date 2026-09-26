@@ -21,6 +21,15 @@ export class PrismaService
     } catch {
       // Local / non-Postgres environments may not support this DDL
     }
+    // Durable gallery image column (Vercel /tmp is ephemeral without R2)
+    try {
+      await this.$executeRawUnsafe(`
+        ALTER TABLE "gallery_items"
+        ADD COLUMN IF NOT EXISTS "image_bytes" BYTEA;
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
   }
 
   async onModuleDestroy() {

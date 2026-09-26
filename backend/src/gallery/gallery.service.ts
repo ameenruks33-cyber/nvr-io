@@ -125,9 +125,15 @@ export class GalleryService {
       'nvr-gallery',
     );
 
+    // Cap DB payload (~4MB) — typical camera JPEG is much smaller
+    const maxDbBytes = 4 * 1024 * 1024;
+    const imageBytes =
+      file.buffer.length <= maxDbBytes ? file.buffer : undefined;
+
     const item = await this.prisma.galleryItem.create({
       data: {
         storageKey,
+        imageBytes,
         mimeType: file.mimetype,
         caption: opts.caption?.trim() || null,
         note: opts.note?.trim() || null,
@@ -139,6 +145,10 @@ export class GalleryService {
         uploadedBy: { select: { id: true, name: true, email: true } },
       },
     });
+
+    // Never return raw bytes to API clients
+    const { imageBytes: _omit, ...safe } = item;
+    void _omit;
 
     await this.audit.log({
       userId: user.id,
@@ -159,7 +169,7 @@ export class GalleryService {
       },
     });
 
-    return item;
+    return safe;
   }
 
   /** Shared cloud gallery — all staff can read; filter by status for verification. */
@@ -170,7 +180,19 @@ export class GalleryService {
     return this.prisma.galleryItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        caption: true,
+        note: true,
+        status: true,
+        uploadedById: true,
+        verifiedById: true,
+        verifiedAt: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
         uploadedBy: { select: { id: true, name: true, email: true } },
         verifiedBy: { select: { id: true, name: true, email: true } },
         customer: { select: { id: true, name: true, customerCode: true } },
@@ -181,10 +203,36 @@ export class GalleryService {
   async getOne(id: string) {
     const item = await this.prisma.galleryItem.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        caption: true,
+        note: true,
+        status: true,
+        uploadedById: true,
+        verifiedById: true,
+        verifiedAt: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
         uploadedBy: { select: { id: true, name: true, email: true } },
         verifiedBy: { select: { id: true, name: true, email: true } },
         customer: { select: { id: true, name: true, customerCode: true } },
+      },
+    });
+    if (!item) throw new NotFoundException('Gallery item not found');
+    return item;
+  }
+
+  async getFilePayload(id: string) {
+    const item = await this.prisma.galleryItem.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        imageBytes: true,
       },
     });
     if (!item) throw new NotFoundException('Gallery item not found');
@@ -214,7 +262,19 @@ export class GalleryService {
         verifiedAt: new Date(),
         note: note?.trim() || existing.note,
       },
-      include: {
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        caption: true,
+        note: true,
+        status: true,
+        uploadedById: true,
+        verifiedById: true,
+        verifiedAt: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
         uploadedBy: { select: { id: true, name: true, email: true } },
         verifiedBy: { select: { id: true, name: true, email: true } },
       },
