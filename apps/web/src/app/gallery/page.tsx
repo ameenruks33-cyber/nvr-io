@@ -72,13 +72,13 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
 }
 
 /**
- * Shared cloud gallery — PIN unlock, view & verify only.
- * Capture camera lives on Add person.
+ * Shared cloud gallery — PIN unlock, watch-only.
+ * Photos are captured from Add person (Capture → cloud).
  */
 export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED'>(
-    'PENDING',
+    'ALL',
   );
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
@@ -89,7 +89,6 @@ export default function GalleryPage() {
   const [pin, setPin] = useState('');
   const [unlocking, setUnlocking] = useState(false);
 
-  const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const isSuperAdmin = role === 'SUPER_ADMIN';
 
   async function load() {
@@ -131,28 +130,11 @@ export default function GalleryPage() {
       sessionStorage.setItem(UNLOCK_KEY, '1');
       setUnlocked(true);
       setPin('');
-      setStatusMsg('Gallery unlocked — shared cloud photos for admin and users.');
+      setStatusMsg('Gallery unlocked — watching cloud photos from Add person.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wrong PIN');
     } finally {
       setUnlocking(false);
-    }
-  }
-
-  async function setItemStatus(id: string, status: 'VERIFIED' | 'REJECTED') {
-    try {
-      await api(`/gallery/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status }),
-      });
-      setStatusMsg(
-        status === 'VERIFIED'
-          ? 'Photo verified for everyone.'
-          : 'Photo rejected.',
-      );
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Update failed');
     }
   }
 
@@ -166,8 +148,8 @@ export default function GalleryPage() {
       <AppShell>
         <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
         <p className="mt-2 max-w-lg text-sm text-slate-400">
-          Enter the number password to open cloud photos. Capture new photos
-          from Add person.
+          Watch cloud photos captured from Add person. Enter the number
+          password to open.
         </p>
 
         {!pinSet ? (
@@ -223,7 +205,7 @@ export default function GalleryPage() {
         <div>
           <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
           <p className="mt-1 max-w-xl text-sm text-slate-400">
-            View and verify shared cloud photos. Capture from{' '}
+            Watch-only. Photos are captured with Capture → cloud on{' '}
             <Link href="/customers/new" className="text-teal-300 underline">
               Add person
             </Link>
@@ -254,10 +236,10 @@ export default function GalleryPage() {
         <div className="flex flex-wrap gap-2">
           {(
             [
-              ['PENDING', 'Previous / pending'],
+              ['ALL', 'All photos'],
+              ['PENDING', 'New'],
               ['VERIFIED', 'Verified'],
               ['REJECTED', 'Rejected'],
-              ['ALL', 'All'],
             ] as const
           ).map(([f, label]) => (
             <button
@@ -274,7 +256,7 @@ export default function GalleryPage() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500">Shared cloud · admin + users</p>
+        <p className="text-xs text-slate-500">Watch only · from Add person</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -295,24 +277,6 @@ export default function GalleryPage() {
                 {item.status}
                 {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
               </p>
-              {isAdmin && item.status === 'PENDING' ? (
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setItemStatus(item.id, 'VERIFIED')}
-                    className="flex-1 rounded-lg bg-teal-700/80 px-2 py-1.5 text-white"
-                  >
-                    Verify
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setItemStatus(item.id, 'REJECTED')}
-                    className="flex-1 rounded-lg bg-red-800/80 px-2 py-1.5 text-white"
-                  >
-                    Reject
-                  </button>
-                </div>
-              ) : null}
             </div>
           </article>
         ))}
@@ -320,7 +284,7 @@ export default function GalleryPage() {
 
       {!items.length ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          No photos in this filter. Capture with Open camera on{' '}
+          No cloud photos yet. Capture with Open camera → Capture → cloud on{' '}
           <Link href="/customers/new" className="text-teal-300 underline">
             Add person
           </Link>

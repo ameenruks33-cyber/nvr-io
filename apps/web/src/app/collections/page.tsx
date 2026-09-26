@@ -136,7 +136,9 @@ export default function CollectionsPage() {
       const result = await api<{
         collected: number;
         remaining: number;
+        principal: number;
         receiptNumber: string;
+        amount: number;
       }>(`/loans/${selected.loan.id}/repayments`, {
         method: 'POST',
         body: JSON.stringify({
@@ -145,10 +147,9 @@ export default function CollectionsPage() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
+      const target = Number(result.principal) || MAX_AED;
       setMessage(
-        `Collected ${money(amountNum)} · ${result.receiptNumber}${
-          notes.trim() ? ' · note saved' : ''
-        }`,
+        `Collected ${money(result.amount || amountNum)}. Remaining balance ${money(result.remaining)} of ${money(target)}.`,
       );
       setAmount('100');
       setNotes('');
@@ -160,9 +161,11 @@ export default function CollectionsPage() {
     }
   }
 
-  const remaining = Number(selected?.loan?.remainingAmount || 0);
   const collected = Number(selected?.loan?.amountCollected || 0);
   const principal = Number(selected?.loan?.principalAmount || MAX_AED);
+  const remaining = Number(
+    selected?.loan?.remainingAmount ?? Math.max(principal - collected, 0),
+  );
   const open = selected?.loan?.status === 'ACTIVE';
 
   return (
@@ -170,8 +173,9 @@ export default function CollectionsPage() {
       <header className="mb-6">
         <h1 className="font-display text-3xl text-white">Collection</h1>
         <p className="mt-1 max-w-xl text-sm text-slate-400">
-          Pick a registered customer, collect {MIN_AED}–{MAX_AED} AED (green),
-          and attach a note when you need one.
+          Collect from registered customers. Target is {money(MAX_AED)} — after
+          each collection the remaining balance updates (e.g. collect{' '}
+          {money(MIN_AED)} → remaining {money(MAX_AED - MIN_AED)}).
         </p>
       </header>
 
@@ -198,6 +202,7 @@ export default function CollectionsPage() {
                 <th className="px-4 py-3 font-medium">Customer</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Collected</th>
+                <th className="px-4 py-3 font-medium">Remaining</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
@@ -206,6 +211,10 @@ export default function CollectionsPage() {
                 const rowCollected = Number(row.loan?.amountCollected || 0);
                 const rowPrincipal = Number(
                   row.loan?.principalAmount || MAX_AED,
+                );
+                const rowRemaining = Number(
+                  row.loan?.remainingAmount ??
+                    Math.max(rowPrincipal - rowCollected, 0),
                 );
                 const active = row.id === selectedId;
                 return (
@@ -227,6 +236,9 @@ export default function CollectionsPage() {
                     <td className="px-4 py-3 text-slate-300">{row.phone}</td>
                     <td className="px-4 py-3">
                       {money(rowCollected)} / {money(rowPrincipal)}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-amber-200">
+                      {money(rowRemaining)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -263,13 +275,46 @@ export default function CollectionsPage() {
                 <p className="text-xs text-slate-500">
                   {selected.customerCode} · {selected.phone}
                 </p>
-                <p className="mt-2 text-xs text-slate-400">
-                  Remaining {money(remaining)} · Collected {money(collected)} /{' '}
-                  {money(principal)}
-                </p>
+                <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-ink-950/80 p-3 text-center">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                      Target
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium text-white">
+                      {money(principal)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                      Collected
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium text-teal-200">
+                      {money(collected)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                      Remaining
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-amber-200">
+                      {money(remaining)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-teal-500 transition-all"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        principal > 0 ? (collected / principal) * 100 : 0,
+                      )}%`,
+                    }}
+                  />
+                </div>
                 <Link
                   href={`/customers/${selected.id}`}
-                  className="mt-1 inline-block text-xs text-teal-300 underline"
+                  className="mt-2 inline-block text-xs text-teal-300 underline"
                 >
                   Open customer
                 </Link>
