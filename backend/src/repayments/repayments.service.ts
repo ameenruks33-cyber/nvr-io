@@ -2,13 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -26,11 +27,13 @@ export interface RecordRepaymentInput {
  */
 @Injectable()
 export class RepaymentsService {
+  private readonly logger = new Logger(RepaymentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
-    private readonly config: ConfigService,
+    private readonly whatsapp: WhatsappService,
   ) {}
 
   async recordRepayment(input: RecordRepaymentInput) {
@@ -41,7 +44,9 @@ export class RepaymentsService {
     if (input.idempotencyKey) {
       const existing = await this.prisma.repayment.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
-        include: { loan: true },
+        include: {
+          loan: { include: { customer: true } },
+        },
       });
       if (existing) {
         return this.toResult(existing.loan, existing);
@@ -49,7 +54,10 @@ export class RepaymentsService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const loan = await tx.loan.findUnique({ where: { id: input.loanId } });
+      const loan = await tx.loan.findUnique({
+        where: { id: input.loanId },
+        include: { customer: true },
+      });
       if (!loan) throw new NotFoundException('Loan not found');
       if (loan.status === 'COMPLETED' || loan.status === 'CLOSED') {
         throw new ConflictException('Loan already completed');
@@ -89,9 +97,10 @@ export class RepaymentsService {
           completedAt: completed ? new Date() : null,
           closedAt: completed ? new Date() : null,
         },
+        include: { customer: true },
       });
 
-      return { loan: updatedLoan, repayment, completed };
+      return { loan: updatedLoan, repayment, completed, customer: loan.customer };
     });
 
     await this.audit.log({
@@ -106,10 +115,17 @@ export class RepaymentsService {
       },
     });
 
+    const amountPaid = Number(result.repayment.amount);
+    const remaining = Number(result.loan.remainingAmount);
+    const principal = Number(result.loan.principalAmount);
+
     if (result.completed) {
       await this.notifications.createLoanCompleted(
         result.loan.customerId,
         result.loan.id,
+        amountPaid,
+        remaining,
+        principal,
       );
       await this.audit.log({
         userId: input.collectorId,
@@ -121,11 +137,52 @@ export class RepaymentsService {
       await this.notifications.createRepaymentReceived(
         result.loan.customerId,
         result.loan.id,
-        input.amount,
+        amountPaid,
+        remaining,
+        principal,
       );
     }
 
-    return this.toResult(result.loan, result.repayment);
+    let whatsapp: {
+      sent: boolean;
+      deepLink: string | null;
+      error?: string;
+    } = { sent: false, deepLink: null };
+
+    try {
+      const wa = await this.whatsapp.sendCollectionReceipt({
+        customerName: result.customer.name,
+        phone: result.customer.phone,
+        amountPaid,
+        remaining,
+        principal,
+        receiptNumber: result.repayment.receiptNumber,
+        completed: result.completed,
+      });
+      whatsapp = {
+        sent: wa.sent,
+        deepLink: wa.deepLink,
+        error: wa.error,
+      };
+      if (wa.sent) {
+        await this.audit.log({
+          userId: input.collectorId,
+          action: 'WHATSAPP_RECEIPT_SENT',
+          recordType: 'repayment',
+          recordId: result.repayment.id,
+          metadata: { phoneDigits: wa.digits },
+        });
+      }
+    } catch (e) {
+      this.logger.warn(
+        `WhatsApp receipt skipped: ${e instanceof Error ? e.message : e}`,
+      );
+    }
+
+    return {
+      ...this.toResult(result.loan, result.repayment),
+      whatsapp,
+    };
   }
 
   async listForLoan(loanId: string) {

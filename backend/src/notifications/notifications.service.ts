@@ -5,14 +5,34 @@ import { PrismaService } from '../prisma/prisma.service';
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createLoanCompleted(customerId: string, loanId: string) {
+  async createLoanCompleted(
+    customerId: string,
+    loanId: string,
+    amountPaid?: number,
+    remaining?: number,
+    principal?: number,
+  ) {
+    const paid =
+      typeof amountPaid === 'number' ? `AED ${amountPaid.toFixed(2)}` : null;
+    const rem =
+      typeof remaining === 'number' && typeof principal === 'number'
+        ? `Remaining AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}`
+        : null;
+    const message = [
+      'CrickHerose: Target reached for this record.',
+      paid ? `Last payment ${paid}.` : null,
+      rem,
+      'WhatsApp receipt sent to customer when configured.',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
     return this.prisma.notification.create({
       data: {
         customerId,
         loanId,
         type: 'LOAN_COMPLETED',
-        message:
-          'NVR.io: Target reached for this record.',
+        message,
         status: 'SENT',
         sentAt: new Date(),
       },
@@ -23,13 +43,19 @@ export class NotificationsService {
     customerId: string,
     loanId: string,
     amount: number,
+    remaining?: number,
+    principal?: number,
   ) {
+    const rem =
+      typeof remaining === 'number' && typeof principal === 'number'
+        ? ` Remaining balance AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}.`
+        : '';
     return this.prisma.notification.create({
       data: {
         customerId,
         loanId,
         type: 'REPAYMENT_RECEIVED',
-        message: `NVR.io: Payment of AED ${amount.toFixed(2)} saved.`,
+        message: `CrickHerose: Payment of AED ${amount.toFixed(2)} saved.${rem}`,
         status: 'SENT',
         sentAt: new Date(),
       },

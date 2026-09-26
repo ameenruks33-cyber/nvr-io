@@ -408,6 +408,26 @@ export default function SettingsPage() {
         <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-ink-900/80 p-5">
           <div>
             <h2 className="text-lg font-medium text-white">
+              WhatsApp collection receipts
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              After each collection, CrickHerose sends a receipt with amount
+              paid and remaining balance to the customer’s phone. Set{' '}
+              <code className="text-slate-200">WHATSAPP_TOKEN</code> and{' '}
+              <code className="text-slate-200">WHATSAPP_PHONE_NUMBER_ID</code>{' '}
+              on the API (Meta WhatsApp Cloud API) for automatic delivery. Without
+              them, collectors get a WhatsApp deep link to send the same receipt
+              manually.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Super Admin: shared cloud gallery number password */}
+      {isSuperAdmin ? (
+        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-ink-900/80 p-5">
+          <div>
+            <h2 className="text-lg font-medium text-white">
               Cloud gallery number password
             </h2>
             <p className="mt-1 text-sm text-slate-400">

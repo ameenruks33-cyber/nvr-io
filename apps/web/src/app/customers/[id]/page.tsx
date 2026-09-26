@@ -45,6 +45,7 @@ export default function CustomerDetailPage() {
   const [notes, setNotes] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [waLink, setWaLink] = useState<string | null>(null);
 
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
@@ -64,11 +65,19 @@ export default function CustomerDetailPage() {
     if (!customer?.loans?.[0]) return;
     setMessage('');
     setError('');
+    setWaLink(null);
     try {
       const result = await api<{
         collected: number;
         remaining: number;
+        principal: number;
         receiptNumber: string;
+        amount: number;
+        whatsapp?: {
+          sent: boolean;
+          deepLink: string | null;
+          error?: string;
+        };
       }>(`/loans/${customer.loans[0].id}/repayments`, {
         method: 'POST',
         body: JSON.stringify({
@@ -77,8 +86,20 @@ export default function CustomerDetailPage() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
+      const target = Number(result.principal) || 1800;
+      const wa = result.whatsapp;
+      let waNote = '';
+      if (wa?.sent) {
+        waNote = ' WhatsApp receipt sent.';
+      } else if (wa?.deepLink) {
+        waNote = ' Open WhatsApp to send the receipt.';
+        setWaLink(wa.deepLink);
+        window.open(wa.deepLink, '_blank', 'noopener,noreferrer');
+      } else if (wa?.error) {
+        waNote = ` WhatsApp: ${wa.error}.`;
+      }
       setMessage(
-        `Saved ${result.receiptNumber}: ${money(result.collected)} collected`,
+        `Saved ${result.receiptNumber}: paid ${money(result.amount ?? amount)}. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setNotes('');
       setAmount('100');
@@ -231,6 +252,16 @@ export default function CustomerDetailPage() {
               )}
               {message ? (
                 <p className="mt-3 text-sm text-teal-200">{message}</p>
+              ) : null}
+              {waLink ? (
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-sm font-medium text-teal-300 underline"
+                >
+                  Send WhatsApp receipt
+                </a>
               ) : null}
               {error ? (
                 <p className="mt-3 text-sm text-red-300">{error}</p>
