@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
 import { APP_ICONS } from '@/lib/app-branding';
+import { APP_NAME } from '@/lib/brand';
+import { BrandWordmark } from '@/components/BrandWordmark';
 import { isMobileAppSurface } from '@/lib/mobile-app';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -93,14 +95,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
             src={APP_ICONS.logo}
-            alt="NVR.io"
+            alt={APP_NAME}
             width={40}
             height={40}
-            className="rounded-xl"
+            className="rounded-xl bg-white"
             unoptimized
             priority
           />
-          <span className="font-display text-xl text-white">NVR.io</span>
+          <BrandWordmark size="sm" onDark />
         </Link>
         <button
           type="button"
@@ -150,16 +152,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mb-8 flex items-center gap-3">
           <Image
             src={APP_ICONS.logo}
-            alt="NVR.io"
+            alt={APP_NAME}
             width={48}
             height={48}
-            className="rounded-xl"
+            className="rounded-xl bg-white"
             unoptimized
             priority
           />
           <div>
-            <p className="font-display text-2xl text-white">NVR.io</p>
-            <p className="text-xs text-slate-400">
+            <BrandWordmark size="md" onDark />
+            <p className="mt-1 text-xs text-slate-400">
               {isSuperAdmin ? 'Super admin' : 'Personal use'}
             </p>
           </div>

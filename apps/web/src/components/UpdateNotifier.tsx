@@ -260,7 +260,7 @@ export function UpdateNotifier() {
         <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-ink-950/95 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-200">
-              Allow notifications so new NVR.io updates are sent to this mobile
+              Allow notifications so new CrickHerose updates are sent to this mobile
               app.
             </p>
             <div className="flex gap-2">

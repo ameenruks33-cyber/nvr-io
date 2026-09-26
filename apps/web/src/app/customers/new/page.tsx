@@ -42,7 +42,7 @@ export default function NewCustomerPage() {
         stopCamera();
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error(
-            'Camera is not available. Open NVR.io in Chrome or Safari.',
+            'Camera is not available. Open CrickHerose in Chrome or Safari.',
           );
         }
         const stream = await navigator.mediaDevices.getUserMedia({

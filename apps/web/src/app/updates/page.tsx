@@ -73,10 +73,10 @@ export default function UpdatesPage() {
         <div className="flex flex-col items-center text-center">
           <Image
             src={newIcon}
-            alt="NVR.io app icon"
+            alt="CrickHerose app icon"
             width={96}
             height={96}
-            className="rounded-3xl shadow-lg shadow-red-500/30"
+            className="rounded-3xl bg-white p-1.5 shadow-lg shadow-red-500/30"
             unoptimized
             priority
           />
@@ -90,7 +90,7 @@ export default function UpdatesPage() {
         {iconRefreshed ? (
           <p className="mt-4 rounded-lg border border-teal-500/30 bg-teal-950/40 px-3 py-3 text-sm text-teal-100">
             Update applied — notification cleared. If your home screen still
-            shows the old icon, remove NVR.io and install again from{' '}
+            shows the old icon, remove CrickHerose and install again from{' '}
             <Link href="/app" className="underline">
               /app
             </Link>

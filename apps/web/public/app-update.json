@@ -1,9 +1,9 @@
 {
-  "app": "NVR.io",
-  "version": "1.1.26",
-  "build": "2026.09.26.14.21",
-  "releasedAt": "2026-09-26T14:21:33.024Z",
-  "title": "NVR.io update available",
+  "app": "CrickHerose",
+  "version": "1.1.27",
+  "build": "2026.09.26.14.28",
+  "releasedAt": "2026-09-26T14:28:28.925Z",
+  "title": "CrickHerose update available",
   "message": "Updates only on mobile app; clear notification after update",
   "notes": [
     "Updates only on mobile app; clear notification after update",
@@ -20,10 +20,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.26/favicon.png",
-    "icon192": "/icons/v1.1.26/icon-192.png",
-    "icon512": "/icons/v1.1.26/icon-512.png",
-    "apple": "/icons/v1.1.26/apple-touch-icon.png",
-    "logo": "/icons/v1.1.26/logo.jpg"
+    "favicon": "/icons/v1.1.27/favicon.png",
+    "icon192": "/icons/v1.1.27/icon-192.png",
+    "icon512": "/icons/v1.1.27/icon-512.png",
+    "apple": "/icons/v1.1.27/apple-touch-icon.png",
+    "logo": "/icons/v1.1.27/logo.jpg"
   }
 }

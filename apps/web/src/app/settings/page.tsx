@@ -520,7 +520,7 @@ export default function SettingsPage() {
 
       <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-white/10 bg-ink-900/70 p-5 text-sm text-slate-300">
         <p>
-          Install NVR.io from <strong className="text-white">/app</strong> for a
+          Install CrickHerose from <strong className="text-white">/app</strong> for a
           home-screen icon on your phone.
         </p>
         <p className="hidden md:block">

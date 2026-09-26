@@ -2,11 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { UpdateNotifier } from '@/components/UpdateNotifier';
 import { APP_ICONS, APP_THEME_COLOR } from '@/lib/app-branding';
+import { APP_NAME, APP_TAGLINE } from '@/lib/brand';
 
 export const metadata: Metadata = {
-  title: 'NVR.io',
-  description: 'NVR.io — personal records and payment tracking',
-  applicationName: 'NVR.io',
+  title: APP_NAME,
+  description: `${APP_NAME} — ${APP_TAGLINE}`,
+  applicationName: APP_NAME,
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'NVR.io',
+    title: APP_NAME,
   },
 };
 

@@ -2,7 +2,7 @@
   "name": "jithu-buy",
   "version": "1.0.0",
   "private": true,
-  "description": "NVR.io — personal records and payment tracking",
+  "description": "CrickHerose — personal records and payment tracking",
   "workspaces": [
     "apps/*",
     "backend",

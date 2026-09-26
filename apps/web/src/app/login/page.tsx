@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, setSession } from '@/lib/api';
 import { APP_ICONS } from '@/lib/app-branding';
+import { APP_NAME } from '@/lib/brand';
+import { BrandWordmark } from '@/components/BrandWordmark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,15 +58,17 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <Image
             src={APP_ICONS.logo}
-            alt="NVR.io"
+            alt={APP_NAME}
             width={112}
             height={112}
-            className="rounded-3xl shadow-lg shadow-red-500/25"
+            className="rounded-3xl bg-white p-2 shadow-lg shadow-red-500/25"
             unoptimized
             priority
           />
-          <p className="mt-4 font-display text-3xl text-white">NVR.io</p>
-          <p className="mt-1 text-sm text-slate-400">Secure staff login</p>
+          <div className="mt-4">
+            <BrandWordmark size="lg" onDark />
+          </div>
+          <p className="mt-2 text-sm text-slate-400">Secure staff login</p>
         </div>
 
         {showInstall ? (
@@ -72,7 +76,7 @@ export default function LoginPage() {
             href="/app"
             className="mt-6 flex w-full items-center justify-center rounded-lg border border-blue-400/40 bg-blue-600/20 px-4 py-3.5 text-center text-sm font-medium text-blue-100 hover:bg-blue-600/30"
           >
-            Install NVR.io on this phone
+            Install {APP_NAME} on this phone
           </Link>
         ) : null}
 
