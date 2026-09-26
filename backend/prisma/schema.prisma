@@ -202,6 +202,15 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+/// App-wide settings (gallery number password, etc.)
+model AppSetting {
+  id             String   @id @default("default")
+  galleryPinHash String?  @map("gallery_pin_hash")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
 /// Private in-app secret gallery — files live on the server only (never device Photos).
 model GalleryItem {
   id           String        @id @default(cuid())

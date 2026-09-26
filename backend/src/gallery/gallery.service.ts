@@ -1,13 +1,18 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { GalleryStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../storage/storage.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+
+const SETTINGS_ID = 'default';
 
 @Injectable()
 export class GalleryService {
@@ -16,6 +21,75 @@ export class GalleryService {
     private readonly audit: AuditService,
     private readonly storage: StorageService,
   ) {}
+
+  private async getSettings() {
+    return this.prisma.appSetting.upsert({
+      where: { id: SETTINGS_ID },
+      create: { id: SETTINGS_ID },
+      update: {},
+    });
+  }
+
+  async pinStatus() {
+    const s = await this.getSettings();
+    return {
+      pinSet: Boolean(s.galleryPinHash),
+    };
+  }
+
+  async setPin(pin: string, actor: AuthUser) {
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admin can set the gallery PIN');
+    }
+    const digits = String(pin || '').trim();
+    if (!/^\d{4,8}$/.test(digits)) {
+      throw new BadRequestException('PIN must be 4–8 digits');
+    }
+    const galleryPinHash = await argon2.hash(digits, {
+      type: argon2.argon2id,
+    });
+    await this.prisma.appSetting.upsert({
+      where: { id: SETTINGS_ID },
+      create: { id: SETTINGS_ID, galleryPinHash },
+      update: { galleryPinHash },
+    });
+    await this.audit.log({
+      userId: actor.id,
+      action: 'GALLERY_PIN_SET',
+      recordType: 'gallery',
+    });
+    return { ok: true, pinSet: true };
+  }
+
+  async unlock(pin: string, actor: AuthUser) {
+    const s = await this.getSettings();
+    if (!s.galleryPinHash) {
+      throw new BadRequestException(
+        'Gallery PIN is not set yet. Ask the super admin to set a number password.',
+      );
+    }
+    const digits = String(pin || '').trim();
+    if (!/^\d{4,8}$/.test(digits)) {
+      throw new UnauthorizedException('Invalid PIN');
+    }
+    const ok = await argon2.verify(s.galleryPinHash, digits);
+    if (!ok) throw new UnauthorizedException('Wrong gallery PIN');
+
+    await this.audit.log({
+      userId: actor.id,
+      action: 'GALLERY_UNLOCK',
+      recordType: 'gallery',
+    });
+
+    return {
+      ok: true,
+      unlockedAt: new Date().toISOString(),
+      // Client stores unlock for this browser session
+      unlockToken: Buffer.from(
+        `${actor.id}:${Date.now()}:gallery`,
+      ).toString('base64url'),
+    };
+  }
 
   async upload(
     file: Express.Multer.File,
@@ -26,13 +100,14 @@ export class GalleryService {
       throw new BadRequestException('Image file is required');
     }
     if (!file.mimetype?.startsWith('image/')) {
-      throw new BadRequestException('Only images are allowed in the secret gallery');
+      throw new BadRequestException(
+        'Only images are allowed in the cloud gallery',
+      );
     }
 
-    const ext =
-      file.originalname?.includes('.')
-        ? `.${file.originalname.split('.').pop()?.toLowerCase()}`
-        : '.jpg';
+    const ext = file.originalname?.includes('.')
+      ? `.${file.originalname.split('.').pop()?.toLowerCase()}`
+      : '.jpg';
     const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.heic'].includes(ext)
       ? ext === '.jpeg'
         ? '.jpg'
@@ -68,20 +143,25 @@ export class GalleryService {
       recordId: item.id,
     });
 
+    // Notify shared cloud feed (admin + users see in Notes)
+    await this.prisma.notification.create({
+      data: {
+        type: 'SYSTEM',
+        message: `Cloud gallery: ${user.name} uploaded a photo${
+          item.caption ? ` — ${item.caption}` : ''
+        }. Waiting for verification.`,
+        status: 'SENT',
+        sentAt: new Date(),
+      },
+    });
+
     return item;
   }
 
-  list(status?: GalleryStatus, user?: AuthUser) {
-    const where: { status?: GalleryStatus; uploadedById?: string } = {};
+  /** Shared cloud gallery — all staff can read; filter by status for verification. */
+  list(status?: GalleryStatus, _user?: AuthUser) {
+    const where: { status?: GalleryStatus } = {};
     if (status) where.status = status;
-
-    // Collectors see their uploads; admins see all
-    if (
-      user &&
-      user.role === UserRole.COLLECTOR
-    ) {
-      where.uploadedById = user.id;
-    }
 
     return this.prisma.galleryItem.findMany({
       where,
@@ -117,7 +197,9 @@ export class GalleryService {
       throw new BadRequestException('Cannot set status back to PENDING');
     }
 
-    const existing = await this.prisma.galleryItem.findUnique({ where: { id } });
+    const existing = await this.prisma.galleryItem.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException('Gallery item not found');
 
     const item = await this.prisma.galleryItem.update({
@@ -136,9 +218,21 @@ export class GalleryService {
 
     await this.audit.log({
       userId: actor.id,
-      action: status === GalleryStatus.VERIFIED ? 'GALLERY_VERIFY' : 'GALLERY_REJECT',
+      action:
+        status === GalleryStatus.VERIFIED ? 'GALLERY_VERIFY' : 'GALLERY_REJECT',
       recordType: 'gallery',
       recordId: id,
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        type: 'SYSTEM',
+        message: `Cloud gallery photo ${
+          status === GalleryStatus.VERIFIED ? 'verified' : 'rejected'
+        } by ${actor.name}.`,
+        status: 'SENT',
+        sentAt: new Date(),
+      },
     });
 
     return item;

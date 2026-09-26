@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GalleryStatus, UserRole } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -36,6 +36,12 @@ class VerifyGalleryDto {
   note?: string;
 }
 
+class GalleryPinDto {
+  @IsString()
+  @Matches(/^\d{4,8}$/, { message: 'PIN must be 4–8 digits' })
+  pin!: string;
+}
+
 @Controller('gallery')
 export class GalleryController {
   constructor(
@@ -44,6 +50,24 @@ export class GalleryController {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  @Get('pin-status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  pinStatus() {
+    return this.gallery.pinStatus();
+  }
+
+  @Post('pin')
+  @Roles(UserRole.SUPER_ADMIN)
+  setPin(@Body() dto: GalleryPinDto, @CurrentUser() user: AuthUser) {
+    return this.gallery.setPin(dto.pin, user);
+  }
+
+  @Post('unlock')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  unlock(@Body() dto: GalleryPinDto, @CurrentUser() user: AuthUser) {
+    return this.gallery.unlock(dto.pin, user);
+  }
 
   @Post('upload')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
@@ -111,14 +135,7 @@ export class GalleryController {
     });
     if (!item) throw new NotFoundException('Gallery item not found');
 
-    // Collectors may only open their own uploads
-    if (
-      user.role === UserRole.COLLECTOR &&
-      item.uploadedById !== user.id
-    ) {
-      throw new NotFoundException('Gallery item not found');
-    }
-
+    // Shared cloud gallery — all authenticated staff can read
     const stream = await this.storage.openStream(item.storageKey);
 
     await this.audit.log({
@@ -130,7 +147,6 @@ export class GalleryController {
 
     res.set({
       'Content-Type': item.mimeType || 'image/jpeg',
-      // Inline view only — discourage download / Photos save prompts
       'Content-Disposition': 'inline',
       'Cache-Control': 'private, no-store, no-cache, must-revalidate',
       Pragma: 'no-cache',

@@ -54,6 +54,13 @@ export default function SettingsPage() {
   const [staffMsg, setStaffMsg] = useState('');
   const [busyId, setBusyId] = useState('');
 
+  const [galleryPinSet, setGalleryPinSet] = useState(false);
+  const [galleryPin, setGalleryPin] = useState('');
+  const [galleryPinConfirm, setGalleryPinConfirm] = useState('');
+  const [pinMsg, setPinMsg] = useState('');
+  const [pinErr, setPinErr] = useState('');
+  const [pinSaving, setPinSaving] = useState(false);
+
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
 
   const loadStaff = useCallback(async () => {
@@ -83,6 +90,44 @@ export default function SettingsPage() {
   useEffect(() => {
     if (isSuperAdmin) void loadStaff();
   }, [isSuperAdmin, loadStaff]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    api<{ pinSet: boolean }>('/gallery/pin-status')
+      .then((s) => setGalleryPinSet(s.pinSet))
+      .catch(() => setGalleryPinSet(false));
+  }, [isSuperAdmin]);
+
+  async function saveGalleryPin(e: FormEvent) {
+    e.preventDefault();
+    setPinErr('');
+    setPinMsg('');
+    if (!/^\d{4,8}$/.test(galleryPin)) {
+      setPinErr('PIN must be 4–8 digits');
+      return;
+    }
+    if (galleryPin !== galleryPinConfirm) {
+      setPinErr('PIN confirmation does not match');
+      return;
+    }
+    setPinSaving(true);
+    try {
+      await api('/gallery/pin', {
+        method: 'POST',
+        body: JSON.stringify({ pin: galleryPin }),
+      });
+      setGalleryPinSet(true);
+      setGalleryPin('');
+      setGalleryPinConfirm('');
+      setPinMsg(
+        'Cloud gallery number password saved. Admins and users unlock Gallery with this PIN.',
+      );
+    } catch (err) {
+      setPinErr(err instanceof Error ? err.message : 'Could not save PIN');
+    } finally {
+      setPinSaving(false);
+    }
+  }
 
   async function toggleAppAccess(user: StaffUser) {
     if (!isSuperAdmin || user.id === profile?.id) return;
@@ -304,6 +349,83 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      {/* Super Admin: shared cloud gallery number password */}
+      {isSuperAdmin ? (
+        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-ink-900/80 p-5">
+          <div>
+            <h2 className="text-lg font-medium text-white">
+              Cloud gallery number password
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Set a 4–8 digit PIN. Admins and users enter it to open the shared
+              cloud photo gallery (read, write, and previous-photo verification).
+              {galleryPinSet
+                ? ' A PIN is already set — saving a new one replaces it.'
+                : ' No PIN yet — gallery stays locked until you set one.'}
+            </p>
+          </div>
+          <form onSubmit={saveGalleryPin} className="space-y-3">
+            <label className="block text-sm">
+              <span className="text-slate-300">New number password</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,8}"
+                maxLength={8}
+                value={galleryPin}
+                onChange={(e) =>
+                  setGalleryPin(e.target.value.replace(/\D/g, '').slice(0, 8))
+                }
+                required
+                autoComplete="new-password"
+                placeholder="••••"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-300">Confirm number password</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,8}"
+                maxLength={8}
+                value={galleryPinConfirm}
+                onChange={(e) =>
+                  setGalleryPinConfirm(
+                    e.target.value.replace(/\D/g, '').slice(0, 8),
+                  )
+                }
+                required
+                autoComplete="new-password"
+                placeholder="••••"
+              />
+            </label>
+            {pinErr ? (
+              <p className="text-sm text-red-300" role="alert">
+                {pinErr}
+              </p>
+            ) : null}
+            {pinMsg ? (
+              <p className="text-sm text-teal-200" role="status">
+                {pinMsg}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={pinSaving || galleryPin.length < 4}
+              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+            >
+              {pinSaving
+                ? 'Saving…'
+                : galleryPinSet
+                  ? 'Update gallery PIN'
+                  : 'Set gallery PIN'}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       {/* Admin: disable / enable users for the app */}
       {isSuperAdmin ? (

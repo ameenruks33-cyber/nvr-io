@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession } from '@/lib/api';
 
@@ -15,6 +15,8 @@ type GalleryItem = {
   uploadedBy?: { id: string; name: string; email: string };
   verifiedBy?: { id: string; name: string; email: string } | null;
 };
+
+const UNLOCK_KEY = 'nvr_gallery_unlocked';
 
 function GalleryThumb({ id, alt }: { id: string; alt: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -35,7 +37,6 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
       })
       .then((blob) => {
         if (cancelled) return;
-        // Memory-only preview — never written to device storage
         objectUrl = URL.createObjectURL(blob);
         setSrc(objectUrl);
       })
@@ -70,8 +71,7 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
 }
 
 /**
- * NVR.io cloud gallery — camera → server only.
- * No device Photos picker, no local save, no Downloads.
+ * Shared cloud gallery — PIN unlock, all staff read/write, admin verifies.
  */
 export default function GalleryPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -79,7 +79,7 @@ export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [caption, setCaption] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED'>(
-    'ALL',
+    'PENDING',
   );
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
@@ -88,7 +88,14 @@ export default function GalleryPage() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraBusy, setCameraBusy] = useState(false);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+
+  const [pinSet, setPinSet] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [pin, setPin] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+
   const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -106,7 +113,7 @@ export default function GalleryPage() {
         stopCamera();
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error(
-            'Camera is not available in this browser. Open NVR.io in Chrome or Safari.',
+            'Camera is not available. Open NVR.io in Chrome or Safari.',
           );
         }
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -123,15 +130,10 @@ export default function GalleryPage() {
           await videoRef.current.play();
         }
         setCameraOn(true);
-        setStatusMsg(
-          'Live camera ready — photos go only to NVR.io cloud, never to phone Photos.',
-        );
       } catch (e) {
         setCameraOn(false);
         setError(
-          e instanceof Error
-            ? e.message
-            : 'Could not open camera. Allow camera permission for NVR.io only.',
+          e instanceof Error ? e.message : 'Could not open camera.',
         );
       } finally {
         setCameraBusy(false);
@@ -140,9 +142,7 @@ export default function GalleryPage() {
     [facing, stopCamera],
   );
 
-  useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   async function load() {
     try {
@@ -158,9 +158,38 @@ export default function GalleryPage() {
   useEffect(() => {
     const session = getSession();
     setRole(session?.user.role || '');
-    load();
+    if (sessionStorage.getItem(UNLOCK_KEY) === '1') {
+      setUnlocked(true);
+    }
+    api<{ pinSet: boolean }>('/gallery/pin-status')
+      .then((s) => setPinSet(s.pinSet))
+      .catch(() => setPinSet(false));
+  }, []);
+
+  useEffect(() => {
+    if (unlocked) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, unlocked]);
+
+  async function onUnlock(e: FormEvent) {
+    e.preventDefault();
+    setUnlocking(true);
+    setError('');
+    try {
+      await api('/gallery/unlock', {
+        method: 'POST',
+        body: JSON.stringify({ pin: pin.trim() }),
+      });
+      sessionStorage.setItem(UNLOCK_KEY, '1');
+      setUnlocked(true);
+      setPin('');
+      setStatusMsg('Gallery unlocked — shared cloud photos for admin and users.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wrong PIN');
+    } finally {
+      setUnlocking(false);
+    }
+  }
 
   async function captureAndUpload() {
     const video = videoRef.current;
@@ -189,7 +218,6 @@ export default function GalleryPage() {
         );
       });
 
-      // Upload straight to cloud — never write blob to device storage / Photos
       const fd = new FormData();
       fd.append('file', blob, `nvr-cloud-${Date.now()}.jpg`);
       if (caption.trim()) fd.append('caption', caption.trim());
@@ -200,7 +228,10 @@ export default function GalleryPage() {
       });
 
       setCaption('');
-      setStatusMsg('Saved to NVR.io cloud gallery only. Not on this device.');
+      setStatusMsg(
+        'Saved to shared cloud gallery. Admins and users can view it; pending verification.',
+      );
+      setFilter('PENDING');
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Cloud upload failed');
@@ -215,10 +246,77 @@ export default function GalleryPage() {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
+      setStatusMsg(
+        status === 'VERIFIED'
+          ? 'Photo verified for everyone.'
+          : 'Photo rejected.',
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
     }
+  }
+
+  function lockGallery() {
+    sessionStorage.removeItem(UNLOCK_KEY);
+    setUnlocked(false);
+    stopCamera();
+  }
+
+  if (!unlocked) {
+    return (
+      <AppShell>
+        <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
+        <p className="mt-2 max-w-lg text-sm text-slate-400">
+          Enter the number password to open cloud photos. Admins and users both
+          unlock with the same PIN, then can view and add photos.
+        </p>
+
+        {!pinSet ? (
+          <p className="mt-6 max-w-md rounded-2xl border border-amber-500/30 bg-amber-950/30 p-4 text-sm text-amber-100">
+            Gallery PIN is not set yet.
+            {isSuperAdmin
+              ? ' Open Settings and set a 4–8 digit number password.'
+              : ' Ask the super admin to set the gallery number password in Settings.'}
+          </p>
+        ) : (
+          <form
+            onSubmit={onUnlock}
+            className="mt-6 max-w-sm space-y-4 rounded-2xl border border-white/10 bg-ink-900/90 p-5"
+          >
+            <label className="block text-sm">
+              <span className="text-slate-300">Number password (PIN)</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.4em] outline-none ring-blue-500 focus:ring-2"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,8}"
+                maxLength={8}
+                value={pin}
+                onChange={(e) =>
+                  setPin(e.target.value.replace(/\D/g, '').slice(0, 8))
+                }
+                required
+                autoComplete="one-time-code"
+                placeholder="••••"
+              />
+            </label>
+            {error ? (
+              <p className="text-sm text-red-300" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={unlocking || pin.length < 4}
+              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+            >
+              {unlocking ? 'Unlocking…' : 'Unlock gallery'}
+            </button>
+          </form>
+        )}
+      </AppShell>
+    );
   }
 
   return (
@@ -227,12 +325,17 @@ export default function GalleryPage() {
         <div>
           <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
           <p className="mt-1 max-w-xl text-sm text-slate-400">
-            Private NVR.io storage only. This gallery does{' '}
-            <strong className="text-slate-200">not</strong> open your phone
-            Photos, does not save to device storage, and does not sync with the
-            device gallery — camera capture uploads straight to the cloud.
+            Shared cloud photos for admin and users. Capture new photos or
+            verify previous pending ones.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={lockGallery}
+          className="text-xs text-slate-500 underline hover:text-slate-300"
+        >
+          Lock gallery
+        </button>
       </div>
 
       <div className="mt-6 space-y-4 rounded-2xl border border-blue-500/20 bg-ink-900/80 p-4">
@@ -276,7 +379,7 @@ export default function GalleryPage() {
               ? 'Opening camera…'
               : cameraOn
                 ? 'Restart camera'
-                : 'Open in-app camera'}
+                : 'Open camera'}
           </button>
           <button
             type="button"
@@ -284,7 +387,7 @@ export default function GalleryPage() {
             onClick={() => void captureAndUpload()}
             className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
           >
-            {uploading ? 'Uploading to cloud…' : 'Capture → cloud'}
+            {uploading ? 'Uploading…' : 'Capture → cloud'}
           </button>
           <button
             type="button"
@@ -296,7 +399,7 @@ export default function GalleryPage() {
             }}
             className="rounded-xl border border-white/15 px-4 py-3.5 text-slate-200 hover:bg-white/5 disabled:opacity-60"
           >
-            Flip camera ({facing === 'environment' ? 'rear' : 'front'})
+            Flip camera
           </button>
         </div>
 
@@ -324,7 +427,14 @@ export default function GalleryPage() {
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
-          {(['ALL', 'PENDING', 'VERIFIED', 'REJECTED'] as const).map((f) => (
+          {(
+            [
+              ['PENDING', 'Previous / pending'],
+              ['VERIFIED', 'Verified'],
+              ['REJECTED', 'Rejected'],
+              ['ALL', 'All'],
+            ] as const
+          ).map(([f, label]) => (
             <button
               key={f}
               type="button"
@@ -335,11 +445,11 @@ export default function GalleryPage() {
                   : 'border border-white/10 text-slate-400'
               }`}
             >
-              {f}
+              {label}
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500">Stored in NVR.io cloud</p>
+        <p className="text-xs text-slate-500">Shared cloud · admin + users</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -348,7 +458,10 @@ export default function GalleryPage() {
             key={item.id}
             className="overflow-hidden rounded-2xl border border-white/10 bg-ink-900/70"
           >
-            <GalleryThumb id={item.id} alt={item.caption || 'Cloud gallery item'} />
+            <GalleryThumb
+              id={item.id}
+              alt={item.caption || 'Cloud gallery item'}
+            />
             <div className="space-y-1 p-3 text-xs">
               <p className="truncate text-sm text-white">
                 {item.caption || 'Untitled'}
@@ -382,8 +495,8 @@ export default function GalleryPage() {
 
       {!items.length ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          Cloud gallery is empty. Open the in-app camera and capture — nothing
-          is stored on this phone.
+          No photos in this filter. Capture one above — it goes to the shared
+          cloud for admin and users.
         </p>
       ) : null}
     </AppShell>
