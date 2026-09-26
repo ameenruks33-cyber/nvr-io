@@ -20,8 +20,9 @@
     "cloud:setup": "node scripts/setup-cloud.mjs",
     "cloud:deploy:web": "npx vercel deploy --prod --cwd apps/web",
     "cloud:deploy:api": "npx vercel deploy --prod --cwd backend",
-    "build:web": "npm run build -w @jithu-buy/web",
-    "ship": "node scripts/auto-ship.cjs"
+    "build:web": "node scripts/bump-app-update.cjs && npm run build -w @jithu-buy/web",
+    "ship": "node scripts/bump-app-update.cjs && node scripts/auto-ship.cjs",
+    "bump:update": "node scripts/bump-app-update.cjs"
   },
   "engines": {
     "node": ">=20"

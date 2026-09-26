@@ -52,9 +52,18 @@ See `infrastructure/cloudflare/README.md`:
 
 CDN content refreshes automatically when Vercel publishes a new deployment.
 
-## Manual deploy (emergency only)
+## App updates (installed devices)
+
+Update file: `apps/web/public/app-update.json` (served as `/app-update.json`)
+
+- Every `npm run ship` / `npm run build:web` bumps the version automatically  
+- Installed PWAs check the file every minute (and on app open)  
+- Banner appears at the top → **Update now**  
+- Optional system notification if the user allowed notifications on `/app` or `/updates`  
+
+Manual bump:
 
 ```bash
-npm run cloud:deploy:web
-npm run cloud:deploy:api
+npm run bump:update -- "Fixed gallery upload"
+npm run ship
 ```

@@ -17,6 +17,7 @@ const links = [
   { href: '/users', label: 'Users', desktopOnly: true },
   { href: '/audit', label: 'Activity', desktopOnly: true },
   { href: '/settings', label: 'Settings' },
+  { href: '/updates', label: 'Updates' },
   { href: '/app', label: 'Install' },
 ];
 

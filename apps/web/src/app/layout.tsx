@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { UpdateNotifier } from '@/components/UpdateNotifier';
 
 export const metadata: Metadata = {
   title: 'NVR.io',
@@ -48,6 +49,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-ink-950 font-sans text-slate-100 antialiased">
+        <UpdateNotifier />
         {children}
       </body>
     </html>

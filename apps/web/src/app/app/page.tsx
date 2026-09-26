@@ -81,6 +81,31 @@ export default function InstallAppPage() {
             {canInstall ? 'Install NVR.io (ask permission)' : 'Install NVR.io'}
           </button>
 
+          <button
+            type="button"
+            onClick={() => {
+              if ('Notification' in window) {
+                void Notification.requestPermission().then((p) =>
+                  setStatus(
+                    p === 'granted'
+                      ? 'Update notifications enabled for this device.'
+                      : 'Notifications were not enabled.',
+                  ),
+                );
+              }
+            }}
+            className="w-full rounded-lg border border-white/15 px-4 py-3 text-sm text-slate-200 hover:bg-white/5"
+          >
+            Allow update notifications
+          </button>
+
+          <Link
+            href="/updates"
+            className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
+          >
+            Open update file / check for updates
+          </Link>
+
           <Link
             href="/login"
             className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
@@ -98,8 +123,8 @@ export default function InstallAppPage() {
         <ul className="mt-8 space-y-2 text-sm text-slate-400">
           <li>Android Chrome: tap Install when prompted</li>
           <li>iPhone Safari: Share → Add to Home Screen</li>
+          <li>Allow notifications to get update alerts on this device</li>
           <li>Same login on web and installed app</li>
-          <li>Change name/password anytime in Settings</li>
           <li>Records stay on the NVR.io server</li>
         </ul>
       </div>
