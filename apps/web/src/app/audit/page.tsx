@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api } from '@/lib/api';
 
 type Row = {
@@ -26,6 +27,7 @@ export default function AuditPage() {
 
   return (
     <AppShell>
+      <SuperAdminOnly>
       <h1 className="mb-6 font-display text-3xl text-white">Audit log</h1>
       {error ? <p className="text-red-300">{error}</p> : null}
       <ul className="space-y-2 text-sm">
@@ -51,6 +53,7 @@ export default function AuditPage() {
           </li>
         ))}
       </ul>
+      </SuperAdminOnly>
     </AppShell>
   );
 }

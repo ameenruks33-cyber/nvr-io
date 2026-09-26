@@ -8,7 +8,7 @@ export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN)
   list(@Query('limit') limit?: string) {
     return this.audit.findAll(limit ? Number(limit) : 100);
   }

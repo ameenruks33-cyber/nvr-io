@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
+import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
 
 type Profile = {
@@ -53,11 +54,10 @@ export default function SettingsPage() {
   const [staffMsg, setStaffMsg] = useState('');
   const [busyId, setBusyId] = useState('');
 
-  const isAdmin =
-    profile?.role === 'SUPER_ADMIN' || profile?.role === 'ADMIN';
+  const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
 
   const loadStaff = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     try {
       const rows = await api<StaffUser[]>('/users');
       setStaff(rows);
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     } catch (e) {
       setStaffErr(e instanceof Error ? e.message : 'Could not load users');
     }
-  }, [isAdmin]);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     api<Profile>('/auth/me')
@@ -81,12 +81,11 @@ export default function SettingsPage() {
   }, [router]);
 
   useEffect(() => {
-    if (isAdmin) void loadStaff();
-  }, [isAdmin, loadStaff]);
+    if (isSuperAdmin) void loadStaff();
+  }, [isSuperAdmin, loadStaff]);
 
   async function toggleAppAccess(user: StaffUser) {
-    if (!isAdmin || user.id === profile?.id) return;
-    if (profile?.role === 'ADMIN' && user.role === 'SUPER_ADMIN') return;
+    if (!isSuperAdmin || user.id === profile?.id) return;
 
     setBusyId(user.id);
     setStaffErr('');
@@ -182,6 +181,7 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
+      <SuperAdminOnly>
       <h1 className="font-display text-3xl text-white">Settings</h1>
 
       {/* Mobile app: no username/password change */}
@@ -306,7 +306,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Admin: disable / enable users for the app */}
-      {isAdmin ? (
+      {isSuperAdmin ? (
         <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-amber-500/25 bg-ink-900/80 p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -338,8 +338,7 @@ export default function SettingsPage() {
           <ul className="divide-y divide-white/5 rounded-xl border border-white/10">
             {staff.map((user) => {
               const isMe = user.id === profile?.id;
-              const blockedAdmin =
-                profile?.role === 'ADMIN' && user.role === 'SUPER_ADMIN';
+              const blockedAdmin = false;
               const canToggle = !isMe && !blockedAdmin;
 
               return (
@@ -408,6 +407,7 @@ export default function SettingsPage() {
           option is not available in the mobile app.
         </p>
       </div>
+      </SuperAdminOnly>
     </AppShell>
   );
 }

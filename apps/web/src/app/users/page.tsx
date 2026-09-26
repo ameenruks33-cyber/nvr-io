@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, getSession } from '@/lib/api';
 
 type User = {
@@ -45,9 +46,8 @@ export default function UsersPage() {
   const [clearing, setClearing] = useState(false);
   const [isDesktopWebsite, setIsDesktopWebsite] = useState(false);
 
-  const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
-  const roleOptions =
-    role === 'SUPER_ADMIN' ? ROLE_OPTIONS_SUPER : ROLE_OPTIONS_ADMIN;
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const roleOptions = ROLE_OPTIONS_SUPER;
 
   const load = useCallback(async () => {
     try {
@@ -74,7 +74,7 @@ export default function UsersPage() {
 
   async function createUser(e: FormEvent) {
     e.preventDefault();
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     setCreating(true);
     setError('');
     setMsg('');
@@ -104,7 +104,7 @@ export default function UsersPage() {
   }
 
   async function setRestricted(user: User, restrict: boolean) {
-    if (!isAdmin || user.id === myId) return;
+    if (!isSuperAdmin || user.id === myId) return;
     setBusyId(user.id);
     setError('');
     setMsg('');
@@ -126,7 +126,7 @@ export default function UsersPage() {
   }
 
   async function changeRole(user: User, nextRole: string) {
-    if (!isAdmin || user.id === myId) return;
+    if (!isSuperAdmin || user.id === myId) return;
     setBusyId(user.id);
     setError('');
     setMsg('');
@@ -169,25 +169,14 @@ export default function UsersPage() {
   }
 
   function canManage(user: User) {
-    if (!isAdmin) return false;
+    if (!isSuperAdmin) return false;
     if (user.id === myId) return false;
-    if (role === 'ADMIN' && user.role === 'SUPER_ADMIN') return false;
     return true;
-  }
-
-  if (!isAdmin && role) {
-    return (
-      <AppShell>
-        <h1 className="font-display text-3xl text-white">Users</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          Only admins can create or restrict users.
-        </p>
-      </AppShell>
-    );
   }
 
   return (
     <AppShell>
+      <SuperAdminOnly>
       <h1 className="mb-2 font-display text-3xl text-white">Users</h1>
       <p className="mb-6 text-sm text-slate-400">
         Create staff accounts and restrict access. Restricted users cannot sign
@@ -420,6 +409,7 @@ export default function UsersPage() {
           browser), not in the mobile app.
         </p>
       ) : null}
+      </SuperAdminOnly>
     </AppShell>
   );
 }

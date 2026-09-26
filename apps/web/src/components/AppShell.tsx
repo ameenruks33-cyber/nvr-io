@@ -5,9 +5,17 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
 import { APP_ICONS } from '@/lib/app-branding';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-const links = [
+type NavLink = {
+  href: string;
+  label: string;
+  desktopOnly?: boolean;
+  /** Only Super Admin sees this item */
+  superAdminOnly?: boolean;
+};
+
+const links: NavLink[] = [
   { href: '/dashboard', label: 'Home' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/customers', label: 'People' },
@@ -15,27 +23,47 @@ const links = [
   { href: '/repayments', label: 'Receipts' },
   { href: '/reports', label: 'Summary' },
   { href: '/notifications', label: 'Notes' },
-  { href: '/users', label: 'Users' },
-  { href: '/audit', label: 'Activity', desktopOnly: true },
-  { href: '/settings', label: 'Settings' },
+  { href: '/users', label: 'Users', superAdminOnly: true },
+  { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
+  { href: '/settings', label: 'Settings', superAdminOnly: true },
   { href: '/updates', label: 'Updates' },
   { href: '/app', label: 'Install' },
 ];
-
-const mobileLinks = [
-  { href: '/dashboard', label: 'Home' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/customers', label: 'People' },
-  { href: '/settings', label: 'Settings' },
-];
-
-const mobileMenuLinks = links.filter((l) => !('desktopOnly' in l && l.desktopOnly));
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [name, setName] = useState('');
+  const [role, setRole] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+
+  const visibleLinks = useMemo(
+    () =>
+      links.filter((link) => {
+        if (link.superAdminOnly && !isSuperAdmin) return false;
+        return true;
+      }),
+    [isSuperAdmin],
+  );
+
+  const mobileMenuLinks = useMemo(
+    () => visibleLinks.filter((l) => !l.desktopOnly),
+    [visibleLinks],
+  );
+
+  const mobileBottomLinks = useMemo(() => {
+    const base = [
+      { href: '/dashboard', label: 'Home' },
+      { href: '/gallery', label: 'Gallery' },
+      { href: '/customers', label: 'People' },
+    ];
+    if (isSuperAdmin) {
+      return [...base, { href: '/settings', label: 'Settings' }];
+    }
+    return [...base, { href: '/notifications', label: 'Notes' }];
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     const session = getSession();
@@ -44,6 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     setName(session.user.name);
+    setRole(session.user.role || '');
   }, [router, pathname]);
 
   function logout() {
@@ -123,11 +152,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <div>
             <p className="font-display text-2xl text-white">NVR.io</p>
-            <p className="text-xs text-slate-400">Personal use</p>
+            <p className="text-xs text-slate-400">
+              {isSuperAdmin ? 'Super admin' : 'Personal use'}
+            </p>
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
               <Link
@@ -160,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-950/95 px-2 py-2 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-lg justify-around">
-          {mobileLinks.map((link) => {
+          {mobileBottomLinks.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
               <Link
