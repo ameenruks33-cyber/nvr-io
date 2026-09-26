@@ -97,13 +97,15 @@ export function UpdateNotifier() {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: `nvr-update-${info.version}`,
-      renotify: true,
       data: { url: safeUpdatePath(info.updateUrl), version: info.version },
       requireInteraction: true,
-      actions: [
-        { action: 'update', title: 'Update now' },
-        { action: 'later', title: 'Later' },
-      ],
+      ...( {
+        renotify: true,
+        actions: [
+          { action: 'update', title: 'Update now' },
+          { action: 'later', title: 'Later' },
+        ],
+      } as NotificationOptions),
     });
   }, []);
 

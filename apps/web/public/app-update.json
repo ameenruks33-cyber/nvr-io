@@ -1,11 +1,12 @@
 {
   "app": "NVR.io",
-  "version": "1.1.5",
-  "build": "2026.09.26.10.31",
-  "releasedAt": "2026-09-26T10:31:32.693Z",
+  "version": "1.1.6",
+  "build": "2026.09.26.10.33",
+  "releasedAt": "2026-09-26T10:33:06.309Z",
   "title": "NVR.io update available",
   "message": "Auto update alerts for installed devices",
   "notes": [
+    "Auto update alerts for installed devices",
     "Auto update alerts for installed devices",
     "Cloud-only gallery — no device Photos or storage",
     "Clearer install steps on phone open",
