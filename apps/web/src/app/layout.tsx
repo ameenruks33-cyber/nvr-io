@@ -1,10 +1,31 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'NVR.io',
-  description: 'NVR.io — customer and repayment management',
+  description: 'NVR.io — personal records and payment tracking',
+  applicationName: 'NVR.io',
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'NVR.io',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1d4ed8',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

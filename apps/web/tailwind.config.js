@@ -11,8 +11,8 @@ module.exports = {
           700: '#243049',
         },
         accent: {
-          DEFAULT: '#0f766e',
-          soft: '#14b8a6',
+          DEFAULT: '#1d4ed8',
+          soft: '#3b82f6',
         },
         status: {
           active: '#b91c1c',

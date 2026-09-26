@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 type BeforeInstallPromptEvent = Event & {
@@ -16,8 +17,12 @@ export default function InstallAppPage() {
   const deferred = useRef<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [status, setStatus] = useState('');
+  const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
+    const ua = navigator.userAgent;
+    setIsIos(/iPad|iPhone|iPod/.test(ua));
+
     function onBeforeInstall(e: Event) {
       e.preventDefault();
       deferred.current = e as BeforeInstallPromptEvent;
@@ -31,7 +36,9 @@ export default function InstallAppPage() {
   async function installPwa() {
     if (!deferred.current) {
       setStatus(
-        'Use your browser menu: Add to Home Screen / Install app. Installation always needs your confirmation.',
+        isIos
+          ? 'On iPhone/iPad: tap Share → Add to Home Screen, then confirm.'
+          : 'Use your browser menu: Install app / Add to Home Screen. Installation always needs your confirmation.',
       );
       return;
     }
@@ -48,39 +55,38 @@ export default function InstallAppPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-ink-900/95 p-8 shadow-2xl">
-        <p className="font-display text-4xl text-white">NVR.io</p>
-        <p className="mt-2 text-sm text-slate-400">
-          Download and install with your permission. Opens as a normal app
-          icon.
-        </p>
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-ink-900/95 p-6 shadow-2xl sm:p-8">
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/logo.jpg"
+            alt="NVR.io"
+            width={128}
+            height={128}
+            className="rounded-3xl shadow-lg shadow-blue-500/25"
+            priority
+          />
+          <p className="mt-4 font-display text-4xl text-white">NVR.io</p>
+          <p className="mt-2 text-sm text-slate-400">
+            Install with your permission. Opens as a normal app icon on your
+            phone.
+          </p>
+        </div>
 
         <div className="mt-8 space-y-3">
           <button
             type="button"
             onClick={installPwa}
-            className="w-full rounded-lg bg-accent px-4 py-3 font-medium text-white hover:bg-teal-700"
+            className="w-full rounded-lg bg-blue-600 px-4 py-3.5 font-medium text-white hover:bg-blue-500"
           >
             {canInstall ? 'Install NVR.io (ask permission)' : 'Install NVR.io'}
           </button>
 
-          <a
-            href="https://play.google.com/store"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/login"
             className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
           >
-            Get Android app (Play Store — when published)
-          </a>
-
-          <a
-            href="https://apps.apple.com/"
-            target="_blank"
-            rel="noreferrer"
-            className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
-          >
-            Get iOS app (App Store — when published)
-          </a>
+            Open in browser / sign in
+          </Link>
         </div>
 
         {status ? (
@@ -90,21 +96,12 @@ export default function InstallAppPage() {
         ) : null}
 
         <ul className="mt-8 space-y-2 text-sm text-slate-400">
-          <li>Install only after you approve the system prompt</li>
-          <li>Normal visible app name: NVR.io</li>
-          <li>Sign in with your staff account after install</li>
-          <li>
-            Records are saved on the NVR.io server / website — not kept as a
-            local phone database
-          </li>
+          <li>Android Chrome: tap Install when prompted</li>
+          <li>iPhone Safari: Share → Add to Home Screen</li>
+          <li>Same login on web and installed app</li>
+          <li>Change name/password anytime in Settings</li>
+          <li>Records stay on the NVR.io server</li>
         </ul>
-
-        <Link
-          href="/login"
-          className="mt-6 inline-block text-sm text-teal-300 hover:underline"
-        >
-          Already installed? Sign in
-        </Link>
       </div>
     </div>
   );

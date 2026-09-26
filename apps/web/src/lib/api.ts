@@ -11,11 +11,17 @@ export type AuthSession = {
   };
 };
 
-const SESSION_KEY = 'jb_session';
+const SESSION_KEY = 'nvr_session';
+
+function storage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage;
+}
 
 export function getSession(): AuthSession | null {
-  if (typeof window === 'undefined') return null;
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const store = storage();
+  if (!store) return null;
+  const raw = store.getItem(SESSION_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as AuthSession;
@@ -25,11 +31,11 @@ export function getSession(): AuthSession | null {
 }
 
 export function setSession(session: AuthSession) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  storage()?.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
+  storage()?.removeItem(SESSION_KEY);
 }
 
 export async function api<T>(
@@ -63,7 +69,10 @@ export async function api<T>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || 'Request failed');
+    const message = Array.isArray(err.message)
+      ? err.message.join(', ')
+      : err.message || 'Request failed';
+    throw new Error(message);
   }
 
   if (res.status === 204) return undefined as T;

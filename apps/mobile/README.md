@@ -1,26 +1,39 @@
-# NVR.io Mobile (Phase 2)
+# NVR.io Mobile
 
-App display name: **NVR.io**
+App display name: **NVR.io**  
+Logo: `assets/logo.jpg` / `assets/icon.png`
 
-## Install (with user permission)
+## Fastest path (recommended)
 
-- Open the website `/app` and tap **Install NVR.io** (browser asks for permission), or
-- Install from Google Play / App Store when published
+1. Open **https://nvr-io-web.vercel.app/app** on your phone  
+2. Tap **Install NVR.io** (or Safari → Share → Add to Home Screen)  
+3. Sign in — same account as the website  
+4. Change name / email / password in **Settings**
 
-No silent install. No auto-hide. No dial-pad stealth activation.
+The installed PWA uses the same logo, blue theme, and mobile bottom navigation.
 
-## Access flow
+## Flutter native shell
 
-```text
-Open NVR.io (normal icon)
-  → Login / PIN / optional biometric
-  → App (all data saved on server / website)
+This folder wraps the live website in a WebView with the NVR.io splash logo.
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run
+# optional custom URL:
+flutter run --dart-define=NVR_APP_URL=https://nvr-io-web.vercel.app/login
 ```
 
-## Data storage
+Create Android/iOS projects once if missing:
 
-Sensitive and borrower records are stored on the **NVR.io backend** (same database as the website). The phone does not keep a permanent local customer/identity database; photos go to private server storage, not the device gallery.
+```bash
+flutter create . --project-name nvr_io --org io.nvr
+```
 
-## Screens (Flutter — when SDK available)
+Then set the launcher icon to `assets/icon.png` (e.g. with `flutter_launcher_icons`).
 
-Login · Dashboard · Registration · Repayments · Settings
+## Rules
+
+- Install only with user permission  
+- No silent / hidden install  
+- All records stay on the NVR.io server

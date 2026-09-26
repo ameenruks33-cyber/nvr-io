@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
 import { useEffect, useState } from 'react';
@@ -15,13 +16,21 @@ const links = [
   { href: '/users', label: 'Users' },
   { href: '/audit', label: 'Activity' },
   { href: '/settings', label: 'Settings' },
-  { href: '/app', label: 'Install app' },
+  { href: '/app', label: 'Install' },
+];
+
+const mobileLinks = [
+  { href: '/dashboard', label: 'Home' },
+  { href: '/customers', label: 'People' },
+  { href: '/repayments', label: 'Receipts' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [name, setName] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -30,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     setName(session.user.name);
-  }, [router]);
+  }, [router, pathname]);
 
   function logout() {
     clearSession();
@@ -38,11 +47,77 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-6 md:px-8">
+    <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-4 px-3 pb-24 pt-4 md:flex-row md:gap-6 md:px-8 md:pb-6 md:pt-6">
+      <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-ink-900/90 px-3 py-2 md:hidden">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <Image
+            src="/logo.jpg"
+            alt="NVR.io"
+            width={40}
+            height={40}
+            className="rounded-xl"
+            priority
+          />
+          <span className="font-display text-xl text-white">NVR.io</span>
+        </Link>
+        <button
+          type="button"
+          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-slate-200"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+        >
+          Menu
+        </button>
+      </header>
+
+      {menuOpen ? (
+        <nav className="rounded-2xl border border-white/10 bg-ink-900/95 p-3 md:hidden">
+          <div className="grid grid-cols-2 gap-1">
+            {links.map((link) => {
+              const active = pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`rounded-lg px-3 py-2.5 text-sm ${
+                    active
+                      ? 'bg-blue-600/25 text-blue-100'
+                      : 'text-slate-300 hover:bg-white/5'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+            <p className="truncate text-sm text-slate-300">{name}</p>
+            <button
+              type="button"
+              onClick={logout}
+              className="text-xs text-slate-400 hover:text-white"
+            >
+              Sign out
+            </button>
+          </div>
+        </nav>
+      ) : null}
+
       <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-white/10 bg-ink-900/80 p-4 md:flex">
-        <div className="mb-8">
-          <p className="font-display text-2xl text-white">NVR.io</p>
-          <p className="mt-1 text-xs text-slate-400">Personal use</p>
+        <div className="mb-8 flex items-center gap-3">
+          <Image
+            src="/logo.jpg"
+            alt="NVR.io"
+            width={48}
+            height={48}
+            className="rounded-xl"
+            priority
+          />
+          <div>
+            <p className="font-display text-2xl text-white">NVR.io</p>
+            <p className="text-xs text-slate-400">Personal use</p>
+          </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {links.map((link) => {
@@ -53,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={link.href}
                 className={`rounded-lg px-3 py-2 text-sm transition ${
                   active
-                    ? 'bg-accent/20 text-teal-200'
+                    ? 'bg-blue-600/25 text-blue-100'
                     : 'text-slate-300 hover:bg-white/5'
                 }`}
               >
@@ -73,7 +148,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
+
       <main className="min-w-0 flex-1">{children}</main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-950/95 px-2 py-2 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-lg justify-around">
+          {mobileLinks.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`min-w-[4.5rem] rounded-xl px-2 py-2 text-center text-xs ${
+                  active ? 'bg-blue-600/30 text-blue-100' : 'text-slate-400'
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

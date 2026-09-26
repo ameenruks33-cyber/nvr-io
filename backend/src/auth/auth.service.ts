@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +12,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/auth.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -54,6 +57,119 @@ export class AuthService {
     };
   }
 
+  async me(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: String(userId) },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid session');
+    }
+    return user;
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto, ip?: string) {
+    const safeUserId = String(userId);
+    if (!/^[a-zA-Z0-9_-]+$/.test(safeUserId)) {
+      throw new UnauthorizedException('Invalid session');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: safeUserId },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid session');
+    }
+
+    const changingEmail = Boolean(
+      dto.email && dto.email.toLowerCase() !== user.email,
+    );
+    const changingPassword = Boolean(dto.newPassword);
+    const changingName = Boolean(dto.name && dto.name.trim() !== user.name);
+
+    if (!changingEmail && !changingPassword && !changingName) {
+      throw new BadRequestException('Nothing to update');
+    }
+
+    if (changingEmail || changingPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Current password is required');
+      }
+      const valid = await argon2.verify(user.passwordHash, dto.currentPassword);
+      if (!valid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    }
+
+    const data: {
+      name?: string;
+      email?: string;
+      passwordHash?: string;
+    } = {};
+
+    if (changingName && dto.name) {
+      data.name = dto.name.trim();
+    }
+
+    if (changingEmail && dto.email) {
+      const email = dto.email.toLowerCase();
+      const taken = await this.prisma.user.findUnique({ where: { email } });
+      if (taken && taken.id !== safeUserId) {
+        throw new ConflictException('Email already in use');
+      }
+      data.email = email;
+    }
+
+    if (changingPassword && dto.newPassword) {
+      data.passwordHash = await argon2.hash(dto.newPassword, {
+        type: argon2.argon2id,
+      });
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: safeUserId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (changingPassword) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: safeUserId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    await this.audit.log({
+      userId: safeUserId,
+      action: 'PROFILE_UPDATE',
+      recordType: 'user',
+      recordId: safeUserId,
+      ipAddress: ip,
+      metadata: {
+        name: changingName,
+        email: changingEmail,
+        password: changingPassword,
+      },
+    });
+
+    return updated;
+  }
+
   async refresh(refreshToken: string) {
     const hash = this.hashToken(refreshToken);
     const stored = await this.prisma.refreshToken.findFirst({
@@ -80,7 +196,6 @@ export class AuthService {
   }
 
   async logout(userId: string, refreshToken?: string, ip?: string) {
-    // Cast to plain string to block object/operator injection into Prisma filters
     const safeUserId = String(userId);
     if (!/^[a-zA-Z0-9_-]+$/.test(safeUserId)) {
       throw new UnauthorizedException('Invalid session');

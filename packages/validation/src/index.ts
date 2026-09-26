@@ -35,7 +35,20 @@ export const createUserSchema = z.object({
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'COLLECTOR']),
 });
 
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(2).max(120).optional(),
+    email: z.string().email().optional(),
+    currentPassword: z.string().min(8).max(128).optional(),
+    newPassword: z.string().min(10).max(128).optional(),
+  })
+  .refine(
+    (v) => Boolean(v.name || v.email || v.newPassword),
+    'Provide a name, email, or new password',
+  );
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type CreateRepaymentInput = z.infer<typeof createRepaymentSchema>;
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
