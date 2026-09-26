@@ -125,10 +125,11 @@ export class GalleryService {
       'nvr-gallery',
     );
 
-    // Cap DB payload (~4MB) — typical camera JPEG is much smaller
     const maxDbBytes = 4 * 1024 * 1024;
     const imageBytes =
-      file.buffer.length <= maxDbBytes ? file.buffer : undefined;
+      file.buffer.length <= maxDbBytes
+        ? new Uint8Array(file.buffer)
+        : undefined;
 
     const item = await this.prisma.galleryItem.create({
       data: {
