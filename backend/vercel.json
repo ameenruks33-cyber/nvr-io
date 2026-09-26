@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "nvr-io-api",
+  "installCommand": "npm install && npx prisma generate",
   "builds": [
     {
       "src": "api/index.ts",

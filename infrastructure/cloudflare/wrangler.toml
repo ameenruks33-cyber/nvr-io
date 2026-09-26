@@ -1,6 +1,6 @@
 name = "nvr-io"
 compatibility_date = "2026-09-26"
-account_id = "" # filled by: npx wrangler whoami / login
+account_id = "5be1df0639fc9310e4a1f27f5da95400"
 
 # Cloudflare R2 — private photo/document storage (S3-compatible)
 [[r2_buckets]]
