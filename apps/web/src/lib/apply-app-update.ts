@@ -1,6 +1,7 @@
 'use client';
 
 import type { AppUpdateInfo } from '@/components/UpdateNotifier';
+import { clearUpdateNotifications } from '@/lib/mobile-app';
 
 const STORAGE_KEY = 'nvr_app_version';
 
@@ -28,8 +29,12 @@ function safePath(url?: string) {
 /** Hard-refresh icons + caches so installed devices pick up the new app icon. */
 export async function applyAppUpdate(
   info: AppUpdatePayload,
-  nextPath = '/updates?updated=1',
+  nextPath = '/dashboard?updated=1',
 ) {
+  // Clear system notification bar first
+  await clearUpdateNotifications(info.version);
+  await clearUpdateNotifications();
+
   const iconUrls = [
     safePath(info.icons?.favicon),
     safePath(info.icons?.icon192),
@@ -53,7 +58,6 @@ export async function applyAppUpdate(
     ),
   );
 
-  // Swap document icons immediately (browser tab / some launchers)
   const head = document.head;
   head
     .querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]')
@@ -80,6 +84,14 @@ export async function applyAppUpdate(
           type: 'ACK_UPDATE',
           version: info.version,
         });
+        try {
+          const notes = await reg.getNotifications?.();
+          notes?.forEach((n) => {
+            if (String(n.tag || '').startsWith('nvr-update-')) n.close();
+          });
+        } catch {
+          /* ignore */
+        }
         reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
         await reg.unregister();
       }),
@@ -96,6 +108,8 @@ export async function applyAppUpdate(
     sessionStorage.setItem('nvr_icon_updated', info.version);
   }
 
-  const target = nextPath.startsWith('/') ? nextPath : '/updates?updated=1';
-  window.location.replace(`${target}${target.includes('?') ? '&' : '?'}v=${info.version}`);
+  const target = nextPath.startsWith('/') ? nextPath : '/dashboard?updated=1';
+  window.location.replace(
+    `${target}${target.includes('?') ? '&' : '?'}v=${info.version}`,
+  );
 }

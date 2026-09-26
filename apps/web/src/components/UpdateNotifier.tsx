@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { applyAppUpdate } from '@/lib/apply-app-update';
+import {
+  clearUpdateNotifications,
+  isMobileAppSurface,
+} from '@/lib/mobile-app';
 
 export type AppUpdateInfo = {
   app: string;
@@ -63,7 +67,9 @@ function isInstalledPwa() {
   );
 }
 
+/** Update banners + push alerts — mobile app only, never desktop website. */
 export function UpdateNotifier() {
+  const [enabled, setEnabled] = useState(false);
   const [update, setUpdate] = useState<AppUpdateInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [askNotify, setAskNotify] = useState(false);
@@ -71,13 +77,15 @@ export function UpdateNotifier() {
   const applyUpdate = useCallback(async (info: AppUpdateInfo) => {
     setBusy(true);
     try {
-      await applyAppUpdate(info, safeUpdatePath(info.updateUrl) + '?updated=1');
+      await clearUpdateNotifications(info.version);
+      await applyAppUpdate(info, '/dashboard?updated=1');
     } finally {
       setBusy(false);
     }
   }, []);
 
   const maybeNotify = useCallback(async (info: AppUpdateInfo) => {
+    if (!isMobileAppSurface()) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     const icon = info.icons?.icon192 || '/icon-192.png';
@@ -97,7 +105,7 @@ export function UpdateNotifier() {
       tag: `nvr-update-${info.version}`,
       data: { url: safeUpdatePath(info.updateUrl), version: info.version },
       requireInteraction: true,
-      ...( {
+      ...({
         renotify: true,
         actions: [
           { action: 'update', title: 'Update now' },
@@ -108,6 +116,10 @@ export function UpdateNotifier() {
   }, []);
 
   const check = useCallback(async () => {
+    if (!isMobileAppSurface()) {
+      setUpdate(null);
+      return;
+    }
     try {
       const info = await fetchUpdateFile();
       if (!info?.version) return;
@@ -129,6 +141,7 @@ export function UpdateNotifier() {
         void maybeNotify(info);
       } else {
         setUpdate(null);
+        await clearUpdateNotifications(info.version);
       }
     } catch {
       /* offline */
@@ -136,6 +149,14 @@ export function UpdateNotifier() {
   }, [maybeNotify]);
 
   useEffect(() => {
+    const mobile = isMobileAppSurface();
+    setEnabled(mobile);
+    if (!mobile) {
+      setUpdate(null);
+      setAskNotify(false);
+      return;
+    }
+
     async function setup() {
       if (!('serviceWorker' in navigator)) {
         void check();
@@ -148,10 +169,12 @@ export function UpdateNotifier() {
         });
         await reg.update();
 
-        // Background periodic checks on installed Android/Chrome PWAs
         const anyReg = reg as ServiceWorkerRegistration & {
           periodicSync?: {
-            register: (tag: string, opts: { minInterval: number }) => Promise<void>;
+            register: (
+              tag: string,
+              opts: { minInterval: number },
+            ) => Promise<void>;
           };
         };
         if (anyReg.periodicSync) {
@@ -160,17 +183,19 @@ export function UpdateNotifier() {
               minInterval: 15 * 60 * 1000,
             });
           } catch {
-            /* not granted / unsupported */
+            /* ignore */
           }
         }
 
-        // Ask SW to check now
         reg.active?.postMessage({ type: 'CHECK_UPDATE' });
 
         reg.addEventListener('updatefound', () => {
           const worker = reg.installing;
           worker?.addEventListener('statechange', () => {
-            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            if (
+              worker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
               void check();
             }
           });
@@ -185,6 +210,7 @@ export function UpdateNotifier() {
     void setup();
 
     const onMessage = (event: MessageEvent) => {
+      if (!isMobileAppSurface()) return;
       if (event.data?.type === 'NVR_UPDATE_AVAILABLE' && event.data.update) {
         const info = event.data.update as AppUpdateInfo;
         setUpdate(info);
@@ -200,7 +226,6 @@ export function UpdateNotifier() {
       if (document.visibilityState === 'visible') void check();
     });
 
-    // Installed app: gently ask once for notification permission so updates auto-arrive
     if (
       isInstalledPwa() &&
       'Notification' in window &&
@@ -227,14 +252,16 @@ export function UpdateNotifier() {
     }
   }
 
+  if (!enabled) return null;
+
   return (
     <>
       {askNotify ? (
-        <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-ink-950/95 px-3 py-3 backdrop-blur sm:bottom-auto sm:top-0 sm:border-b sm:border-t-0">
+        <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-ink-950/95 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-200">
-              Allow notifications so new NVR.io updates are sent automatically to
-              this installed app.
+              Allow notifications so new NVR.io updates are sent to this mobile
+              app.
             </p>
             <div className="flex gap-2">
               <button

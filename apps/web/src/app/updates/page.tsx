@@ -3,19 +3,33 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { AppUpdateInfo } from '@/components/UpdateNotifier';
 import { applyAppUpdate } from '@/lib/apply-app-update';
 import { APP_ICONS } from '@/lib/app-branding';
+import {
+  clearUpdateNotifications,
+  isDesktopWebsite,
+  isMobileAppSurface,
+} from '@/lib/mobile-app';
 
 const STORAGE_KEY = 'nvr_app_version';
 
 export default function UpdatesPage() {
+  const router = useRouter();
   const [info, setInfo] = useState<AppUpdateInfo | null>(null);
   const [current, setCurrent] = useState('…');
   const [busy, setBusy] = useState(false);
   const [iconRefreshed, setIconRefreshed] = useState(false);
+  const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
+    // Desktop website: no update screen
+    if (isDesktopWebsite() || !isMobileAppSurface()) {
+      router.replace('/dashboard');
+      return;
+    }
+    setAllowed(true);
     setCurrent(localStorage.getItem(STORAGE_KEY) || 'not installed yet');
     if (sessionStorage.getItem('nvr_icon_updated')) {
       setIconRefreshed(true);
@@ -25,13 +39,14 @@ export default function UpdatesPage() {
       .then((r) => r.json())
       .then(setInfo)
       .catch(() => setInfo(null));
-  }, []);
+  }, [router]);
 
   async function applyUpdate() {
     if (!info) return;
     setBusy(true);
     try {
-      await applyAppUpdate(info, '/updates?updated=1');
+      await clearUpdateNotifications(info.version);
+      await applyAppUpdate(info, '/dashboard?updated=1');
     } finally {
       setBusy(false);
     }
@@ -40,6 +55,14 @@ export default function UpdatesPage() {
   async function enableNotifications() {
     if (!('Notification' in window)) return;
     await Notification.requestPermission();
+  }
+
+  if (!allowed) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
+        Updates are for the mobile app only…
+      </div>
+    );
   }
 
   const newIcon = info?.icons?.icon512 || APP_ICONS.icon512;
@@ -59,19 +82,19 @@ export default function UpdatesPage() {
           />
           <p className="mt-4 font-display text-3xl text-white">App updates</p>
           <p className="mt-2 text-sm text-slate-400">
-            Updates refresh the app and the icon. Tap Update now to replace the
-            old icon with the new one.
+            Mobile app only. Tap Update now — the notification bar alert will
+            close automatically.
           </p>
         </div>
 
         {iconRefreshed ? (
           <p className="mt-4 rounded-lg border border-teal-500/30 bg-teal-950/40 px-3 py-3 text-sm text-teal-100">
-            Update applied — new icon loaded. If your home screen still shows the
-            old icon, remove NVR.io and install again from{' '}
+            Update applied — notification cleared. If your home screen still
+            shows the old icon, remove NVR.io and install again from{' '}
             <Link href="/app" className="underline">
               /app
-            </Link>{' '}
-            (required on some iPhones).
+            </Link>
+            .
           </p>
         ) : null}
 
@@ -92,7 +115,7 @@ export default function UpdatesPage() {
 
         {info?.notes?.length ? (
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-300">
-            {info.notes.map((n) => (
+            {[...new Set(info.notes)].map((n) => (
               <li key={n}>{n}</li>
             ))}
           </ul>
@@ -105,7 +128,7 @@ export default function UpdatesPage() {
             onClick={() => void applyUpdate()}
             className="w-full rounded-lg bg-red-600 px-4 py-3 font-medium text-white hover:bg-red-500 disabled:opacity-60"
           >
-            {busy ? 'Updating icon & app…' : 'Update now (new icon)'}
+            {busy ? 'Updating…' : 'Update now'}
           </button>
           <button
             type="button"

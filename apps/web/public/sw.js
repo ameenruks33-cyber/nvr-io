@@ -1,5 +1,5 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'nvr-io-shell-v1-1-20';
+const CACHE = 'nvr-io-shell-v1-1-21';
 const PRECACHE = ['/', '/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
 const VERSION_STORE = 'nvr-sw-version';
@@ -203,7 +203,21 @@ self.addEventListener('message', (event) => {
     );
   }
   if (data.type === 'ACK_UPDATE' && data.version) {
-    event.waitUntil(writeStoredVersion(String(data.version)));
+    event.waitUntil(
+      (async () => {
+        await writeStoredVersion(String(data.version));
+        try {
+          const notes = await self.registration.getNotifications();
+          for (const n of notes) {
+            if (String(n.tag || '').startsWith('nvr-update-')) {
+              n.close();
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      })(),
+    );
   }
 });
 

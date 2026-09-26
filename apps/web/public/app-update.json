@@ -1,18 +1,18 @@
 {
   "app": "NVR.io",
-  "version": "1.1.20",
-  "build": "2026.09.26.13.23",
-  "releasedAt": "2026-09-26T13:23:07.059Z",
+  "version": "1.1.21",
+  "build": "2026.09.26.13.27",
+  "releasedAt": "2026-09-26T13:27:06.960Z",
   "title": "NVR.io update available",
-  "message": "Users, Activity, Settings — Super Admin only",
+  "message": "Updates only on mobile app; clear notification after update",
   "notes": [
+    "Updates only on mobile app; clear notification after update",
     "Users, Activity, Settings — Super Admin only",
     "Users, Activity, Settings — Super Admin only",
     "Hide gallery cloud-only banner",
     "Hide gallery cloud-only banner",
     "Remove empty gallery camera box",
     "Remove empty gallery camera box",
-    "Settings: disable or enable users for the app",
     "Settings: disable or enable users for the app"
   ],
   "minVersion": "1.0.0",
@@ -20,10 +20,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.20/favicon.png",
-    "icon192": "/icons/v1.1.20/icon-192.png",
-    "icon512": "/icons/v1.1.20/icon-512.png",
-    "apple": "/icons/v1.1.20/apple-touch-icon.png",
-    "logo": "/icons/v1.1.20/logo.jpg"
+    "favicon": "/icons/v1.1.21/favicon.png",
+    "icon192": "/icons/v1.1.21/icon-192.png",
+    "icon512": "/icons/v1.1.21/icon-512.png",
+    "apple": "/icons/v1.1.21/apple-touch-icon.png",
+    "logo": "/icons/v1.1.21/logo.jpg"
   }
 }

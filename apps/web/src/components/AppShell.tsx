@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
 import { APP_ICONS } from '@/lib/app-branding';
+import { isMobileAppSurface } from '@/lib/mobile-app';
 import { useEffect, useMemo, useState } from 'react';
 
 type NavLink = {
@@ -13,6 +14,8 @@ type NavLink = {
   desktopOnly?: boolean;
   /** Only Super Admin sees this item */
   superAdminOnly?: boolean;
+  /** Only mobile app / phone — hidden on desktop website */
+  mobileAppOnly?: boolean;
 };
 
 const links: NavLink[] = [
@@ -26,7 +29,7 @@ const links: NavLink[] = [
   { href: '/users', label: 'Users', superAdminOnly: true },
   { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
   { href: '/settings', label: 'Settings', superAdminOnly: true },
-  { href: '/updates', label: 'Updates' },
+  { href: '/updates', label: 'Updates', mobileAppOnly: true },
   { href: '/app', label: 'Install' },
 ];
 
@@ -36,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobileApp, setIsMobileApp] = useState(false);
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
 
@@ -43,9 +47,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () =>
       links.filter((link) => {
         if (link.superAdminOnly && !isSuperAdmin) return false;
+        if (link.mobileAppOnly && !isMobileApp) return false;
         return true;
       }),
-    [isSuperAdmin],
+    [isSuperAdmin, isMobileApp],
   );
 
   const mobileMenuLinks = useMemo(
@@ -66,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isSuperAdmin]);
 
   useEffect(() => {
+    setIsMobileApp(isMobileAppSurface());
     const session = getSession();
     if (!session) {
       router.replace('/login');
