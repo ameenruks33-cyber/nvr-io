@@ -45,19 +45,11 @@ export default function CustomersPage() {
 
   return (
     <AppShell>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl text-white">People</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Search by ID, name, or phone
-          </p>
-        </div>
-        <Link
-          href="/customers/new"
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
-        >
-          Add person
-        </Link>
+      <header className="mb-6">
+        <h1 className="font-display text-3xl text-white">People</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Search by ID, name, or phone
+        </p>
       </header>
 
       <form onSubmit={onSearch} className="mb-4 flex gap-2">
