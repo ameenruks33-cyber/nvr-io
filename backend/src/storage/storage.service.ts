@@ -24,8 +24,11 @@ export class StorageService implements OnModuleInit {
   onModuleInit() {
     const driver = (this.config.get('STORAGE_DRIVER') || 'local').toLowerCase();
     this.driver = driver === 'r2' || driver === 's3' ? 'r2' : 'local';
+    const configuredPath = this.config.get<string>('STORAGE_LOCAL_PATH');
+    const onServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
     this.localRoot =
-      this.config.get('STORAGE_LOCAL_PATH') || join(process.cwd(), 'uploads');
+      configuredPath ||
+      (onServerless ? join('/tmp', 'nvr-io-uploads') : join(process.cwd(), 'uploads'));
 
     if (this.driver === 'r2') {
       const accountId = this.config.getOrThrow<string>('R2_ACCOUNT_ID');
