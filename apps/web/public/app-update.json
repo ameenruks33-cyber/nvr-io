@@ -16,7 +16,7 @@
     "Remove empty gallery camera box"
   ],
   "minVersion": "1.0.0",
-  "force": false,
+  "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {

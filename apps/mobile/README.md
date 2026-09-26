@@ -8,7 +8,7 @@ Logo: `assets/logo.jpg` / `assets/icon.png`
 Open **Gallery** in the app / PWA:
 
 1. Tap **Open in-app camera** (live camera inside NVR.io — not the phone gallery)  
-2. Tap **Capture → cloud** — uploads straight to NVR.io server storage  
+2. Tap **Save Cloud** — uploads straight to NVR.io server storage
 3. Never opens device Photos / Files, and never saves into phone storage  
 4. Admins verify the same cloud items on the website (Verify / Reject)
 

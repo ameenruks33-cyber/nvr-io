@@ -331,7 +331,7 @@ export default function NewCustomerPage() {
               {cameraBusy
                 ? 'Opening…'
                 : cameraOn
-                  ? 'Restart camera'
+                  ? 'Restart Data Capture'
                   : 'Data Capture'}
             </button>
             <button
@@ -340,7 +340,7 @@ export default function NewCustomerPage() {
               onClick={() => void captureAndUploadToCloud()}
               className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
             >
-              {uploading ? 'Uploading…' : 'Save Cloud'}
+              {uploading ? 'Saving…' : 'Save Cloud'}
             </button>
             <button
               type="button"
