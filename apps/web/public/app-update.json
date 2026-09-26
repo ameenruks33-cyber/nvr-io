@@ -1,29 +1,29 @@
 {
   "app": "NVR.io",
-  "version": "1.1.17",
+  "version": "1.1.18",
   "build": "2026.09.26.13.19",
-  "releasedAt": "2026-09-26T13:19:26.611Z",
+  "releasedAt": "2026-09-26T13:19:34.937Z",
   "title": "NVR.io update available",
   "message": "Hide gallery cloud-only banner",
   "notes": [
+    "Hide gallery cloud-only banner",
     "Hide gallery cloud-only banner",
     "Remove empty gallery camera box",
     "Remove empty gallery camera box",
     "Settings: disable or enable users for the app",
     "Settings: disable or enable users for the app",
     "Admin can create users and restrict access",
-    "Admin can create users and restrict access",
-    "Home screen icon refreshes on update"
+    "Admin can create users and restrict access"
   ],
   "minVersion": "1.0.0",
   "force": false,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.17/favicon.png",
-    "icon192": "/icons/v1.1.17/icon-192.png",
-    "icon512": "/icons/v1.1.17/icon-512.png",
-    "apple": "/icons/v1.1.17/apple-touch-icon.png",
-    "logo": "/icons/v1.1.17/logo.jpg"
+    "favicon": "/icons/v1.1.18/favicon.png",
+    "icon192": "/icons/v1.1.18/icon-192.png",
+    "icon512": "/icons/v1.1.18/icon-512.png",
+    "apple": "/icons/v1.1.18/apple-touch-icon.png",
+    "logo": "/icons/v1.1.18/logo.jpg"
   }
 }
