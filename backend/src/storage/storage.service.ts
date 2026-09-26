@@ -53,8 +53,11 @@ export class StorageService implements OnModuleInit {
     buffer: Buffer,
     mimeType: string,
     ext = '.jpg',
+    namespace = 'nvr',
   ): Promise<string> {
-    const key = `${randomUUID()}${ext.startsWith('.') ? ext : `.${ext}`}`;
+    const safeNs = String(namespace || 'nvr').replace(/[^a-zA-Z0-9_-]/g, '');
+    const safeExt = ext.startsWith('.') ? ext : `.${ext}`;
+    const key = `${safeNs}-${randomUUID()}${safeExt}`;
     if (!/^[a-zA-Z0-9._-]+$/.test(key)) {
       throw new Error('Invalid generated storage key');
     }
@@ -66,6 +69,11 @@ export class StorageService implements OnModuleInit {
           Key: key,
           Body: buffer,
           ContentType: mimeType,
+          // Private object metadata — cloud gallery only
+          Metadata: {
+            'nvr-scope': 'cloud-gallery',
+            'nvr-device-sync': 'false',
+          },
         }),
       );
       return key;

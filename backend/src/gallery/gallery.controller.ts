@@ -17,7 +17,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { GalleryStatus, UserRole } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
-import { basename } from 'path';
 import { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
@@ -131,9 +130,13 @@ export class GalleryController {
 
     res.set({
       'Content-Type': item.mimeType || 'image/jpeg',
-      'Content-Disposition': `inline; filename="${basename(item.storageKey)}"`,
-      'Cache-Control': 'private, no-store',
+      // Inline view only — discourage download / Photos save prompts
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
       'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
+      'Cross-Origin-Resource-Policy': 'same-site',
     });
 
     return new StreamableFile(stream);

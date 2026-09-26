@@ -3,14 +3,14 @@
 App display name: **NVR.io**  
 Logo: `assets/logo.jpg` / `assets/icon.png`
 
-## Secret gallery (private — not device Photos)
+## Cloud gallery (separate from device Photos)
 
 Open **Gallery** in the app / PWA:
 
-1. Take a photo or pick an image  
-2. It uploads straight to the NVR.io server  
-3. It does **not** save into the phone Photos / Gallery app  
-4. Admins verify the same items on the **website** (Gallery → Verify / Reject)
+1. Tap **Open in-app camera** (live camera inside NVR.io — not the phone gallery)  
+2. Tap **Capture → cloud** — uploads straight to NVR.io server storage  
+3. Never opens device Photos / Files, and never saves into phone storage  
+4. Admins verify the same cloud items on the website (Verify / Reject)
 
 ## Fastest path
 
@@ -21,7 +21,8 @@ Open **Gallery** in the app / PWA:
 
 | Action | Mobile app | Website |
 |--------|------------|---------|
-| Secret gallery upload | Yes | Yes |
+| Cloud gallery capture | Yes (in-app camera) | Yes (in-app camera) |
+| Device Photos / Files picker | No | No |
 | Verify / reject gallery | Admin only | Admin only |
 | Change username / password | No | Settings |
 | Clear old database | No | Users (admin) |

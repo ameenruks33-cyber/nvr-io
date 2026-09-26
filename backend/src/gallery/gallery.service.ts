@@ -43,6 +43,7 @@ export class GalleryService {
       file.buffer,
       file.mimetype,
       safeExt,
+      'nvr-gallery',
     );
 
     const item = await this.prisma.galleryItem.create({
