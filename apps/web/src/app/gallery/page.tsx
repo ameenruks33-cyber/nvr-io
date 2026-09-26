@@ -282,13 +282,6 @@ export default function GalleryPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
-          <p className="mt-1 max-w-xl text-sm text-slate-400">
-            Watch cloud photos from{' '}
-            <Link href="/customers/new" className="text-teal-300 underline">
-              Add person
-            </Link>
-            . Delete any old photo you no longer need.
-          </p>
         </div>
         {pinSet ? (
           <button
