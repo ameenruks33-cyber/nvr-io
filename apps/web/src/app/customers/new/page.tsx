@@ -279,8 +279,8 @@ export default function NewCustomerPage() {
         <div className="space-y-3 text-sm">
           <span className="text-slate-300">Customer photo</span>
           <p className="text-xs text-slate-500">
-            Open camera here — Capture → cloud saves to the person and the
-            shared cloud gallery. Not the device Photos app.
+            Data Capture here — Save Cloud saves to the person and the shared
+            cloud gallery. Not the device Photos app.
           </p>
 
           <label className="block text-sm">
@@ -329,10 +329,10 @@ export default function NewCustomerPage() {
               className="rounded-xl bg-blue-600 px-4 py-3.5 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
             >
               {cameraBusy
-                ? 'Opening camera…'
+                ? 'Opening…'
                 : cameraOn
                   ? 'Restart camera'
-                  : 'Open camera'}
+                  : 'Data Capture'}
             </button>
             <button
               type="button"
@@ -340,7 +340,7 @@ export default function NewCustomerPage() {
               onClick={() => void captureAndUploadToCloud()}
               className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
             >
-              {uploading ? 'Uploading…' : 'Capture → cloud'}
+              {uploading ? 'Uploading…' : 'Save Cloud'}
             </button>
             <button
               type="button"
