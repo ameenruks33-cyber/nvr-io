@@ -73,7 +73,52 @@ export default function SettingsPage() {
   const [galleryPhotosMsg, setGalleryPhotosMsg] = useState('');
   const [deletingPhotoId, setDeletingPhotoId] = useState('');
 
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waAutoSend, setWaAutoSend] = useState(false);
+  const [waProvider, setWaProvider] = useState<'green-api' | 'meta'>(
+    'green-api',
+  );
+  const [waInstanceId, setWaInstanceId] = useState('');
+  const [waToken, setWaToken] = useState('');
+  const [waTokenSet, setWaTokenSet] = useState(false);
+  const [waApiUrl, setWaApiUrl] = useState('');
+  const [waTemplate, setWaTemplate] = useState('');
+  const [waTestPhone, setWaTestPhone] = useState('');
+  const [waMsg, setWaMsg] = useState('');
+  const [waErr, setWaErr] = useState('');
+  const [waSaving, setWaSaving] = useState(false);
+  const [waTesting, setWaTesting] = useState(false);
+
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
+
+  const loadWhatsapp = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    try {
+      const s = await api<{
+        autoSend: boolean;
+        provider: string | null;
+        settings: {
+          enabled: boolean;
+          provider: string;
+          instanceId: string;
+          tokenSet: boolean;
+          apiUrl: string;
+          templateName: string;
+        };
+      }>('/whatsapp/settings');
+      setWaAutoSend(Boolean(s.autoSend));
+      setWaEnabled(Boolean(s.settings?.enabled));
+      setWaProvider(
+        s.settings?.provider === 'meta' ? 'meta' : 'green-api',
+      );
+      setWaInstanceId(s.settings?.instanceId || '');
+      setWaTokenSet(Boolean(s.settings?.tokenSet));
+      setWaApiUrl(s.settings?.apiUrl || '');
+      setWaTemplate(s.settings?.templateName || '');
+    } catch {
+      setWaAutoSend(false);
+    }
+  }, [isSuperAdmin]);
 
   const loadStaff = useCallback(async () => {
     if (!isSuperAdmin) return;
@@ -116,8 +161,9 @@ export default function SettingsPage() {
     if (isSuperAdmin) {
       void loadStaff();
       void loadGalleryPhotos();
+      void loadWhatsapp();
     }
-  }, [isSuperAdmin, loadStaff, loadGalleryPhotos]);
+  }, [isSuperAdmin, loadStaff, loadGalleryPhotos, loadWhatsapp]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -179,6 +225,67 @@ export default function SettingsPage() {
       setPinErr(err instanceof Error ? err.message : 'Could not save PIN');
     } finally {
       setPinSaving(false);
+    }
+  }
+
+  async function saveWhatsapp(e: FormEvent) {
+    e.preventDefault();
+    setWaErr('');
+    setWaMsg('');
+    setWaSaving(true);
+    try {
+      const s = await api<{
+        autoSend: boolean;
+        settings: { tokenSet: boolean };
+      }>('/whatsapp/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          enabled: waEnabled,
+          provider: waProvider,
+          instanceId: waInstanceId,
+          token: waToken.trim() || undefined,
+          apiUrl: waApiUrl.trim() || undefined,
+          templateName: waTemplate.trim() || undefined,
+          templateLang: 'en',
+        }),
+      });
+      setWaAutoSend(Boolean(s.autoSend));
+      setWaTokenSet(Boolean(s.settings?.tokenSet));
+      setWaToken('');
+      setWaMsg(
+        s.autoSend
+          ? 'WhatsApp auto-send is ON. New collections will message customers automatically.'
+          : 'WhatsApp settings saved. Auto-send is still off.',
+      );
+    } catch (err) {
+      setWaErr(err instanceof Error ? err.message : 'Could not save WhatsApp');
+    } finally {
+      setWaSaving(false);
+    }
+  }
+
+  async function testWhatsapp() {
+    setWaErr('');
+    setWaMsg('');
+    if (!waTestPhone.trim()) {
+      setWaErr('Enter a test phone number first');
+      return;
+    }
+    setWaTesting(true);
+    try {
+      const r = await api<{ sent: boolean; error?: string }>('/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone: waTestPhone.trim() }),
+      });
+      if (r.sent) {
+        setWaMsg('Test receipt sent. Check WhatsApp on that phone.');
+      } else {
+        setWaErr(r.error || 'Test send failed');
+      }
+    } catch (err) {
+      setWaErr(err instanceof Error ? err.message : 'Test send failed');
+    } finally {
+      setWaTesting(false);
     }
   }
 
@@ -403,23 +510,148 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      {/* Super Admin: shared cloud gallery number password */}
+      {/* Super Admin: WhatsApp auto receipts */}
       {isSuperAdmin ? (
-        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-ink-900/80 p-5">
+        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-teal-500/25 bg-ink-900/80 p-5">
           <div>
             <h2 className="text-lg font-medium text-white">
-              WhatsApp collection receipts
+              WhatsApp auto receipts
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              After each collection, CrickHerose sends a receipt with amount
-              paid and remaining balance to the customer’s phone. Set{' '}
-              <code className="text-slate-200">WHATSAPP_TOKEN</code> and{' '}
-              <code className="text-slate-200">WHATSAPP_PHONE_NUMBER_ID</code>{' '}
-              on the API (Meta WhatsApp Cloud API) for automatic delivery. Without
-              them, collectors get a WhatsApp deep link to send the same receipt
-              manually.
+              When enabled, saving a collection automatically sends the receipt
+              (amount paid + remaining balance) to the registered customer’s
+              WhatsApp. Recommended: Green API — create an instance at{' '}
+              <a
+                href="https://console.green-api.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-teal-300 underline"
+              >
+                console.green-api.com
+              </a>
+              , scan the QR with your business WhatsApp, then paste Instance ID
+              and API token below.
             </p>
+            {waAutoSend ? (
+              <p className="mt-2 text-sm text-teal-200">
+                Auto-send is ON ({waProvider}).
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-amber-200">
+                Auto-send is OFF — receipts will not go out until you enable and
+                save credentials.
+              </p>
+            )}
           </div>
+          <form onSubmit={saveWhatsapp} className="space-y-3">
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={waEnabled}
+                onChange={(e) => setWaEnabled(e.target.checked)}
+              />
+              Enable automatic WhatsApp receipts
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-300">Provider</span>
+              <select
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                value={waProvider}
+                onChange={(e) =>
+                  setWaProvider(e.target.value as 'green-api' | 'meta')
+                }
+              >
+                <option value="green-api">Green API (recommended)</option>
+                <option value="meta">Meta WhatsApp Cloud API</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-300">
+                {waProvider === 'meta' ? 'Phone number ID' : 'Instance ID'}
+              </span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                value={waInstanceId}
+                onChange={(e) => setWaInstanceId(e.target.value)}
+                placeholder={
+                  waProvider === 'meta' ? 'Phone number ID' : 'idInstance'
+                }
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-300">
+                API token{waTokenSet ? ' (leave blank to keep current)' : ''}
+              </span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                type="password"
+                value={waToken}
+                onChange={(e) => setWaToken(e.target.value)}
+                placeholder={waTokenSet ? '••••••••' : 'apiTokenInstance'}
+                autoComplete="new-password"
+              />
+            </label>
+            {waProvider === 'green-api' ? (
+              <label className="block text-sm">
+                <span className="text-slate-300">API URL (optional)</span>
+                <input
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                  value={waApiUrl}
+                  onChange={(e) => setWaApiUrl(e.target.value)}
+                  placeholder="https://api.green-api.com"
+                />
+              </label>
+            ) : (
+              <label className="block text-sm">
+                <span className="text-slate-300">
+                  Template name (optional, for Meta)
+                </span>
+                <input
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                  value={waTemplate}
+                  onChange={(e) => setWaTemplate(e.target.value)}
+                  placeholder="collection_receipt"
+                />
+              </label>
+            )}
+            <label className="block text-sm">
+              <span className="text-slate-300">Test phone (optional)</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                value={waTestPhone}
+                onChange={(e) => setWaTestPhone(e.target.value)}
+                placeholder="05xxxxxxxx or 9715xxxxxxxx"
+              />
+            </label>
+            {waErr ? (
+              <p className="text-sm text-red-300" role="alert">
+                {waErr}
+              </p>
+            ) : null}
+            {waMsg ? (
+              <p className="text-sm text-teal-200" role="status">
+                {waMsg}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={waSaving}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-500 disabled:opacity-60"
+              >
+                {waSaving ? 'Saving…' : 'Save WhatsApp settings'}
+              </button>
+              <button
+                type="button"
+                disabled={waTesting}
+                onClick={() => void testWhatsapp()}
+                className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-200 hover:bg-white/5 disabled:opacity-60"
+              >
+                {waTesting ? 'Sending…' : 'Send test receipt'}
+              </button>
+            </div>
+          </form>
         </section>
       ) : null}
 

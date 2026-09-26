@@ -144,6 +144,7 @@ export default function CollectionsPage() {
         whatsapp?: {
           sent: boolean;
           deepLink: string | null;
+          configured?: boolean;
           error?: string;
         };
       }>(`/loans/${selected.loan.id}/repayments`, {
@@ -158,14 +159,15 @@ export default function CollectionsPage() {
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
-        waNote = ' WhatsApp receipt sent to customer.';
+        waNote =
+          ' WhatsApp receipt sent automatically to the customer.';
+      } else if (wa?.error) {
+        waNote = ` ${wa.error}`;
+        if (wa.deepLink) setWaLink(wa.deepLink);
       } else if (wa?.deepLink) {
         waNote =
-          ' Open WhatsApp to send the receipt (amount paid + remaining).';
+          ' WhatsApp auto-send is off — use the link to send manually, or enable it in Settings.';
         setWaLink(wa.deepLink);
-        window.open(wa.deepLink, '_blank', 'noopener,noreferrer');
-      } else if (wa?.error) {
-        waNote = ` WhatsApp: ${wa.error}.`;
       }
       setMessage(
         `Collected ${money(result.amount || amountNum)}. Remaining balance ${money(result.remaining)} of ${money(target)}.${waNote}`,

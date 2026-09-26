@@ -30,6 +30,25 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+    // WhatsApp auto-receipt settings on app_settings
+    const waCols = [
+      `ADD COLUMN IF NOT EXISTS "whatsapp_enabled" BOOLEAN NOT NULL DEFAULT false`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_provider" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_instance_id" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_token_encrypted" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_api_url" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_template_name" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "whatsapp_template_lang" TEXT`,
+    ];
+    for (const col of waCols) {
+      try {
+        await this.$executeRawUnsafe(
+          `ALTER TABLE "app_settings" ${col};`,
+        );
+      } catch {
+        // ignore if table not ready yet
+      }
+    }
   }
 
   async onModuleDestroy() {

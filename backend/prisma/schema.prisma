@@ -202,11 +202,18 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-/// App-wide settings (gallery number password, etc.)
+/// App-wide settings (gallery number password, WhatsApp auto-receipts, etc.)
 model AppSetting {
-  id             String   @id @default("default")
-  galleryPinHash String?  @map("gallery_pin_hash")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                      String   @id @default("default")
+  galleryPinHash          String?  @map("gallery_pin_hash")
+  whatsappEnabled         Boolean  @default(false) @map("whatsapp_enabled")
+  whatsappProvider        String?  @map("whatsapp_provider")
+  whatsappInstanceId      String?  @map("whatsapp_instance_id")
+  whatsappTokenEncrypted  String?  @map("whatsapp_token_encrypted")
+  whatsappApiUrl          String?  @map("whatsapp_api_url")
+  whatsappTemplateName    String?  @map("whatsapp_template_name")
+  whatsappTemplateLang    String?  @map("whatsapp_template_lang")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
 }

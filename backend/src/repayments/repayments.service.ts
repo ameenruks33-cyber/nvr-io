@@ -146,6 +146,8 @@ export class RepaymentsService {
     let whatsapp: {
       sent: boolean;
       deepLink: string | null;
+      configured?: boolean;
+      provider?: string;
       error?: string;
     } = { sent: false, deepLink: null };
 
@@ -162,6 +164,8 @@ export class RepaymentsService {
       whatsapp = {
         sent: wa.sent,
         deepLink: wa.deepLink,
+        configured: wa.configured,
+        provider: wa.provider,
         error: wa.error,
       };
       if (wa.sent) {
@@ -170,7 +174,28 @@ export class RepaymentsService {
           action: 'WHATSAPP_RECEIPT_SENT',
           recordType: 'repayment',
           recordId: result.repayment.id,
-          metadata: { phoneDigits: wa.digits },
+          metadata: { phoneDigits: wa.digits, provider: wa.provider },
+        });
+        await this.prisma.notification.create({
+          data: {
+            customerId: result.loan.customerId,
+            loanId: result.loan.id,
+            type: 'SYSTEM',
+            message: `WhatsApp receipt auto-sent: paid AED ${amountPaid.toFixed(2)}, remaining AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}.`,
+            status: 'SENT',
+            sentAt: new Date(),
+          },
+        });
+      } else if (wa.error) {
+        await this.prisma.notification.create({
+          data: {
+            customerId: result.loan.customerId,
+            loanId: result.loan.id,
+            type: 'SYSTEM',
+            message: `WhatsApp auto-send failed: ${wa.error}`,
+            status: 'FAILED',
+            sentAt: null,
+          },
         });
       }
     } catch (e) {

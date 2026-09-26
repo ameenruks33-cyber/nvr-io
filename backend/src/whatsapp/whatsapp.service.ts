@@ -1,5 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
+import { AuditService } from '../audit/audit.service';
+import { AuthUser } from '../auth/decorators/current-user.decorator';
 
 export type WhatsAppReceiptInput = {
   customerName: string;
@@ -16,14 +26,35 @@ export type WhatsAppSendResult = {
   deepLink: string | null;
   message: string;
   sent: boolean;
+  configured: boolean;
+  provider?: string;
   error?: string;
 };
+
+type ResolvedConfig = {
+  configured: boolean;
+  enabled: boolean;
+  provider: 'green-api' | 'meta' | null;
+  instanceId: string | null;
+  token: string | null;
+  apiUrl: string | null;
+  templateName: string | null;
+  templateLang: string;
+  source: 'settings' | 'env' | 'none';
+};
+
+const SETTINGS_ID = 'default';
 
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly crypto: FieldEncryptionService,
+    private readonly audit: AuditService,
+  ) {}
 
   /** Normalize to international digits (default UAE 971). */
   toDigits(phone: string, defaultCountry = '971'): string | null {
@@ -62,6 +93,107 @@ export class WhatsappService {
     return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
   }
 
+  async getPublicStatus() {
+    const cfg = await this.resolveConfig();
+    return {
+      enabled: cfg.enabled,
+      configured: cfg.configured,
+      provider: cfg.provider,
+      source: cfg.source,
+      instanceIdSet: Boolean(cfg.instanceId),
+      tokenSet: Boolean(cfg.token),
+      templateName: cfg.templateName,
+      autoSend: cfg.configured && cfg.enabled,
+    };
+  }
+
+  async getAdminStatus() {
+    const row = await this.prisma.appSetting.findUnique({
+      where: { id: SETTINGS_ID },
+    });
+    const cfg = await this.resolveConfig();
+    return {
+      ...cfg,
+      autoSend: cfg.configured && cfg.enabled,
+      settings: {
+        enabled: row?.whatsappEnabled ?? false,
+        provider: row?.whatsappProvider || 'green-api',
+        instanceId: row?.whatsappInstanceId || '',
+        tokenSet: Boolean(row?.whatsappTokenEncrypted),
+        apiUrl: row?.whatsappApiUrl || '',
+        templateName: row?.whatsappTemplateName || '',
+        templateLang: row?.whatsappTemplateLang || 'en',
+      },
+    };
+  }
+
+  async saveSettings(
+    input: {
+      enabled: boolean;
+      provider: 'green-api' | 'meta';
+      instanceId: string;
+      token?: string;
+      apiUrl?: string;
+      templateName?: string;
+      templateLang?: string;
+    },
+    actor: AuthUser,
+  ) {
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admin can configure WhatsApp');
+    }
+
+    const provider = input.provider === 'meta' ? 'meta' : 'green-api';
+    const instanceId = input.instanceId.trim();
+    const existing = await this.prisma.appSetting.findUnique({
+      where: { id: SETTINGS_ID },
+    });
+
+    let tokenEncrypted = existing?.whatsappTokenEncrypted || null;
+    if (input.token?.trim()) {
+      tokenEncrypted = this.crypto.encrypt(input.token.trim());
+    }
+
+    if (input.enabled && (!instanceId || !tokenEncrypted)) {
+      throw new BadRequestException(
+        'Instance ID and API token are required to enable auto-send',
+      );
+    }
+
+    await this.prisma.appSetting.upsert({
+      where: { id: SETTINGS_ID },
+      create: {
+        id: SETTINGS_ID,
+        whatsappEnabled: input.enabled,
+        whatsappProvider: provider,
+        whatsappInstanceId: instanceId || null,
+        whatsappTokenEncrypted: tokenEncrypted,
+        whatsappApiUrl: input.apiUrl?.trim() || null,
+        whatsappTemplateName: input.templateName?.trim() || null,
+        whatsappTemplateLang: input.templateLang?.trim() || 'en',
+      },
+      update: {
+        whatsappEnabled: input.enabled,
+        whatsappProvider: provider,
+        whatsappInstanceId: instanceId || null,
+        whatsappTokenEncrypted: tokenEncrypted,
+        whatsappApiUrl: input.apiUrl?.trim() || null,
+        whatsappTemplateName: input.templateName?.trim() || null,
+        whatsappTemplateLang: input.templateLang?.trim() || 'en',
+      },
+    });
+
+    await this.audit.log({
+      userId: actor.id,
+      action: 'WHATSAPP_SETTINGS_UPDATE',
+      recordType: 'app_settings',
+      recordId: SETTINGS_ID,
+      metadata: { enabled: input.enabled, provider },
+    });
+
+    return this.getAdminStatus();
+  }
+
   async sendCollectionReceipt(
     input: WhatsAppReceiptInput,
   ): Promise<WhatsAppSendResult> {
@@ -75,28 +207,188 @@ export class WhatsappService {
         deepLink: null,
         message,
         sent: false,
+        configured: false,
         error: 'Customer phone number is missing or invalid',
       };
     }
 
     const deepLink = this.deepLink(digits, message);
-    const token = this.config.get<string>('WHATSAPP_TOKEN')?.trim();
-    const phoneNumberId = this.config
-      .get<string>('WHATSAPP_PHONE_NUMBER_ID')
-      ?.trim();
+    const cfg = await this.resolveConfig();
 
-    if (!token || !phoneNumberId) {
+    if (!cfg.configured || !cfg.enabled) {
       this.logger.warn(
-        'WhatsApp Cloud API not configured — receipt deep link only',
+        'WhatsApp auto-send not configured — enable it in Settings',
       );
-      return { digits, deepLink, message, sent: false };
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: false,
+        configured: false,
+        error:
+          'WhatsApp auto-send is off. Super admin: enable it in Settings.',
+      };
     }
 
+    if (cfg.provider === 'green-api') {
+      return this.sendViaGreenApi(cfg, digits, message, deepLink);
+    }
+
+    return this.sendViaMeta(cfg, digits, message, deepLink, input);
+  }
+
+  private async resolveConfig(): Promise<ResolvedConfig> {
+    const row = await this.prisma.appSetting.findUnique({
+      where: { id: SETTINGS_ID },
+    });
+
+    if (row?.whatsappEnabled && row.whatsappTokenEncrypted && row.whatsappInstanceId) {
+      let token: string | null = null;
+      try {
+        token = this.crypto.decrypt(row.whatsappTokenEncrypted);
+      } catch (e) {
+        this.logger.error(
+          `Failed to decrypt WhatsApp token: ${e instanceof Error ? e.message : e}`,
+        );
+      }
+      if (token) {
+        const provider =
+          row.whatsappProvider === 'meta' ? 'meta' : 'green-api';
+        return {
+          configured: true,
+          enabled: true,
+          provider,
+          instanceId: row.whatsappInstanceId,
+          token,
+          apiUrl: row.whatsappApiUrl || null,
+          templateName: row.whatsappTemplateName || null,
+          templateLang: row.whatsappTemplateLang || 'en',
+          source: 'settings',
+        };
+      }
+    }
+
+    const envToken = this.config.get<string>('WHATSAPP_TOKEN')?.trim();
+    const greenInstance = this.config
+      .get<string>('WHATSAPP_GREEN_ID_INSTANCE')
+      ?.trim();
+    const metaPhoneId = this.config
+      .get<string>('WHATSAPP_PHONE_NUMBER_ID')
+      ?.trim();
+    const envProviderRaw = (
+      this.config.get<string>('WHATSAPP_PROVIDER') || ''
+    ).toLowerCase();
+
+    let envProvider: 'green-api' | 'meta' | null = null;
+    let envInstance: string | null = null;
+    if (envToken && greenInstance && (envProviderRaw === 'green-api' || !metaPhoneId)) {
+      envProvider = 'green-api';
+      envInstance = greenInstance;
+    } else if (envToken && metaPhoneId) {
+      envProvider = 'meta';
+      envInstance = metaPhoneId;
+    } else if (envToken && greenInstance) {
+      envProvider = 'green-api';
+      envInstance = greenInstance;
+    }
+
+    if (envToken && envInstance && envProvider) {
+      return {
+        configured: true,
+        enabled: true,
+        provider: envProvider,
+        instanceId: envInstance,
+        token: envToken,
+        apiUrl:
+          this.config.get<string>('WHATSAPP_GREEN_API_URL')?.trim() ||
+          this.config.get<string>('WHATSAPP_API_URL')?.trim() ||
+          null,
+        templateName:
+          this.config.get<string>('WHATSAPP_TEMPLATE_NAME')?.trim() || null,
+        templateLang:
+          this.config.get<string>('WHATSAPP_TEMPLATE_LANG') || 'en',
+        source: 'env',
+      };
+    }
+
+    return {
+      configured: false,
+      enabled: false,
+      provider: null,
+      instanceId: null,
+      token: null,
+      apiUrl: null,
+      templateName: null,
+      templateLang: 'en',
+      source: 'none',
+    };
+  }
+
+  private async sendViaGreenApi(
+    cfg: ResolvedConfig,
+    digits: string,
+    message: string,
+    deepLink: string,
+  ): Promise<WhatsAppSendResult> {
+    const base = (cfg.apiUrl || 'https://api.green-api.com').replace(/\/$/, '');
+    const url = `${base}/waInstance${cfg.instanceId}/sendMessage/${cfg.token}`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: `${digits}@c.us`,
+          message,
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        this.logger.error(`Green API ${res.status}: ${errText}`);
+        return {
+          digits,
+          deepLink,
+          message,
+          sent: false,
+          configured: true,
+          provider: 'green-api',
+          error: `WhatsApp send failed (${res.status})`,
+        };
+      }
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: true,
+        configured: true,
+        provider: 'green-api',
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'WhatsApp send failed';
+      this.logger.error(msg);
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: false,
+        configured: true,
+        provider: 'green-api',
+        error: msg,
+      };
+    }
+  }
+
+  private async sendViaMeta(
+    cfg: ResolvedConfig,
+    digits: string,
+    message: string,
+    deepLink: string,
+    input: WhatsAppReceiptInput,
+  ): Promise<WhatsAppSendResult> {
     try {
       const apiVersion =
         this.config.get<string>('WHATSAPP_API_VERSION') || 'v21.0';
-      const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
-      const template = this.config.get<string>('WHATSAPP_TEMPLATE_NAME')?.trim();
+      const url = `https://graph.facebook.com/${apiVersion}/${cfg.instanceId}/messages`;
+      const template = cfg.templateName?.trim();
 
       const body = template
         ? {
@@ -105,10 +397,7 @@ export class WhatsappService {
             type: 'template',
             template: {
               name: template,
-              language: {
-                code:
-                  this.config.get<string>('WHATSAPP_TEMPLATE_LANG') || 'en',
-              },
+              language: { code: cfg.templateLang || 'en' },
               components: [
                 {
                   type: 'body',
@@ -133,7 +422,7 @@ export class WhatsappService {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${cfg.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -141,21 +430,38 @@ export class WhatsappService {
 
       if (!res.ok) {
         const errText = await res.text();
-        this.logger.error(`WhatsApp API ${res.status}: ${errText}`);
+        this.logger.error(`WhatsApp Meta API ${res.status}: ${errText}`);
         return {
           digits,
           deepLink,
           message,
           sent: false,
+          configured: true,
+          provider: 'meta',
           error: `WhatsApp API error ${res.status}`,
         };
       }
 
-      return { digits, deepLink, message, sent: true };
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: true,
+        configured: true,
+        provider: 'meta',
+      };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'WhatsApp send failed';
       this.logger.error(msg);
-      return { digits, deepLink, message, sent: false, error: msg };
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: false,
+        configured: true,
+        provider: 'meta',
+        error: msg,
+      };
     }
   }
 }
