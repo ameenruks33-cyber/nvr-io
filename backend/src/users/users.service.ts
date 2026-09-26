@@ -108,6 +108,14 @@ export class UsersService {
       },
     });
 
+    // Kick them out of the app immediately when disabled
+    if (!isActive) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
     await this.audit.log({
       userId: actor.id,
       action: isActive ? 'USER_ENABLE' : 'USER_DISABLE',

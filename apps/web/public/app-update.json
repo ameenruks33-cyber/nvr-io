@@ -1,18 +1,18 @@
 {
   "app": "NVR.io",
-  "version": "1.1.12",
-  "build": "2026.09.26.13.05",
-  "releasedAt": "2026-09-26T13:05:18.297Z",
+  "version": "1.1.13",
+  "build": "2026.09.26.13.11",
+  "releasedAt": "2026-09-26T13:11:21.896Z",
   "title": "NVR.io update available",
-  "message": "Admin can create users and restrict access",
+  "message": "Settings: disable or enable users for the app",
   "notes": [
+    "Settings: disable or enable users for the app",
     "Admin can create users and restrict access",
     "Admin can create users and restrict access",
     "Home screen icon refreshes on update",
     "App icon updates with each release",
     "New red play app icon",
     "New red play app icon",
-    "Auto update alerts for installed devices",
     "Auto update alerts for installed devices"
   ],
   "minVersion": "1.0.0",
@@ -20,10 +20,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.12/favicon.png",
-    "icon192": "/icons/v1.1.12/icon-192.png",
-    "icon512": "/icons/v1.1.12/icon-512.png",
-    "apple": "/icons/v1.1.12/apple-touch-icon.png",
-    "logo": "/icons/v1.1.12/logo.jpg"
+    "favicon": "/icons/v1.1.13/favicon.png",
+    "icon192": "/icons/v1.1.13/icon-192.png",
+    "icon512": "/icons/v1.1.13/icon-512.png",
+    "apple": "/icons/v1.1.13/apple-touch-icon.png",
+    "logo": "/icons/v1.1.13/logo.jpg"
   }
 }

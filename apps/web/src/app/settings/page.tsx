@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
@@ -10,6 +11,14 @@ type Profile = {
   name: string;
   email: string;
   role: string;
+};
+
+type StaffUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
 };
 
 function useWebsiteDesktopUi() {
@@ -39,6 +48,25 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [staff, setStaff] = useState<StaffUser[]>([]);
+  const [staffErr, setStaffErr] = useState('');
+  const [staffMsg, setStaffMsg] = useState('');
+  const [busyId, setBusyId] = useState('');
+
+  const isAdmin =
+    profile?.role === 'SUPER_ADMIN' || profile?.role === 'ADMIN';
+
+  const loadStaff = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const rows = await api<StaffUser[]>('/users');
+      setStaff(rows);
+      setStaffErr('');
+    } catch (e) {
+      setStaffErr(e instanceof Error ? e.message : 'Could not load users');
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     api<Profile>('/auth/me')
       .then((user) => {
@@ -51,6 +79,35 @@ export default function SettingsPage() {
         router.replace('/login');
       });
   }, [router]);
+
+  useEffect(() => {
+    if (isAdmin) void loadStaff();
+  }, [isAdmin, loadStaff]);
+
+  async function toggleAppAccess(user: StaffUser) {
+    if (!isAdmin || user.id === profile?.id) return;
+    if (profile?.role === 'ADMIN' && user.role === 'SUPER_ADMIN') return;
+
+    setBusyId(user.id);
+    setStaffErr('');
+    setStaffMsg('');
+    try {
+      const disable = user.isActive;
+      await api(`/users/${user.id}/${disable ? 'disable' : 'enable'}`, {
+        method: 'PATCH',
+      });
+      setStaffMsg(
+        disable
+          ? `${user.name} is disabled — they cannot use the app.`
+          : `${user.name} can use the app again.`,
+      );
+      await loadStaff();
+    } catch (e) {
+      setStaffErr(e instanceof Error ? e.message : 'Update failed');
+    } finally {
+      setBusyId('');
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -248,6 +305,98 @@ export default function SettingsPage() {
         </form>
       </div>
 
+      {/* Admin: disable / enable users for the app */}
+      {isAdmin ? (
+        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-amber-500/25 bg-ink-900/80 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium text-white">
+                User app access
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Disable a user to block them from the app immediately. Enable
+                again anytime. Create new accounts under{' '}
+                <Link href="/users" className="text-teal-300 underline">
+                  Users
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+
+          {staffErr ? (
+            <p className="text-sm text-red-300" role="alert">
+              {staffErr}
+            </p>
+          ) : null}
+          {staffMsg ? (
+            <p className="text-sm text-teal-200" role="status">
+              {staffMsg}
+            </p>
+          ) : null}
+
+          <ul className="divide-y divide-white/5 rounded-xl border border-white/10">
+            {staff.map((user) => {
+              const isMe = user.id === profile?.id;
+              const blockedAdmin =
+                profile?.role === 'ADMIN' && user.role === 'SUPER_ADMIN';
+              const canToggle = !isMe && !blockedAdmin;
+
+              return (
+                <li
+                  key={user.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {user.name}
+                      {isMe ? (
+                        <span className="ml-2 text-xs text-slate-500">(you)</span>
+                      ) : null}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {user.email} · {user.role}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs ${
+                        user.isActive ? 'text-teal-300' : 'text-amber-300'
+                      }`}
+                    >
+                      {user.isActive ? 'App enabled' : 'App disabled'}
+                    </p>
+                  </div>
+
+                  {canToggle ? (
+                    <button
+                      type="button"
+                      disabled={busyId === user.id}
+                      onClick={() => void toggleAppAccess(user)}
+                      className={`rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-60 ${
+                        user.isActive
+                          ? 'bg-amber-700/90 text-white hover:bg-amber-600'
+                          : 'bg-teal-700/90 text-white hover:bg-teal-600'
+                      }`}
+                    >
+                      {busyId === user.id
+                        ? '…'
+                        : user.isActive
+                          ? 'Disable from app'
+                          : 'Enable for app'}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-500">—</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+
+          {!staff.length ? (
+            <p className="text-sm text-slate-500">No staff users found.</p>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-white/10 bg-ink-900/70 p-5 text-sm text-slate-300">
         <p>
           Install NVR.io from <strong className="text-white">/app</strong> for a
@@ -255,8 +404,8 @@ export default function SettingsPage() {
         </p>
         <p className="hidden md:block">
           To clear old customer data, open{' '}
-          <strong className="text-white">Users (admin panel)</strong> on this
-          website — that option is not available in the mobile app.
+          <strong className="text-white">Users</strong> on this website — that
+          option is not available in the mobile app.
         </p>
       </div>
     </AppShell>
