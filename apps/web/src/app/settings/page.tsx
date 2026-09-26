@@ -61,6 +61,18 @@ export default function SettingsPage() {
   const [pinErr, setPinErr] = useState('');
   const [pinSaving, setPinSaving] = useState(false);
 
+  type GalleryAdminRow = {
+    id: string;
+    caption?: string | null;
+    status: string;
+    createdAt: string;
+    uploadedBy?: { name: string } | null;
+  };
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryAdminRow[]>([]);
+  const [galleryPhotosErr, setGalleryPhotosErr] = useState('');
+  const [galleryPhotosMsg, setGalleryPhotosMsg] = useState('');
+  const [deletingPhotoId, setDeletingPhotoId] = useState('');
+
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
 
   const loadStaff = useCallback(async () => {
@@ -71,6 +83,19 @@ export default function SettingsPage() {
       setStaffErr('');
     } catch (e) {
       setStaffErr(e instanceof Error ? e.message : 'Could not load users');
+    }
+  }, [isSuperAdmin]);
+
+  const loadGalleryPhotos = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    try {
+      const rows = await api<GalleryAdminRow[]>('/gallery');
+      setGalleryPhotos(rows);
+      setGalleryPhotosErr('');
+    } catch (e) {
+      setGalleryPhotosErr(
+        e instanceof Error ? e.message : 'Could not load cloud photos',
+      );
     }
   }, [isSuperAdmin]);
 
@@ -88,8 +113,11 @@ export default function SettingsPage() {
   }, [router]);
 
   useEffect(() => {
-    if (isSuperAdmin) void loadStaff();
-  }, [isSuperAdmin, loadStaff]);
+    if (isSuperAdmin) {
+      void loadStaff();
+      void loadGalleryPhotos();
+    }
+  }, [isSuperAdmin, loadStaff, loadGalleryPhotos]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -97,6 +125,31 @@ export default function SettingsPage() {
       .then((s) => setGalleryPinSet(s.pinSet))
       .catch(() => setGalleryPinSet(false));
   }, [isSuperAdmin]);
+
+  async function deleteGalleryPhoto(photo: GalleryAdminRow) {
+    const label = photo.caption?.trim() || 'this photo';
+    if (
+      !window.confirm(
+        `Delete ${label} from the cloud gallery? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingPhotoId(photo.id);
+    setGalleryPhotosErr('');
+    setGalleryPhotosMsg('');
+    try {
+      await api(`/gallery/${photo.id}`, { method: 'DELETE' });
+      setGalleryPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      setGalleryPhotosMsg('Photo removed from cloud gallery.');
+    } catch (e) {
+      setGalleryPhotosErr(
+        e instanceof Error ? e.message : 'Could not delete photo',
+      );
+    } finally {
+      setDeletingPhotoId('');
+    }
+  }
 
   async function saveGalleryPin(e: FormEvent) {
     e.preventDefault();
@@ -424,6 +477,78 @@ export default function SettingsPage() {
                   : 'Set gallery PIN'}
             </button>
           </form>
+        </section>
+      ) : null}
+
+      {/* Super Admin: remove old cloud gallery photos */}
+      {isSuperAdmin ? (
+        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-red-500/25 bg-ink-900/80 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium text-white">
+                Cloud photos
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Remove old cloud gallery photos from the admin panel. You can
+                also delete them in{' '}
+                <Link href="/gallery" className="text-teal-300 underline">
+                  Gallery
+                </Link>
+                .
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadGalleryPhotos()}
+              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {galleryPhotosErr ? (
+            <p className="text-sm text-red-300" role="alert">
+              {galleryPhotosErr}
+            </p>
+          ) : null}
+          {galleryPhotosMsg ? (
+            <p className="text-sm text-teal-200" role="status">
+              {galleryPhotosMsg}
+            </p>
+          ) : null}
+
+          <ul className="divide-y divide-white/5 rounded-xl border border-white/10">
+            {galleryPhotos.map((photo) => (
+              <li
+                key={photo.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white">
+                    {photo.caption?.trim() || 'Untitled photo'}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {photo.status}
+                    {photo.uploadedBy ? ` · ${photo.uploadedBy.name}` : ''}
+                    {' · '}
+                    {new Date(photo.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={deletingPhotoId === photo.id}
+                  onClick={() => void deleteGalleryPhoto(photo)}
+                  className="rounded-lg bg-red-800/90 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deletingPhotoId === photo.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {!galleryPhotos.length ? (
+            <p className="text-sm text-slate-500">No cloud photos to remove.</p>
+          ) : null}
         </section>
       ) : null}
 
