@@ -39,6 +39,12 @@ enum NotificationStatus {
   FAILED
 }
 
+enum GalleryStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -50,10 +56,12 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  refreshTokens RefreshToken[]
-  repayments    Repayment[]    @relation("CollectedBy")
-  auditLogs     AuditLog[]
-  customers     Customer[]     @relation("RegisteredBy")
+  refreshTokens       RefreshToken[]
+  repayments          Repayment[]    @relation("CollectedBy")
+  auditLogs           AuditLog[]
+  customers           Customer[]     @relation("RegisteredBy")
+  galleryUploads      GalleryItem[]  @relation("GalleryUploadedBy")
+  galleryVerifications GalleryItem[] @relation("GalleryVerifiedBy")
 
   @@map("users")
 }
@@ -93,6 +101,7 @@ model Customer {
   loans         Loan[]
   documents     Document[]
   notifications Notification[]
+  galleryItems  GalleryItem[]
 
   @@index([name])
   @@index([phone])
@@ -191,4 +200,29 @@ model AuditLog {
   @@index([userId])
   @@index([recordType, recordId])
   @@map("audit_logs")
+}
+
+/// Private in-app secret gallery — files live on the server only (never device Photos).
+model GalleryItem {
+  id           String        @id @default(cuid())
+  storageKey   String        @map("storage_key")
+  mimeType     String?       @map("mime_type")
+  caption      String?
+  note         String?
+  status       GalleryStatus @default(PENDING)
+  uploadedById String        @map("uploaded_by_id")
+  verifiedById String?       @map("verified_by_id")
+  verifiedAt   DateTime?     @map("verified_at")
+  customerId   String?       @map("customer_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  uploadedBy User      @relation("GalleryUploadedBy", fields: [uploadedById], references: [id])
+  verifiedBy User?     @relation("GalleryVerifiedBy", fields: [verifiedById], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([status])
+  @@index([uploadedById])
+  @@index([createdAt])
+  @@map("gallery_items")
 }

@@ -20,6 +20,7 @@ export class AdminService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      const gallery = await tx.galleryItem.deleteMany();
       const notifications = await tx.notification.deleteMany();
       const documents = await tx.document.deleteMany();
       const repayments = await tx.repayment.deleteMany();
@@ -33,11 +34,13 @@ export class AdminService {
             { recordType: 'repayment' },
             { recordType: 'document' },
             { recordType: 'notification' },
+            { recordType: 'gallery' },
           ],
         },
       });
 
       return {
+        gallery: gallery.count,
         notifications: notifications.count,
         documents: documents.count,
         repayments: repayments.count,

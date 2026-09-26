@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 const links = [
   { href: '/dashboard', label: 'Home' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/customers', label: 'People' },
   { href: '/loans', label: 'Records' },
   { href: '/repayments', label: 'Receipts' },
@@ -21,8 +22,8 @@ const links = [
 
 const mobileLinks = [
   { href: '/dashboard', label: 'Home' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/customers', label: 'People' },
-  { href: '/repayments', label: 'Receipts' },
   { href: '/settings', label: 'Settings' },
 ];
 

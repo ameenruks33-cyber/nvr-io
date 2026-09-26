@@ -3,30 +3,33 @@
 App display name: **NVR.io**  
 Logo: `assets/logo.jpg` / `assets/icon.png`
 
-## Fastest path (recommended)
+## Secret gallery (private — not device Photos)
 
-1. Open **https://nvr-io-web.vercel.app/app** on your phone  
-2. Tap **Install NVR.io** (or Safari → Share → Add to Home Screen)  
-3. Sign in — same account as the website  
+Open **Gallery** in the app / PWA:
+
+1. Take a photo or pick an image  
+2. It uploads straight to the NVR.io server  
+3. It does **not** save into the phone Photos / Gallery app  
+4. Admins verify the same items on the **website** (Gallery → Verify / Reject)
+
+## Fastest path
+
+1. https://nvr-io-web.vercel.app/app → Install NVR.io  
+2. Sign in → **Gallery** tab  
 
 ## Mobile vs website
 
-| Action | Mobile app | Website (computer) |
-|--------|------------|--------------------|
-| Change username / password | Not available | Settings |
-| Clear old database | Not available | Users (admin panel) |
-| People / receipts / records | Yes | Yes |
+| Action | Mobile app | Website |
+|--------|------------|---------|
+| Secret gallery upload | Yes | Yes |
+| Verify / reject gallery | Admin only | Admin only |
+| Change username / password | No | Settings |
+| Clear old database | No | Users (admin) |
 
-## Flutter native shell
+## Flutter shell
 
 ```bash
 cd apps/mobile
 flutter pub get
 flutter run
 ```
-
-## Rules
-
-- Install only with user permission  
-- No silent / hidden install  
-- All records stay on the NVR.io server
