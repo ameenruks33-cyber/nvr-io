@@ -236,10 +236,6 @@ export default function GalleryPage() {
       </div>
 
       <div className="mt-6 space-y-4 rounded-2xl border border-blue-500/20 bg-ink-900/80 p-4">
-        <div className="rounded-lg border border-teal-500/20 bg-teal-950/30 px-3 py-2 text-xs text-teal-100/90">
-          Cloud-only · No device Photos · No Downloads · No local gallery link
-        </div>
-
         <label className="block text-sm">
           <span className="text-slate-300">Caption (optional)</span>
           <input
