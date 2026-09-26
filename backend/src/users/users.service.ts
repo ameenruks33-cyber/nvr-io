@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +10,7 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { AuthUser } from '../auth/decorators/current-user.decorator';
 
 @Injectable()
 export class UsersService {
@@ -17,7 +20,7 @@ export class UsersService {
   ) {}
 
   async create(dto: CreateUserDto, actorId: string) {
-    const email = dto.email.toLowerCase();
+    const email = dto.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('Email already in use');
 
@@ -27,11 +30,12 @@ export class UsersService {
 
     const user = await this.prisma.user.create({
       data: {
-        name: dto.name,
+        name: dto.name.trim(),
         email,
-        phone: dto.phone,
+        phone: dto.phone?.trim() || null,
         passwordHash,
         role: dto.role,
+        isActive: true,
       },
       select: {
         id: true,
@@ -70,9 +74,25 @@ export class UsersService {
     });
   }
 
-  async setActive(id: string, isActive: boolean, actorId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
+  private async assertCanManage(targetId: string, actor: AuthUser) {
+    if (targetId === actor.id) {
+      throw new BadRequestException('You cannot change your own access here');
+    }
+    const target = await this.prisma.user.findUnique({ where: { id: targetId } });
+    if (!target) throw new NotFoundException('User not found');
+
+    if (
+      actor.role === UserRole.ADMIN &&
+      target.role === UserRole.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException('Admins cannot manage super admins');
+    }
+
+    return target;
+  }
+
+  async setActive(id: string, isActive: boolean, actor: AuthUser) {
+    await this.assertCanManage(id, actor);
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -81,16 +101,53 @@ export class UsersService {
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         isActive: true,
+        createdAt: true,
       },
     });
 
     await this.audit.log({
-      userId: actorId,
+      userId: actor.id,
       action: isActive ? 'USER_ENABLE' : 'USER_DISABLE',
       recordType: 'user',
       recordId: id,
+    });
+
+    return updated;
+  }
+
+  async setRole(id: string, role: UserRole, actor: AuthUser) {
+    const target = await this.assertCanManage(id, actor);
+
+    if (
+      actor.role === UserRole.ADMIN &&
+      target.role === UserRole.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException('Admins cannot change super admin roles');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    await this.audit.log({
+      userId: actor.id,
+      action: 'USER_ROLE_CHANGE',
+      recordType: 'user',
+      recordId: id,
+      metadata: { role },
     });
 
     return updated;

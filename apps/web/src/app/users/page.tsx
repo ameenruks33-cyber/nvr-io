@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession } from '@/lib/api';
 
@@ -8,33 +8,141 @@ type User = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
   role: string;
   isActive: boolean;
+  createdAt?: string;
 };
+
+const ROLE_OPTIONS_ADMIN = [
+  { value: 'COLLECTOR', label: 'Collector (staff)' },
+  { value: 'ADMIN', label: 'Admin' },
+];
+
+const ROLE_OPTIONS_SUPER = [
+  ...ROLE_OPTIONS_ADMIN,
+  { value: 'SUPER_ADMIN', label: 'Super admin' },
+];
 
 export default function UsersPage() {
   const [rows, setRows] = useState<User[]>([]);
   const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
   const [role, setRole] = useState('');
+  const [myId, setMyId] = useState('');
+  const [busyId, setBusyId] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [newRole, setNewRole] = useState('COLLECTOR');
+
   const [confirmText, setConfirmText] = useState('');
   const [clearMsg, setClearMsg] = useState('');
   const [clearErr, setClearErr] = useState('');
   const [clearing, setClearing] = useState(false);
   const [isDesktopWebsite, setIsDesktopWebsite] = useState(false);
 
+  const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const roleOptions =
+    role === 'SUPER_ADMIN' ? ROLE_OPTIONS_SUPER : ROLE_OPTIONS_ADMIN;
+
+  const load = useCallback(async () => {
+    try {
+      const list = await api<User[]>('/users');
+      setRows(list);
+      setError('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load users');
+    }
+  }, []);
+
   useEffect(() => {
     const session = getSession();
     setRole(session?.user.role || '');
-    api<User[]>('/users')
-      .then(setRows)
-      .catch((e) => setError(e.message));
+    setMyId(session?.user.id || '');
+    void load();
 
     const mq = window.matchMedia('(min-width: 768px)');
     const update = () => setIsDesktopWebsite(mq.matches);
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
-  }, []);
+  }, [load]);
+
+  async function createUser(e: FormEvent) {
+    e.preventDefault();
+    if (!isAdmin) return;
+    setCreating(true);
+    setError('');
+    setMsg('');
+    try {
+      await api<User>('/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          password,
+          role: newRole,
+        }),
+      });
+      setName('');
+      setEmail('');
+      setPhone('');
+      setPassword('');
+      setNewRole('COLLECTOR');
+      setMsg('User created. They can sign in with that email and password.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Create failed');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function setRestricted(user: User, restrict: boolean) {
+    if (!isAdmin || user.id === myId) return;
+    setBusyId(user.id);
+    setError('');
+    setMsg('');
+    try {
+      await api(`/users/${user.id}/${restrict ? 'disable' : 'enable'}`, {
+        method: 'PATCH',
+      });
+      setMsg(
+        restrict
+          ? `${user.name} is restricted — they cannot sign in.`
+          : `${user.name} is active again.`,
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function changeRole(user: User, nextRole: string) {
+    if (!isAdmin || user.id === myId) return;
+    setBusyId(user.id);
+    setError('');
+    setMsg('');
+    try {
+      await api(`/users/${user.id}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: nextRole }),
+      });
+      setMsg(`${user.name} role set to ${nextRole}.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Role change failed');
+    } finally {
+      setBusyId('');
+    }
+  }
 
   async function clearOldDatabase(e: FormEvent) {
     e.preventDefault();
@@ -60,14 +168,116 @@ export default function UsersPage() {
     }
   }
 
+  function canManage(user: User) {
+    if (!isAdmin) return false;
+    if (user.id === myId) return false;
+    if (role === 'ADMIN' && user.role === 'SUPER_ADMIN') return false;
+    return true;
+  }
+
+  if (!isAdmin && role) {
+    return (
+      <AppShell>
+        <h1 className="font-display text-3xl text-white">Users</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Only admins can create or restrict users.
+        </p>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <h1 className="mb-2 font-display text-3xl text-white">Users</h1>
       <p className="mb-6 text-sm text-slate-400">
-        Website admin panel — staff accounts and database tools.
+        Create staff accounts and restrict access. Restricted users cannot sign
+        in.
       </p>
 
-      {error ? <p className="mb-4 text-red-300">{error}</p> : null}
+      {error ? (
+        <p className="mb-4 text-sm text-red-300" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {msg ? (
+        <p className="mb-4 text-sm text-teal-200" role="status">
+          {msg}
+        </p>
+      ) : null}
+
+      <form
+        onSubmit={createUser}
+        className="mb-8 space-y-4 rounded-2xl border border-blue-500/20 bg-ink-900/80 p-5"
+      >
+        <h2 className="text-lg font-medium text-white">Create new user</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2">
+            <span className="text-slate-300">Full name</span>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              minLength={2}
+              autoComplete="name"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-300">Email / username</span>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="off"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-300">Phone (optional)</span>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-300">Password</span>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={10}
+              autoComplete="new-password"
+              placeholder="At least 10 characters"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-300">Role</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+            >
+              {roleOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          type="submit"
+          disabled={creating}
+          className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-500 disabled:opacity-60 sm:w-auto"
+        >
+          {creating ? 'Creating…' : 'Create user'}
+        </button>
+      </form>
 
       <div className="overflow-x-auto rounded-2xl border border-white/10">
         <table className="min-w-full text-left text-sm">
@@ -77,24 +287,87 @@ export default function UsersPage() {
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Role</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Access</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-white/5">
-                <td className="px-4 py-3">{row.name}</td>
-                <td className="px-4 py-3">{row.email}</td>
-                <td className="px-4 py-3">{row.role}</td>
-                <td className="px-4 py-3">
-                  {row.isActive ? 'Active' : 'Disabled'}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const manage = canManage(row);
+              return (
+                <tr key={row.id} className="border-t border-white/5 align-top">
+                  <td className="px-4 py-3 text-white">{row.name}</td>
+                  <td className="px-4 py-3 text-slate-300">{row.email}</td>
+                  <td className="px-4 py-3">
+                    {manage ? (
+                      <select
+                        className="rounded-lg border border-white/10 bg-ink-950 px-2 py-1.5 text-xs text-slate-200"
+                        value={row.role}
+                        disabled={busyId === row.id}
+                        onChange={(e) => void changeRole(row, e.target.value)}
+                      >
+                        {roleOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                        {row.role === 'SUPER_ADMIN' &&
+                        role === 'SUPER_ADMIN' ? (
+                          <option value="SUPER_ADMIN">Super admin</option>
+                        ) : null}
+                      </select>
+                    ) : (
+                      <span className="text-slate-300">{row.role}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={
+                        row.isActive ? 'text-teal-300' : 'text-amber-300'
+                      }
+                    >
+                      {row.isActive ? 'Active' : 'Restricted'}
+                    </span>
+                    {row.id === myId ? (
+                      <span className="ml-2 text-xs text-slate-500">(you)</span>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    {manage ? (
+                      <button
+                        type="button"
+                        disabled={busyId === row.id}
+                        onClick={() =>
+                          void setRestricted(row, row.isActive)
+                        }
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${
+                          row.isActive
+                            ? 'bg-amber-700/80 text-white hover:bg-amber-600'
+                            : 'bg-teal-700/80 text-white hover:bg-teal-600'
+                        }`}
+                      >
+                        {busyId === row.id
+                          ? '…'
+                          : row.isActive
+                            ? 'Restrict'
+                            : 'Allow access'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-500">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Clear DB: website desktop + SUPER_ADMIN only — never shown as a mobile app control */}
+      {!rows.length ? (
+        <p className="mt-6 text-center text-sm text-slate-500">
+          No users yet. Create the first account above.
+        </p>
+      ) : null}
+
       {role === 'SUPER_ADMIN' && isDesktopWebsite ? (
         <form
           onSubmit={clearOldDatabase}

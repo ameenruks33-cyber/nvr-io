@@ -15,7 +15,7 @@ const links = [
   { href: '/repayments', label: 'Receipts' },
   { href: '/reports', label: 'Summary' },
   { href: '/notifications', label: 'Notes' },
-  { href: '/users', label: 'Users', desktopOnly: true },
+  { href: '/users', label: 'Users' },
   { href: '/audit', label: 'Activity', desktopOnly: true },
   { href: '/settings', label: 'Settings' },
   { href: '/updates', label: 'Updates' },
