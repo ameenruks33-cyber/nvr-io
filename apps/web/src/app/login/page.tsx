@@ -1,13 +1,12 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, setSession } from '@/lib/api';
-import { APP_ICONS } from '@/lib/app-branding';
 import { APP_NAME } from '@/lib/brand';
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { SpinningLogo } from '@/components/SpinningLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,13 +55,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
-          <Image
-            src={APP_ICONS.logo}
-            alt={APP_NAME}
-            width={112}
-            height={112}
-            className="rounded-3xl bg-white p-2 shadow-lg shadow-red-500/25"
-            unoptimized
+          <SpinningLogo
+            size={112}
+            className="rounded-3xl p-2 shadow-lg shadow-red-500/25"
             priority
           />
           <div className="mt-4">

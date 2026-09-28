@@ -25,6 +25,31 @@ body {
   box-sizing: border-box;
 }
 
+.logo-3d-stage {
+  perspective: 700px;
+}
+
+.logo-3d {
+  animation: logo-spin-3d 4s linear infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+@keyframes logo-spin-3d {
+  from {
+    transform: rotateX(8deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(8deg) rotateY(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-3d {
+    animation: none;
+  }
+}
+
 input,
 textarea,
 select,

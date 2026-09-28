@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { APP_ICONS } from '@/lib/app-branding';
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { SpinningLogo } from '@/components/SpinningLogo';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -100,13 +99,9 @@ export default function InstallAppPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
-          <Image
-            src={APP_ICONS.logo}
-            alt="CrickHerose"
-            width={128}
-            height={128}
-            className="rounded-3xl bg-white p-2 shadow-lg shadow-red-500/25"
-            unoptimized
+          <SpinningLogo
+            size={128}
+            className="rounded-3xl p-2 shadow-lg shadow-red-500/25"
             priority
           />
           <p className="mt-4 text-sm font-medium text-slate-600">Install</p>

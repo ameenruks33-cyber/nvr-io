@@ -1,12 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/api';
-import { APP_ICONS } from '@/lib/app-branding';
-import { APP_NAME } from '@/lib/brand';
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { SpinningLogo } from '@/components/SpinningLogo';
 import { isMobileAppSurface } from '@/lib/mobile-app';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -93,15 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-4 px-3 pb-24 pt-4 md:flex-row md:gap-6 md:px-8 md:pb-6 md:pt-6">
       <header className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <Image
-            src={APP_ICONS.logo}
-            alt={APP_NAME}
-            width={40}
-            height={40}
-            className="rounded-xl bg-white"
-            unoptimized
-            priority
-          />
+          <SpinningLogo size={40} className="rounded-xl" priority />
           <BrandWordmark size="sm" onDark />
         </Link>
         <button
@@ -150,15 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 md:flex">
         <div className="mb-8 flex items-center gap-3">
-          <Image
-            src={APP_ICONS.logo}
-            alt={APP_NAME}
-            width={48}
-            height={48}
-            className="rounded-xl bg-white"
-            unoptimized
-            priority
-          />
+          <SpinningLogo size={48} className="rounded-xl" priority />
           <div>
             <BrandWordmark size="md" onDark />
             <p className="mt-1 text-xs text-slate-500">
