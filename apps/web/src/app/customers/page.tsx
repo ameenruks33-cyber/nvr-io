@@ -75,7 +75,7 @@ export default function CustomersPage() {
             <tr>
               <th className="px-4 py-3 font-medium">ID</th>
               <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Phone</th>
+              <th className="px-4 py-3 font-medium">WhatsApp</th>
               <th className="px-4 py-3 font-medium">Collected</th>
             </tr>
           </thead>

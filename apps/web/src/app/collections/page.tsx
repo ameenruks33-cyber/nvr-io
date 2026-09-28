@@ -224,7 +224,7 @@ export default function CollectionsPage() {
             <thead className="bg-ink-900 text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-medium">Customer</th>
-                <th className="px-4 py-3 font-medium">Phone</th>
+                <th className="px-4 py-3 font-medium">WhatsApp</th>
                 <th className="px-4 py-3 font-medium">Collected</th>
                 <th className="px-4 py-3 font-medium">Remaining</th>
                 <th className="px-4 py-3 font-medium">Status</th>

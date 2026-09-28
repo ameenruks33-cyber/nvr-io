@@ -297,12 +297,12 @@ export default function NewCustomerPage() {
       >
         {(
           [
-            ['name', 'Full name', 'text'],
-            ['phone', 'Phone number', 'tel'],
+            ['name', 'Full Name', 'text'],
+            ['phone', 'WhatsApp Number', 'tel'],
             'careOf',
             ['address', 'Address', 'text'],
-            ['passportNumber', 'Passport number', 'text'],
-            ['aadhaarNumber', 'Aadhaar number', 'text'],
+            ['passportNumber', 'Passport Number', 'text'],
+            ['aadhaarNumber', 'Aadhaar Number', 'text'],
           ] as const
         ).map((field) =>
           field === 'careOf' ? (
@@ -313,7 +313,7 @@ export default function NewCustomerPage() {
                   name="careOfName"
                   type="text"
                   placeholder="Name"
-                  aria-label="C/O name"
+                  aria-label="C/O Name"
                   maxLength={120}
                   autoComplete="off"
                   className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
@@ -322,7 +322,7 @@ export default function NewCustomerPage() {
                   name="careOfPhone"
                   type="tel"
                   placeholder="Phone"
-                  aria-label="C/O phone"
+                  aria-label="C/O Phone"
                   maxLength={20}
                   autoComplete="off"
                   className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"

@@ -201,7 +201,7 @@ export default function UsersPage() {
         <h2 className="text-lg font-medium text-white">Create new user</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm sm:col-span-2">
-            <span className="text-slate-300">Full name</span>
+            <span className="text-slate-300">Full Name</span>
             <input
               className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={name}

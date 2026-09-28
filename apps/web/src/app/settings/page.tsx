@@ -423,7 +423,7 @@ export default function SettingsPage() {
           className="mt-4 max-w-xl space-y-4 rounded-2xl border border-white/10 bg-ink-900/70 p-5 sm:p-6"
         >
           <label className="block text-sm">
-            <span className="text-slate-300">Display name</span>
+            <span className="text-slate-300">Display Name</span>
             <input
               className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={name}
@@ -558,14 +558,14 @@ export default function SettingsPage() {
             </label>
             <label className="block text-sm">
               <span className="text-slate-300">
-                {waProvider === 'meta' ? 'Phone number ID' : 'Instance ID'}
+                {waProvider === 'meta' ? 'Phone Number ID' : 'Instance ID'}
               </span>
               <input
                 className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
                 value={waInstanceId}
                 onChange={(e) => setWaInstanceId(e.target.value)}
                 placeholder={
-                  waProvider === 'meta' ? 'Phone number ID' : 'idInstance'
+                  waProvider === 'meta' ? 'Phone Number ID' : 'idInstance'
                 }
                 autoComplete="off"
               />
