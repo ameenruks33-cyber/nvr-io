@@ -1,29 +1,29 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.33",
-  "build": "2026.09.26.16.23",
-  "releasedAt": "2026-09-26T16:23:08.136Z",
+  "version": "1.1.35",
+  "build": "2026.09.28.06.07",
+  "releasedAt": "2026-09-28T06:07:56.374Z",
   "title": "CrickHerose update available",
-  "message": "Data Capture and Save Cloud button labels",
+  "message": "Fix home page failing to open (service worker redirect)",
   "notes": [
+    "Fix home page failing to open (service worker redirect)",
+    "Fix home page failing to open (service worker redirect)",
     "Data Capture and Save Cloud button labels",
     "Updates only on mobile app; clear notification after update",
     "Updates only on mobile app; clear notification after update",
     "Users, Activity, Settings — Super Admin only",
     "Users, Activity, Settings — Super Admin only",
-    "Hide gallery cloud-only banner",
-    "Hide gallery cloud-only banner",
-    "Remove empty gallery camera box"
+    "Hide gallery cloud-only banner"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.33/favicon.png",
-    "icon192": "/icons/v1.1.33/icon-192.png",
-    "icon512": "/icons/v1.1.33/icon-512.png",
-    "apple": "/icons/v1.1.33/apple-touch-icon.png",
-    "logo": "/icons/v1.1.33/logo.jpg"
+    "favicon": "/icons/v1.1.35/favicon.png",
+    "icon192": "/icons/v1.1.35/icon-192.png",
+    "icon512": "/icons/v1.1.35/icon-512.png",
+    "apple": "/icons/v1.1.35/apple-touch-icon.png",
+    "logo": "/icons/v1.1.35/logo.jpg"
   }
 }

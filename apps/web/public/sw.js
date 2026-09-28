@@ -1,6 +1,7 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'crickherose-shell-v1-1-33';
-const PRECACHE = ['/', '/login', '/app', '/manifest.webmanifest'];
+const CACHE = 'crickherose-shell-v1-1-35';
+// '/' only redirects to /app — never precache redirect responses
+const PRECACHE = ['/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
 const VERSION_STORE = 'nvr-sw-version';
 
@@ -145,6 +146,16 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/** Browsers reject redirected responses for navigations — rebuild as a plain response. */
+function unredirect(res) {
+  if (!res || !res.redirected) return res;
+  return new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -152,6 +163,20 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (isApiPath(url.pathname)) return;
+
+  // Page loads: let the network handle redirects natively; offline → cached shell
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(() =>
+        caches
+          .match(url.pathname)
+          .then((r) => unredirect(r) || caches.match('/app'))
+          .then((r) => unredirect(r) || caches.match('/login'))
+          .then((r) => unredirect(r)),
+      ),
+    );
+    return;
+  }
 
   const sameOriginReq = new Request(url.pathname + url.search, {
     method: 'GET',
@@ -172,13 +197,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(sameOriginReq)
       .then((res) => {
-        if (res.ok) {
+        if (res.ok && !res.redirected) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));
         }
-        return res;
+        return unredirect(res);
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match('/'))),
+      .catch(() => caches.match(req).then((r) => unredirect(r))),
   );
 });
 
