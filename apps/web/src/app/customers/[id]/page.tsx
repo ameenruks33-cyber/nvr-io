@@ -12,6 +12,8 @@ type CustomerDetail = {
   name: string;
   phone: string;
   address: string;
+  botimNumber?: string | null;
+  mobileNumber?: string | null;
   careOfName?: string | null;
   careOfPhone?: string | null;
   passportMasked: string;
@@ -136,7 +138,15 @@ export default function CustomerDetailPage() {
       <div className="mb-6">
         <p className="text-sm text-slate-500">{customer.customerCode}</p>
         <h1 className="font-display text-3xl text-slate-900">{customer.name}</h1>
-        <p className="mt-1 text-slate-600">{customer.phone}</p>
+        <p className="mt-1 text-slate-600">
+          {[
+            `WhatsApp: ${customer.phone}`,
+            customer.botimNumber ? `Botim: ${customer.botimNumber}` : '',
+            customer.mobileNumber ? `Phone: ${customer.mobileNumber}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">

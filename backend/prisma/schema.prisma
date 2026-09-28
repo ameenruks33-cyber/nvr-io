@@ -105,6 +105,8 @@ model Customer {
   name              String
   phone             String
   address           String
+  botimNumber       String?  @map("botim_number")
+  mobileNumber      String?  @map("mobile_number")
   careOfName        String?  @map("care_of_name")
   careOfPhone       String?  @map("care_of_phone")
   passportEncrypted String   @map("passport_encrypted")

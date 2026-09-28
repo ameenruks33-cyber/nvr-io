@@ -254,6 +254,8 @@ export default function NewCustomerPage() {
         body: JSON.stringify({
           name: form.get('name'),
           phone: form.get('phone'),
+          botimNumber: String(form.get('botimNumber') || '').trim() || undefined,
+          mobileNumber: String(form.get('mobileNumber') || '').trim() || undefined,
           address: form.get('address'),
           careOfName: String(form.get('careOfName') || '').trim() || undefined,
           careOfPhone: String(form.get('careOfPhone') || '').trim() || undefined,
@@ -298,14 +300,48 @@ export default function NewCustomerPage() {
         {(
           [
             ['name', 'Full Name', 'text'],
-            ['phone', 'WhatsApp / Phone / Botim', 'tel'],
+            'contact',
             'careOf',
             ['address', 'Address', 'text'],
             ['passportNumber', 'Passport Number', 'text'],
             ['aadhaarNumber', 'Aadhaar Number', 'text'],
           ] as const
         ).map((field) =>
-          field === 'careOf' ? (
+          field === 'contact' ? (
+            <div key="contact" className="block text-sm">
+              <span className="text-slate-600">WhatsApp / Botim / Phone</span>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                <input
+                  name="phone"
+                  type="tel"
+                  placeholder="WhatsApp"
+                  aria-label="WhatsApp Number"
+                  required
+                  maxLength={20}
+                  autoComplete="off"
+                  className="w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                />
+                <input
+                  name="botimNumber"
+                  type="tel"
+                  placeholder="Botim"
+                  aria-label="Botim Number"
+                  maxLength={20}
+                  autoComplete="off"
+                  className="w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                />
+                <input
+                  name="mobileNumber"
+                  type="tel"
+                  placeholder="Phone"
+                  aria-label="Phone Number"
+                  maxLength={20}
+                  autoComplete="off"
+                  className="w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                />
+              </div>
+            </div>
+          ) : field === 'careOf' ? (
             <div key="careOf" className="block text-sm">
               <span className="text-slate-600">C/O Name &amp; Phone</span>
               <div className="mt-1 grid grid-cols-2 gap-2">

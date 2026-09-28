@@ -77,6 +77,8 @@ export class PrismaService
     for (const col of [
       `ADD COLUMN IF NOT EXISTS "care_of_name" TEXT`,
       `ADD COLUMN IF NOT EXISTS "care_of_phone" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "botim_number" TEXT`,
+      `ADD COLUMN IF NOT EXISTS "mobile_number" TEXT`,
     ]) {
       try {
         await this.$executeRawUnsafe(`ALTER TABLE "customers" ${col};`);

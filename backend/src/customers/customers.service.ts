@@ -40,6 +40,8 @@ export class CustomersService {
           name: dto.name.trim(),
           phone: dto.phone.trim(),
           address: dto.address.trim(),
+          botimNumber: dto.botimNumber?.trim() || null,
+          mobileNumber: dto.mobileNumber?.trim() || null,
           careOfName: dto.careOfName?.trim() || null,
           careOfPhone: dto.careOfPhone?.trim() || null,
           passportEncrypted: this.crypto.encrypt(dto.passportNumber.trim()),
@@ -185,6 +187,8 @@ export class CustomersService {
       name: string;
       phone: string;
       address: string;
+      botimNumber?: string | null;
+      mobileNumber?: string | null;
       careOfName?: string | null;
       careOfPhone?: string | null;
       passportEncrypted: string;
@@ -229,6 +233,8 @@ export class CustomersService {
       name: customer.name,
       phone: customer.phone,
       address: customer.address,
+      botimNumber: customer.botimNumber ?? null,
+      mobileNumber: customer.mobileNumber ?? null,
       careOfName: customer.careOfName ?? null,
       careOfPhone: customer.careOfPhone ?? null,
       passportMasked,

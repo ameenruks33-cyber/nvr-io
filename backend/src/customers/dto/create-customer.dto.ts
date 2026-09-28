@@ -35,6 +35,16 @@ export class CreateCustomerDto {
   @MaxLength(20)
   careOfPhone?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  botimNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  mobileNumber?: string;
+
   @IsString()
   @MinLength(5)
   @MaxLength(30)
