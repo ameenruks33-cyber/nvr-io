@@ -20,7 +20,7 @@ type NavLink = {
 
 const links: NavLink[] = [
   { href: '/dashboard', label: 'Home' },
-  { href: '/gallery', label: 'Gallery' },
+  { href: '/gallery', label: 'File' },
   { href: '/collections', label: 'Collection' },
   { href: '/customers', label: 'People' },
   { href: '/loans', label: 'Records' },
@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (isSuperAdmin) {
       return [...base, { href: '/settings', label: 'Settings' }];
     }
-    return [...base, { href: '/gallery', label: 'Gallery' }];
+    return [...base, { href: '/gallery', label: 'File' }];
   }, [isSuperAdmin]);
 
   useEffect(() => {
