@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-4 px-3 pb-24 pt-4 md:flex-row md:gap-6 md:px-8 md:pb-6 md:pt-6">
-      <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-ink-900/90 px-3 py-2 md:hidden">
+      <header className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
             src={APP_ICONS.logo}
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <button
           type="button"
-          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-slate-200"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
         >
@@ -115,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {menuOpen ? (
-        <nav className="rounded-2xl border border-white/10 bg-ink-900/95 p-3 md:hidden">
+        <nav className="rounded-2xl border border-slate-200 bg-white p-3 md:hidden">
           <div className="grid grid-cols-2 gap-1">
             {mobileMenuLinks.map((link) => {
               const active = pathname.startsWith(link.href);
@@ -126,8 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setMenuOpen(false)}
                   className={`rounded-lg px-3 py-2.5 text-sm ${
                     active
-                      ? 'bg-blue-600/25 text-blue-100'
-                      : 'text-slate-300 hover:bg-white/5'
+                      ? 'bg-blue-600 font-medium text-white'
+                      : 'text-slate-600 hover:bg-blue-50'
                   }`}
                 >
                   {link.label}
@@ -135,12 +135,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-            <p className="truncate text-sm text-slate-300">{name}</p>
+          <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+            <p className="truncate text-sm text-slate-600">{name}</p>
             <button
               type="button"
               onClick={logout}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-slate-500 hover:text-blue-700"
             >
               Sign out
             </button>
@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       ) : null}
 
-      <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-white/10 bg-ink-900/80 p-4 md:flex">
+      <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 md:flex">
         <div className="mb-8 flex items-center gap-3">
           <Image
             src={APP_ICONS.logo}
@@ -161,7 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <div>
             <BrandWordmark size="md" onDark />
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-500">
               {isSuperAdmin ? 'Super admin' : 'Personal use'}
             </p>
           </div>
@@ -175,8 +175,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={link.href}
                 className={`rounded-lg px-3 py-2 text-sm transition ${
                   active
-                    ? 'bg-blue-600/25 text-blue-100'
-                    : 'text-slate-300 hover:bg-white/5'
+                    ? 'bg-blue-600 font-medium text-white'
+                    : 'text-slate-600 hover:bg-blue-50'
                 }`}
               >
                 {link.label}
@@ -184,12 +184,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <p className="truncate text-sm text-slate-300">{name}</p>
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <p className="truncate text-sm text-slate-600">{name}</p>
           <button
             type="button"
             onClick={logout}
-            className="mt-2 text-xs text-slate-400 hover:text-white"
+            className="mt-2 text-xs text-slate-500 hover:text-blue-700"
           >
             Sign out
           </button>
@@ -198,7 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="min-w-0 flex-1">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-950/95 px-2 py-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-slate-50 px-2 py-2 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-lg justify-around">
           {mobileBottomLinks.map((link) => {
             const active = pathname.startsWith(link.href);
@@ -207,7 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={link.href}
                 href={link.href}
                 className={`min-w-[4.5rem] rounded-xl px-2 py-2 text-center text-xs ${
-                  active ? 'bg-blue-600/30 text-blue-100' : 'text-slate-400'
+                  active ? 'bg-blue-600 font-medium text-white' : 'text-slate-500'
                 }`}
               >
                 {link.label}

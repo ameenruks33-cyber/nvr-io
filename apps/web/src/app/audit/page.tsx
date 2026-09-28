@@ -28,21 +28,21 @@ export default function AuditPage() {
   return (
     <AppShell>
       <SuperAdminOnly>
-      <h1 className="mb-6 font-display text-3xl text-white">Audit log</h1>
-      {error ? <p className="text-red-300">{error}</p> : null}
+      <h1 className="mb-6 font-display text-3xl text-slate-900">Audit log</h1>
+      {error ? <p className="text-red-600">{error}</p> : null}
       <ul className="space-y-2 text-sm">
         {rows.map((row) => (
           <li
             key={row.id}
-            className="rounded-xl border border-white/10 bg-ink-900/60 px-4 py-3"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3"
           >
             <div className="flex flex-wrap justify-between gap-2">
-              <span className="font-medium text-teal-200">{row.action}</span>
+              <span className="font-medium text-teal-700">{row.action}</span>
               <span className="text-slate-500">
                 {new Date(row.createdAt).toLocaleString()}
               </span>
             </div>
-            <p className="mt-1 text-slate-300">
+            <p className="mt-1 text-slate-600">
               {row.recordType}
               {row.recordId ? ` · ${row.recordId}` : ''}
             </p>

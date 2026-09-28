@@ -22,7 +22,7 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 font-display text-3xl text-white">Summary</h1>
+      <h1 className="mb-6 font-display text-3xl text-slate-900">Summary</h1>
       {stats ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {[
@@ -35,15 +35,15 @@ export default function ReportsPage() {
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-2xl border border-white/10 bg-ink-900/70 p-5"
+              className="rounded-2xl border border-slate-200 bg-white p-5"
             >
-              <p className="text-xs uppercase text-slate-400">{label}</p>
+              <p className="text-xs uppercase text-slate-500">{label}</p>
               <p className="mt-2 font-display text-2xl">{value}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-500">Loading…</p>
       )}
     </AppShell>
   );

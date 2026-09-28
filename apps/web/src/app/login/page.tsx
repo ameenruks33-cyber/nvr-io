@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-ink-900/90 p-6 shadow-2xl sm:p-8">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image
             src={APP_ICONS.logo}
@@ -68,13 +68,13 @@ export default function LoginPage() {
           <div className="mt-4">
             <BrandWordmark size="lg" onDark />
           </div>
-          <p className="mt-2 text-sm text-slate-400">Secure staff login</p>
+          <p className="mt-2 text-sm text-slate-500">Secure staff login</p>
         </div>
 
         {showInstall ? (
           <Link
             href="/app"
-            className="mt-6 flex w-full items-center justify-center rounded-lg border border-blue-400/40 bg-blue-600/20 px-4 py-3.5 text-center text-sm font-medium text-blue-100 hover:bg-blue-600/30"
+            className="mt-6 flex w-full items-center justify-center rounded-lg border border-blue-400/40 bg-blue-100 px-4 py-3.5 text-center text-sm font-medium text-blue-700 hover:bg-blue-100"
           >
             Install {APP_NAME} on this phone
           </Link>
@@ -82,9 +82,9 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <label className="block text-sm">
-            <span className="text-slate-300">Email / username</span>
+            <span className="text-slate-600">Email / username</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -95,9 +95,9 @@ export default function LoginPage() {
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Password</span>
+            <span className="text-slate-600">Password</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -107,7 +107,7 @@ export default function LoginPage() {
             />
           </label>
           {error ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}

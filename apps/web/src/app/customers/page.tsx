@@ -46,8 +46,8 @@ export default function CustomersPage() {
   return (
     <AppShell>
       <header className="mb-6">
-        <h1 className="font-display text-3xl text-white">People</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="font-display text-3xl text-slate-900">People</h1>
+        <p className="mt-1 text-sm text-slate-500">
           Search by ID, name, or phone
         </p>
       </header>
@@ -57,21 +57,21 @@ export default function CustomersPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Name / Phone / ID"
-          className="w-full max-w-md rounded-lg border border-white/10 bg-ink-900 px-3 py-2"
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2"
         />
         <button
           type="submit"
-          className="rounded-lg border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-blue-50"
         >
           Search
         </button>
       </form>
 
-      {error ? <p className="text-red-300">{error}</p> : null}
+      {error ? <p className="text-red-600">{error}</p> : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-ink-900 text-slate-400">
+          <thead className="bg-white text-slate-500">
             <tr>
               <th className="px-4 py-3 font-medium">ID</th>
               <th className="px-4 py-3 font-medium">Name</th>
@@ -86,12 +86,12 @@ export default function CustomersPage() {
               return (
                 <tr
                   key={row.id}
-                  className="border-t border-white/5 hover:bg-white/[0.03]"
+                  className="border-t border-slate-100 hover:bg-white/[0.03]"
                 >
                   <td className="px-4 py-3">
                     <Link
                       href={`/customers/${row.id}`}
-                      className="text-teal-300 hover:underline"
+                      className="text-teal-700 hover:underline"
                     >
                       {row.customerCode}
                     </Link>

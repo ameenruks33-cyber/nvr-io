@@ -40,8 +40,8 @@ export default function DashboardPage() {
     <AppShell>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl text-white">Home</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="font-display text-3xl text-slate-900">Home</h1>
+          <p className="mt-1 text-sm text-slate-500">
             Personal records overview
           </p>
         </div>
@@ -53,18 +53,18 @@ export default function DashboardPage() {
         </Link>
       </header>
 
-      {error ? <p className="text-red-300">{error}</p> : null}
+      {error ? <p className="text-red-600">{error}</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <div
             key={card.label}
-            className="rounded-2xl border border-white/10 bg-ink-900/70 p-5"
+            className="rounded-2xl border border-slate-200 bg-white p-5"
           >
-            <p className="text-xs uppercase tracking-wide text-slate-400">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
               {card.label}
             </p>
-            <p className="mt-2 font-display text-2xl text-white">{card.value}</p>
+            <p className="mt-2 font-display text-2xl text-slate-900">{card.value}</p>
           </div>
         ))}
       </div>

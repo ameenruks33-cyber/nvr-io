@@ -98,7 +98,7 @@ export default function InstallAppPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-ink-900/95 p-6 shadow-2xl sm:p-8">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image
             src={APP_ICONS.logo}
@@ -109,18 +109,18 @@ export default function InstallAppPage() {
             unoptimized
             priority
           />
-          <p className="mt-4 text-sm font-medium text-slate-300">Install</p>
+          <p className="mt-4 text-sm font-medium text-slate-600">Install</p>
           <div className="mt-2">
             <BrandWordmark size="xl" onDark />
           </div>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-500">
             Phones never auto-install. Use the button below (or the steps for
             your phone).
           </p>
         </div>
 
         {installed ? (
-          <p className="mt-6 rounded-lg border border-teal-500/30 bg-teal-950/40 px-3 py-3 text-center text-sm text-teal-100">
+          <p className="mt-6 rounded-lg border border-teal-500/30 bg-teal-50 px-3 py-3 text-center text-sm text-teal-700">
             This device already has CrickHerose installed. Open it from the home
             screen icon.
           </p>
@@ -154,30 +154,30 @@ export default function InstallAppPage() {
                 ),
               );
             }}
-            className="w-full rounded-lg border border-white/15 px-4 py-3 text-sm text-slate-200 hover:bg-white/5"
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50"
           >
             Allow update notifications
           </button>
 
           <Link
             href="/login"
-            className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
+            className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-sm text-slate-700 hover:bg-blue-50"
           >
             Continue to sign in
           </Link>
         </div>
 
         {status ? (
-          <p className="mt-4 text-sm text-teal-200" role="status">
+          <p className="mt-4 text-sm text-teal-700" role="status">
             {status}
           </p>
         ) : null}
 
-        <div className="mt-8 space-y-4 text-left text-sm text-slate-300">
+        <div className="mt-8 space-y-4 text-left text-sm text-slate-600">
           {isIos ? (
-            <div className="rounded-xl border border-white/10 bg-ink-950/80 p-4">
-              <p className="font-medium text-white">iPhone / iPad (Safari)</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-400">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-medium text-slate-900">iPhone / iPad (Safari)</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-500">
                 <li>Open this page in Safari (not Chrome / Instagram)</li>
                 <li>Tap Share (□↑) at the bottom</li>
                 <li>Scroll and tap Add to Home Screen</li>
@@ -187,15 +187,15 @@ export default function InstallAppPage() {
           ) : null}
 
           {isAndroid || (!isIos && !installed) ? (
-            <div className="rounded-xl border border-white/10 bg-ink-950/80 p-4">
-              <p className="font-medium text-white">Android (Chrome)</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-400">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-medium text-slate-900">Android (Chrome)</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-500">
                 <li>Open https://nvr-io-web.vercel.app/app in Chrome</li>
                 <li>Tap Install CrickHerose above (or ⋮ → Install app)</li>
                 <li>Confirm Install when Chrome asks</li>
               </ol>
               {!canInstall && swReady ? (
-                <p className="mt-2 text-xs text-amber-200/90">
+                <p className="mt-2 text-xs text-amber-700">
                   If no Install popup appears, use Chrome menu → Install app.
                   In-app browsers (WhatsApp, Instagram) cannot install PWAs —
                   open the link in Chrome.
@@ -207,7 +207,7 @@ export default function InstallAppPage() {
 
         <p className="mt-6 text-center text-xs text-slate-500">
           Direct install link:{' '}
-          <span className="text-slate-400">nvr-io-web.vercel.app/app</span>
+          <span className="text-slate-500">nvr-io-web.vercel.app/app</span>
         </p>
       </div>
     </div>

@@ -22,18 +22,18 @@ export default function NotificationsPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 font-display text-3xl text-white">Notifications</h1>
+      <h1 className="mb-6 font-display text-3xl text-slate-900">Notifications</h1>
       <ul className="space-y-3">
         {rows.map((row) => (
           <li
             key={row.id}
-            className="rounded-2xl border border-white/10 bg-ink-900/70 p-4"
+            className="rounded-2xl border border-slate-200 bg-white p-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
               <span>{row.type}</span>
               <span>{new Date(row.createdAt).toLocaleString()}</span>
             </div>
-            <p className="mt-2 text-sm text-slate-100">{row.message}</p>
+            <p className="mt-2 text-sm text-slate-900">{row.message}</p>
             {row.customer ? (
               <p className="mt-1 text-xs text-slate-500">
                 {row.customer.customerCode} · {row.customer.name}

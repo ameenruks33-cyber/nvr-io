@@ -7,4 +7,4 @@ export const APP_ICONS = {
   "apple": "/icons/v1.1.35/apple-touch-icon.png",
   "logo": "/icons/v1.1.35/logo.jpg"
 } as const;
-export const APP_THEME_COLOR = '#b91c1c';
+export const APP_THEME_COLOR = '#1d4ed8';

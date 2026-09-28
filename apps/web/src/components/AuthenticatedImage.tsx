@@ -46,7 +46,7 @@ export function AuthenticatedImage({
   if (!src) {
     return (
       <div
-        className={`flex items-center justify-center bg-ink-950 text-slate-500 ${className || ''}`}
+        className={`flex items-center justify-center bg-slate-50 text-slate-500 ${className || ''}`}
       >
         No photo
       </div>

@@ -285,15 +285,15 @@ export default function NewCustomerPage() {
 
   return (
     <AppShell>
-      <h1 className="font-display text-3xl text-white">Add person</h1>
-      <p className="mt-1 text-sm text-slate-400">
+      <h1 className="font-display text-3xl text-slate-900">Add person</h1>
+      <p className="mt-1 text-sm text-slate-500">
         Identity fields are encrypted on the server. Location is saved only
         after you allow it.
       </p>
 
       <form
         onSubmit={onSubmit}
-        className="mt-8 max-w-xl space-y-4 rounded-2xl border border-white/10 bg-ink-900/70 p-6"
+        className="mt-8 max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
       >
         {(
           [
@@ -307,7 +307,7 @@ export default function NewCustomerPage() {
         ).map((field) =>
           field === 'careOf' ? (
             <div key="careOf" className="block text-sm">
-              <span className="text-slate-300">C/O Name &amp; Phone</span>
+              <span className="text-slate-600">C/O Name &amp; Phone</span>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 <input
                   name="careOfName"
@@ -316,7 +316,7 @@ export default function NewCustomerPage() {
                   aria-label="C/O Name"
                   maxLength={120}
                   autoComplete="off"
-                  className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                 />
                 <input
                   name="careOfPhone"
@@ -325,19 +325,19 @@ export default function NewCustomerPage() {
                   aria-label="C/O Phone"
                   maxLength={20}
                   autoComplete="off"
-                  className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                 />
               </div>
             </div>
           ) : (
             <label key={field[0]} className="block text-sm">
-              <span className="text-slate-300">{field[1]}</span>
+              <span className="text-slate-600">{field[1]}</span>
               <input
                 name={field[0]}
                 type={field[2]}
                 required
                 autoComplete="off"
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
               />
             </label>
           ),
@@ -345,9 +345,9 @@ export default function NewCustomerPage() {
 
         <div className="space-y-3 text-sm">
           <label className="block text-sm">
-            <span className="text-slate-400">Caption (optional)</span>
+            <span className="text-slate-500">Caption (optional)</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 outline-none ring-blue-500 focus:ring-2"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               maxLength={120}
@@ -358,7 +358,7 @@ export default function NewCustomerPage() {
           <div
             className={
               cameraOn
-                ? 'overflow-hidden rounded-xl border border-white/10 bg-black'
+                ? 'overflow-hidden rounded-xl border border-slate-200 bg-black'
                 : 'contents'
             }
           >
@@ -384,7 +384,7 @@ export default function NewCustomerPage() {
 
           {pending.length ? (
             <div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 {pending.length} photo{pending.length > 1 ? 's' : ''} ready —
                 tap Save Cloud to upload.
               </p>
@@ -458,7 +458,7 @@ export default function NewCustomerPage() {
                 setFacing(next);
                 if (cameraOn) void startCamera(next);
               }}
-              className="rounded-xl border border-white/15 px-4 py-3.5 text-slate-200 hover:bg-white/5 disabled:opacity-60"
+              className="rounded-xl border border-slate-300 px-4 py-3.5 text-slate-700 hover:bg-blue-50 disabled:opacity-60"
             >
               Flip camera
             </button>
@@ -468,14 +468,14 @@ export default function NewCustomerPage() {
             <button
               type="button"
               onClick={stopCamera}
-              className="text-xs text-slate-500 underline hover:text-slate-300"
+              className="text-xs text-slate-500 underline hover:text-slate-800"
             >
               Close camera
             </button>
           ) : null}
 
           {photoStatus ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {photoStatus}
             </p>
           ) : null}
@@ -484,15 +484,15 @@ export default function NewCustomerPage() {
             <button
               type="button"
               onClick={clearPhoto}
-              className="text-xs text-slate-500 underline hover:text-slate-300"
+              className="text-xs text-slate-500 underline hover:text-slate-800"
             >
               Remove photo
             </button>
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-ink-950 p-3 text-sm">
-          <p className="text-slate-300">{locationStatus}</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+          <p className="text-slate-600">{locationStatus}</p>
           {coords ? (
             <p className="mt-1 text-xs text-slate-500">
               {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
@@ -504,13 +504,13 @@ export default function NewCustomerPage() {
           <button
             type="button"
             onClick={requestLocation}
-            className="mt-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/15"
+            className="mt-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs hover:bg-slate-200"
           >
             Request location permission
           </button>
         </div>
 
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         <button
           type="submit"

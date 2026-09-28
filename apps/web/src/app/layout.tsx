@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: APP_NAME,
   },
 };
@@ -53,7 +53,7 @@ export default function RootLayout({
         <link rel="icon" href={APP_ICONS.favicon} sizes="32x32" type="image/png" />
         <link rel="apple-touch-icon" href={APP_ICONS.apple} />
       </head>
-      <body className="min-h-screen bg-ink-950 font-sans text-slate-100 antialiased">
+      <body className="min-h-screen font-sans text-slate-900 antialiased">
         <UpdateNotifier />
         {children}
       </body>

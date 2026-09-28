@@ -59,7 +59,7 @@ export default function UpdatesPage() {
 
   if (!allowed) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
         Updates are for the mobile app only…
       </div>
     );
@@ -69,7 +69,7 @@ export default function UpdatesPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-10">
-      <div className="rounded-2xl border border-white/10 bg-ink-900/95 p-6 shadow-2xl">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="flex flex-col items-center text-center">
           <Image
             src={newIcon}
@@ -80,15 +80,15 @@ export default function UpdatesPage() {
             unoptimized
             priority
           />
-          <p className="mt-4 font-display text-3xl text-white">App updates</p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-4 font-display text-3xl text-slate-900">App updates</p>
+          <p className="mt-2 text-sm text-slate-500">
             Mobile app only. Tap Update now — the notification bar alert will
             close automatically.
           </p>
         </div>
 
         {iconRefreshed ? (
-          <p className="mt-4 rounded-lg border border-teal-500/30 bg-teal-950/40 px-3 py-3 text-sm text-teal-100">
+          <p className="mt-4 rounded-lg border border-teal-500/30 bg-teal-50 px-3 py-3 text-sm text-teal-700">
             Update applied — notification cleared. If your home screen still
             shows the old icon, remove CrickHerose and install again from{' '}
             <Link href="/app" className="underline">
@@ -99,22 +99,22 @@ export default function UpdatesPage() {
         ) : null}
 
         <dl className="mt-6 space-y-2 text-sm">
-          <div className="flex justify-between gap-4 border-b border-white/5 py-2">
-            <dt className="text-slate-400">Installed version</dt>
-            <dd className="text-white">{current}</dd>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Installed version</dt>
+            <dd className="text-slate-900">{current}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-white/5 py-2">
-            <dt className="text-slate-400">Latest version</dt>
-            <dd className="text-white">{info?.version || '…'}</dd>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Latest version</dt>
+            <dd className="text-slate-900">{info?.version || '…'}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-white/5 py-2">
-            <dt className="text-slate-400">Build</dt>
-            <dd className="text-white">{info?.build || '…'}</dd>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Build</dt>
+            <dd className="text-slate-900">{info?.build || '…'}</dd>
           </div>
         </dl>
 
         {info?.notes?.length ? (
-          <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-300">
+          <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-600">
             {[...new Set(info.notes)].map((n) => (
               <li key={n}>{n}</li>
             ))}
@@ -133,19 +133,19 @@ export default function UpdatesPage() {
           <button
             type="button"
             onClick={() => void enableNotifications()}
-            className="w-full rounded-lg border border-white/15 px-4 py-3 text-sm text-slate-200 hover:bg-white/5"
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50"
           >
             Allow update notifications
           </button>
           <Link
             href="/app"
-            className="block w-full rounded-lg border border-white/15 px-4 py-3 text-center text-sm text-slate-200 hover:bg-white/5"
+            className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-sm text-slate-700 hover:bg-blue-50"
           >
             Reinstall home-screen icon
           </Link>
           <Link
             href="/dashboard"
-            className="block text-center text-sm text-teal-300 hover:underline"
+            className="block text-center text-sm text-teal-700 hover:underline"
           >
             Back to app
           </Link>

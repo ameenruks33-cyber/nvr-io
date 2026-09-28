@@ -387,17 +387,17 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <SuperAdminOnly>
-      <h1 className="font-display text-3xl text-white">Settings</h1>
+      <h1 className="font-display text-3xl text-slate-900">Settings</h1>
 
       {/* Mobile app: no username/password change */}
-      <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-white/10 bg-ink-900/70 p-5 text-sm text-slate-300 md:hidden">
-        <p className="font-medium text-white">
+      <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600 md:hidden">
+        <p className="font-medium text-slate-900">
           {profile?.name || 'Signed in'}
         </p>
-        <p className="text-slate-400">{profile?.email}</p>
+        <p className="text-slate-500">{profile?.email}</p>
         <p>
           Username and password can only be changed from the{' '}
-          <strong className="text-white">website</strong> (computer browser),
+          <strong className="text-slate-900">website</strong> (computer browser),
           not in the mobile app.
         </p>
         <button
@@ -406,7 +406,7 @@ export default function SettingsPage() {
             clearSession();
             router.replace('/login');
           }}
-          className="w-full rounded-lg border border-white/15 px-4 py-3 text-slate-200 hover:bg-white/5"
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-700 hover:bg-blue-50"
         >
           Sign out
         </button>
@@ -414,18 +414,18 @@ export default function SettingsPage() {
 
       {/* Website desktop: account management */}
       <div className="mt-6 hidden md:block">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-500">
           Change your display name, login email, and password on the website.
         </p>
 
         <form
           onSubmit={onSubmit}
-          className="mt-4 max-w-xl space-y-4 rounded-2xl border border-white/10 bg-ink-900/70 p-5 sm:p-6"
+          className="mt-4 max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
         >
           <label className="block text-sm">
-            <span className="text-slate-300">Display Name</span>
+            <span className="text-slate-600">Display Name</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -435,9 +435,9 @@ export default function SettingsPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Login email / username</span>
+            <span className="text-slate-600">Login email / username</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -446,18 +446,18 @@ export default function SettingsPage() {
             />
           </label>
 
-          <div className="border-t border-white/10 pt-4">
-            <p className="text-sm font-medium text-white">Change password</p>
-            <p className="mt-1 text-xs text-slate-400">
+          <div className="border-t border-slate-200 pt-4">
+            <p className="text-sm font-medium text-slate-900">Change password</p>
+            <p className="mt-1 text-xs text-slate-500">
               Leave blank to keep your current password. Current password is
               required when changing email or password.
             </p>
           </div>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Current password</span>
+            <span className="text-slate-600">Current password</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -466,9 +466,9 @@ export default function SettingsPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">New password</span>
+            <span className="text-slate-600">New password</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -478,9 +478,9 @@ export default function SettingsPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Confirm new password</span>
+            <span className="text-slate-600">Confirm new password</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -490,12 +490,12 @@ export default function SettingsPage() {
           </label>
 
           {error ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
           {message ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {message}
             </p>
           ) : null}
@@ -512,12 +512,12 @@ export default function SettingsPage() {
 
       {/* Super Admin: WhatsApp auto receipts */}
       {isSuperAdmin ? (
-        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-teal-500/25 bg-ink-900/80 p-5">
+        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-teal-500/25 bg-white p-5">
           <div>
-            <h2 className="text-lg font-medium text-white">
+            <h2 className="text-lg font-medium text-slate-900">
               WhatsApp receipts
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-500">
               After each saved collection, WhatsApp opens with the receipt
               (name, date &amp; time, amount, total, remaining balance) ready
               for the customer — the collector taps Send. This is free and needs
@@ -525,17 +525,17 @@ export default function SettingsPage() {
               without the tap.
             </p>
             {waAutoSend ? (
-              <p className="mt-2 text-sm text-teal-200">
+              <p className="mt-2 text-sm text-teal-700">
                 Auto-send is ON ({waProvider}).
               </p>
             ) : (
-              <p className="mt-2 text-sm text-slate-300">
+              <p className="mt-2 text-sm text-slate-600">
                 Using the free one-tap WhatsApp button.
               </p>
             )}
           </div>
           <form onSubmit={saveWhatsapp} className="space-y-3">
-            <label className="flex items-center gap-2 text-sm text-slate-200">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={waEnabled}
@@ -544,9 +544,9 @@ export default function SettingsPage() {
               Enable automatic WhatsApp receipts
             </label>
             <label className="block text-sm">
-              <span className="text-slate-300">Provider</span>
+              <span className="text-slate-600">Provider</span>
               <select
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 value={waProvider}
                 onChange={(e) =>
                   setWaProvider(e.target.value as 'green-api' | 'meta')
@@ -557,11 +557,11 @@ export default function SettingsPage() {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-slate-300">
+              <span className="text-slate-600">
                 {waProvider === 'meta' ? 'Phone Number ID' : 'Instance ID'}
               </span>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 value={waInstanceId}
                 onChange={(e) => setWaInstanceId(e.target.value)}
                 placeholder={
@@ -571,11 +571,11 @@ export default function SettingsPage() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-slate-300">
+              <span className="text-slate-600">
                 API token{waTokenSet ? ' (leave blank to keep current)' : ''}
               </span>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 type="password"
                 value={waToken}
                 onChange={(e) => setWaToken(e.target.value)}
@@ -585,9 +585,9 @@ export default function SettingsPage() {
             </label>
             {waProvider === 'green-api' ? (
               <label className="block text-sm">
-                <span className="text-slate-300">API URL (optional)</span>
+                <span className="text-slate-600">API URL (optional)</span>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                   value={waApiUrl}
                   onChange={(e) => setWaApiUrl(e.target.value)}
                   placeholder="https://api.green-api.com"
@@ -595,11 +595,11 @@ export default function SettingsPage() {
               </label>
             ) : (
               <label className="block text-sm">
-                <span className="text-slate-300">
+                <span className="text-slate-600">
                   Template name (optional, for Meta)
                 </span>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                   value={waTemplate}
                   onChange={(e) => setWaTemplate(e.target.value)}
                   placeholder="collection_receipt"
@@ -607,21 +607,21 @@ export default function SettingsPage() {
               </label>
             )}
             <label className="block text-sm">
-              <span className="text-slate-300">Test phone (optional)</span>
+              <span className="text-slate-600">Test phone (optional)</span>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 value={waTestPhone}
                 onChange={(e) => setWaTestPhone(e.target.value)}
                 placeholder="05xxxxxxxx or 9715xxxxxxxx"
               />
             </label>
             {waErr ? (
-              <p className="text-sm text-red-300" role="alert">
+              <p className="text-sm text-red-600" role="alert">
                 {waErr}
               </p>
             ) : null}
             {waMsg ? (
-              <p className="text-sm text-teal-200" role="status">
+              <p className="text-sm text-teal-700" role="status">
                 {waMsg}
               </p>
             ) : null}
@@ -637,7 +637,7 @@ export default function SettingsPage() {
                 type="button"
                 disabled={waTesting}
                 onClick={() => void testWhatsapp()}
-                className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-200 hover:bg-white/5 disabled:opacity-60"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 disabled:opacity-60"
               >
                 {waTesting ? 'Sending…' : 'Send test receipt'}
               </button>
@@ -648,12 +648,12 @@ export default function SettingsPage() {
 
       {/* Super Admin: shared cloud gallery number password */}
       {isSuperAdmin ? (
-        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-ink-900/80 p-5">
+        <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-blue-500/25 bg-white p-5">
           <div>
-            <h2 className="text-lg font-medium text-white">
+            <h2 className="text-lg font-medium text-slate-900">
               Cloud gallery number password
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-500">
               Set a 4–8 digit PIN. Admins and users enter it to open the shared
               cloud photo gallery (read, write, and previous-photo verification).
               {galleryPinSet
@@ -663,9 +663,9 @@ export default function SettingsPage() {
           </div>
           <form onSubmit={saveGalleryPin} className="space-y-3">
             <label className="block text-sm">
-              <span className="text-slate-300">New number password</span>
+              <span className="text-slate-600">New number password</span>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
                 type="password"
                 inputMode="numeric"
                 pattern="\d{4,8}"
@@ -680,9 +680,9 @@ export default function SettingsPage() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-slate-300">Confirm number password</span>
+              <span className="text-slate-600">Confirm number password</span>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
                 type="password"
                 inputMode="numeric"
                 pattern="\d{4,8}"
@@ -699,12 +699,12 @@ export default function SettingsPage() {
               />
             </label>
             {pinErr ? (
-              <p className="text-sm text-red-300" role="alert">
+              <p className="text-sm text-red-600" role="alert">
                 {pinErr}
               </p>
             ) : null}
             {pinMsg ? (
-              <p className="text-sm text-teal-200" role="status">
+              <p className="text-sm text-teal-700" role="status">
                 {pinMsg}
               </p>
             ) : null}
@@ -725,16 +725,16 @@ export default function SettingsPage() {
 
       {/* Super Admin: remove old cloud gallery photos */}
       {isSuperAdmin ? (
-        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-red-500/25 bg-ink-900/80 p-5">
+        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-red-500/25 bg-white p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-medium text-white">
+              <h2 className="text-lg font-medium text-slate-900">
                 Cloud photos
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-500">
                 Remove old cloud gallery photos from the admin panel. You can
                 also delete them in{' '}
-                <Link href="/gallery" className="text-teal-300 underline">
+                <Link href="/gallery" className="text-teal-700 underline">
                   Gallery
                 </Link>
                 .
@@ -743,34 +743,34 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => void loadGalleryPhotos()}
-              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-blue-50"
             >
               Refresh
             </button>
           </div>
 
           {galleryPhotosErr ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {galleryPhotosErr}
             </p>
           ) : null}
           {galleryPhotosMsg ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {galleryPhotosMsg}
             </p>
           ) : null}
 
-          <ul className="divide-y divide-white/5 rounded-xl border border-white/10">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
             {galleryPhotos.map((photo) => (
               <li
                 key={photo.id}
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">
+                  <p className="truncate text-sm font-medium text-slate-900">
                     {photo.caption?.trim() || 'Untitled photo'}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     {photo.status}
                     {photo.uploadedBy ? ` · ${photo.uploadedBy.name}` : ''}
                     {' · '}
@@ -797,16 +797,16 @@ export default function SettingsPage() {
 
       {/* Admin: disable / enable users for the app */}
       {isSuperAdmin ? (
-        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-amber-500/25 bg-ink-900/80 p-5">
+        <section className="mt-8 max-w-2xl space-y-4 rounded-2xl border border-amber-500/25 bg-white p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-medium text-white">
+              <h2 className="text-lg font-medium text-slate-900">
                 User app access
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-500">
                 Disable a user to block them from the app immediately. Enable
                 again anytime. Create new accounts under{' '}
-                <Link href="/users" className="text-teal-300 underline">
+                <Link href="/users" className="text-teal-700 underline">
                   Users
                 </Link>
                 .
@@ -815,17 +815,17 @@ export default function SettingsPage() {
           </div>
 
           {staffErr ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {staffErr}
             </p>
           ) : null}
           {staffMsg ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {staffMsg}
             </p>
           ) : null}
 
-          <ul className="divide-y divide-white/5 rounded-xl border border-white/10">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
             {staff.map((user) => {
               const isMe = user.id === profile?.id;
               const blockedAdmin = false;
@@ -837,18 +837,18 @@ export default function SettingsPage() {
                   className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-slate-900">
                       {user.name}
                       {isMe ? (
                         <span className="ml-2 text-xs text-slate-500">(you)</span>
                       ) : null}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {user.email} · {user.role}
                     </p>
                     <p
                       className={`mt-1 text-xs ${
-                        user.isActive ? 'text-teal-300' : 'text-amber-300'
+                        user.isActive ? 'text-teal-700' : 'text-amber-700'
                       }`}
                     >
                       {user.isActive ? 'App enabled' : 'App disabled'}
@@ -886,14 +886,14 @@ export default function SettingsPage() {
         </section>
       ) : null}
 
-      <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-white/10 bg-ink-900/70 p-5 text-sm text-slate-300">
+      <div className="mt-6 max-w-xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
         <p>
-          Install CrickHerose from <strong className="text-white">/app</strong> for a
+          Install CrickHerose from <strong className="text-slate-900">/app</strong> for a
           home-screen icon on your phone.
         </p>
         <p className="hidden md:block">
           To clear old customer data, open{' '}
-          <strong className="text-white">Users</strong> on this website — that
+          <strong className="text-slate-900">Users</strong> on this website — that
           option is not available in the mobile app.
         </p>
       </div>

@@ -177,33 +177,33 @@ export default function UsersPage() {
   return (
     <AppShell>
       <SuperAdminOnly>
-      <h1 className="mb-2 font-display text-3xl text-white">Users</h1>
-      <p className="mb-6 text-sm text-slate-400">
+      <h1 className="mb-2 font-display text-3xl text-slate-900">Users</h1>
+      <p className="mb-6 text-sm text-slate-500">
         Create staff accounts and restrict access. Restricted users cannot sign
         in.
       </p>
 
       {error ? (
-        <p className="mb-4 text-sm text-red-300" role="alert">
+        <p className="mb-4 text-sm text-red-600" role="alert">
           {error}
         </p>
       ) : null}
       {msg ? (
-        <p className="mb-4 text-sm text-teal-200" role="status">
+        <p className="mb-4 text-sm text-teal-700" role="status">
           {msg}
         </p>
       ) : null}
 
       <form
         onSubmit={createUser}
-        className="mb-8 space-y-4 rounded-2xl border border-blue-500/20 bg-ink-900/80 p-5"
+        className="mb-8 space-y-4 rounded-2xl border border-blue-500/20 bg-white p-5"
       >
-        <h2 className="text-lg font-medium text-white">Create new user</h2>
+        <h2 className="text-lg font-medium text-slate-900">Create new user</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm sm:col-span-2">
-            <span className="text-slate-300">Full Name</span>
+            <span className="text-slate-600">Full Name</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -212,9 +212,9 @@ export default function UsersPage() {
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Email / username</span>
+            <span className="text-slate-600">Email / username</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -223,18 +223,18 @@ export default function UsersPage() {
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Phone (optional)</span>
+            <span className="text-slate-600">Phone (optional)</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               autoComplete="tel"
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Password</span>
+            <span className="text-slate-600">Password</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -245,9 +245,9 @@ export default function UsersPage() {
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Role</span>
+            <span className="text-slate-600">Role</span>
             <select
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
             >
@@ -268,9 +268,9 @@ export default function UsersPage() {
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-ink-900 text-slate-400">
+          <thead className="bg-white text-slate-500">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
@@ -283,13 +283,13 @@ export default function UsersPage() {
             {rows.map((row) => {
               const manage = canManage(row);
               return (
-                <tr key={row.id} className="border-t border-white/5 align-top">
-                  <td className="px-4 py-3 text-white">{row.name}</td>
-                  <td className="px-4 py-3 text-slate-300">{row.email}</td>
+                <tr key={row.id} className="border-t border-slate-100 align-top">
+                  <td className="px-4 py-3 text-slate-900">{row.name}</td>
+                  <td className="px-4 py-3 text-slate-600">{row.email}</td>
                   <td className="px-4 py-3">
                     {manage ? (
                       <select
-                        className="rounded-lg border border-white/10 bg-ink-950 px-2 py-1.5 text-xs text-slate-200"
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700"
                         value={row.role}
                         disabled={busyId === row.id}
                         onChange={(e) => void changeRole(row, e.target.value)}
@@ -305,13 +305,13 @@ export default function UsersPage() {
                         ) : null}
                       </select>
                     ) : (
-                      <span className="text-slate-300">{row.role}</span>
+                      <span className="text-slate-600">{row.role}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={
-                        row.isActive ? 'text-teal-300' : 'text-amber-300'
+                        row.isActive ? 'text-teal-700' : 'text-amber-700'
                       }
                     >
                       {row.isActive ? 'Active' : 'Restricted'}
@@ -360,23 +360,23 @@ export default function UsersPage() {
       {role === 'SUPER_ADMIN' && isDesktopWebsite ? (
         <form
           onSubmit={clearOldDatabase}
-          className="mt-8 max-w-xl space-y-4 rounded-2xl border border-red-500/30 bg-red-950/20 p-5"
+          className="mt-8 max-w-xl space-y-4 rounded-2xl border border-red-500/30 bg-red-50 p-5"
         >
-          <h2 className="text-lg font-medium text-red-200">
+          <h2 className="text-lg font-medium text-red-600">
             Clear old database
           </h2>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-slate-600">
             Deletes all people, records, receipts, documents, and notes. Staff
             login accounts are kept. This cannot be undone. Not available in the
             mobile app.
           </p>
           <label className="block text-sm">
-            <span className="text-slate-300">
-              Type <code className="text-red-200">DELETE_OLD_DATA</code> to
+            <span className="text-slate-600">
+              Type <code className="text-red-600">DELETE_OLD_DATA</code> to
               confirm
             </span>
             <input
-              className="mt-1 w-full rounded-lg border border-red-500/40 bg-ink-950 px-3 py-3 outline-none ring-red-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-red-500/40 bg-slate-50 px-3 py-3 outline-none ring-red-500 focus:ring-2"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               autoComplete="off"
@@ -384,12 +384,12 @@ export default function UsersPage() {
             />
           </label>
           {clearErr ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {clearErr}
             </p>
           ) : null}
           {clearMsg ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {clearMsg}
             </p>
           ) : null}
@@ -404,7 +404,7 @@ export default function UsersPage() {
       ) : null}
 
       {role === 'SUPER_ADMIN' && !isDesktopWebsite ? (
-        <p className="mt-6 max-w-xl rounded-2xl border border-white/10 bg-ink-900/70 p-4 text-sm text-slate-400">
+        <p className="mt-6 max-w-xl rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
           Database clear is only available on the website admin panel (computer
           browser), not in the mobile app.
         </p>

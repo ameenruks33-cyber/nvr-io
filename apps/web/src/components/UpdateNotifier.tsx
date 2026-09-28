@@ -257,9 +257,9 @@ export function UpdateNotifier() {
   return (
     <>
       {askNotify ? (
-        <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-ink-950/95 px-3 py-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-blue-400/30 bg-slate-50 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-200">
+            <p className="text-xs text-slate-700">
               Allow notifications so new CrickHerose updates are sent to this mobile
               app.
             </p>
@@ -270,7 +270,7 @@ export function UpdateNotifier() {
                   localStorage.setItem(NOTIFY_ASKED_KEY, '1');
                   setAskNotify(false);
                 }}
-                className="rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600"
               >
                 Not now
               </button>
@@ -289,19 +289,19 @@ export function UpdateNotifier() {
       {update ? (
         <div
           role="status"
-          className="fixed inset-x-0 top-0 z-[100] border-b border-blue-400/40 bg-blue-950/95 px-3 py-3 shadow-lg backdrop-blur"
+          className="fixed inset-x-0 top-0 z-[100] border-b border-blue-400/40 bg-blue-50 px-3 py-3 shadow-lg backdrop-blur"
         >
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-white">{update.title}</p>
-              <p className="text-xs text-blue-100/90">
+              <p className="text-sm font-medium text-slate-900">{update.title}</p>
+              <p className="text-xs text-blue-700">
                 v{update.version} · {update.message}
               </p>
             </div>
             <div className="flex gap-2">
               <Link
                 href={safeUpdatePath(update.updateUrl)}
-                className="rounded-lg border border-white/20 px-3 py-2 text-xs text-blue-100 hover:bg-white/5"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-blue-700 hover:bg-blue-50"
               >
                 Details
               </Link>

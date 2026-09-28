@@ -120,7 +120,7 @@ export default function CustomerDetailPage() {
   if (!customer) {
     return (
       <AppShell>
-        <p className="text-slate-400">{error || 'Loading…'}</p>
+        <p className="text-slate-500">{error || 'Loading…'}</p>
       </AppShell>
     );
   }
@@ -134,14 +134,14 @@ export default function CustomerDetailPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <p className="text-sm text-slate-400">{customer.customerCode}</p>
-        <h1 className="font-display text-3xl text-white">{customer.name}</h1>
-        <p className="mt-1 text-slate-300">{customer.phone}</p>
+        <p className="text-sm text-slate-500">{customer.customerCode}</p>
+        <h1 className="font-display text-3xl text-slate-900">{customer.name}</h1>
+        <p className="mt-1 text-slate-600">{customer.phone}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-ink-900/70">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             {customer.photoStorageId ? (
               <AuthenticatedImage
                 storageKey={customer.photoStorageId}
@@ -154,35 +154,35 @@ export default function CustomerDetailPage() {
               </div>
             )}
           </div>
-          <div className="rounded-2xl border border-white/10 bg-ink-900/70 p-4 text-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
             {customer.careOfName || customer.careOfPhone ? (
               <>
-                <p className="text-slate-400">C/O</p>
+                <p className="text-slate-500">C/O</p>
                 <p className="mt-1">
                   {[customer.careOfName, customer.careOfPhone]
                     .filter(Boolean)
                     .join(' · ')}
                 </p>
-                <p className="mt-3 text-slate-400">Address</p>
+                <p className="mt-3 text-slate-500">Address</p>
               </>
             ) : (
-              <p className="text-slate-400">Address</p>
+              <p className="text-slate-500">Address</p>
             )}
             <p className="mt-1">{customer.address}</p>
-            <p className="mt-3 text-slate-400">Passport</p>
+            <p className="mt-3 text-slate-500">Passport</p>
             <p className="mt-1 font-mono">
               {customer.passportNumber || customer.passportMasked}
             </p>
-            <p className="mt-3 text-slate-400">Aadhaar</p>
+            <p className="mt-3 text-slate-500">Aadhaar</p>
             <p className="mt-1 font-mono">
               {customer.aadhaarNumber || customer.aadhaarMasked}
             </p>
-            <p className="mt-3 text-slate-400">Saved location</p>
+            <p className="mt-3 text-slate-500">Saved location</p>
             <p className="mt-1">
               {customer.latitude.toFixed(5)}, {customer.longitude.toFixed(5)}
             </p>
             <a
-              className="mt-2 inline-block text-teal-300 hover:underline"
+              className="mt-2 inline-block text-teal-700 hover:underline"
               href={`https://maps.google.com/?q=${customer.latitude},${customer.longitude}`}
               target="_blank"
               rel="noreferrer"
@@ -194,23 +194,23 @@ export default function CustomerDetailPage() {
 
         <div className="space-y-6">
           {loan ? (
-            <div className="rounded-2xl border border-white/10 bg-ink-900/70 p-5">
-              <h2 className="font-display text-xl text-white">Payments</h2>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="font-display text-xl text-slate-900">Payments</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-slate-400">Target</p>
+                  <p className="text-xs text-slate-500">Target</p>
                   <p className="text-lg">{money(principal)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Collected</p>
+                  <p className="text-xs text-slate-500">Collected</p>
                   <p className="text-lg">{money(collected)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Remaining</p>
+                  <p className="text-xs text-slate-500">Remaining</p>
                   <p className="text-lg">{money(remaining)}</p>
                 </div>
               </div>
-              <p className="mt-3 text-sm text-slate-400">
+              <p className="mt-3 text-sm text-slate-500">
                 Entries:{' '}
                 {Math.round(collected / Number(loan.dailyPayment || 100))} /{' '}
                 {Math.round(principal / Number(loan.dailyPayment || 100))}
@@ -220,14 +220,14 @@ export default function CustomerDetailPage() {
                 <form onSubmit={collect} className="mt-5 space-y-3">
                   <div className="flex flex-wrap items-end gap-2">
                     <label className="block text-sm">
-                      <span className="text-slate-400">Amount (AED)</span>
+                      <span className="text-slate-500">Amount (AED)</span>
                       <input
                         type="number"
                         min={1}
                         step={1}
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className={`mt-1 w-32 rounded-lg border bg-ink-950 px-3 py-2 ring-2 ${
+                        className={`mt-1 w-32 rounded-lg border bg-slate-50 px-3 py-2 ring-2 ${
                           amountOk
                             ? 'border-teal-500/40 ring-teal-500/40'
                             : 'border-red-500/40 ring-red-500/50'
@@ -237,8 +237,8 @@ export default function CustomerDetailPage() {
                     <span
                       className={`mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${
                         amountOk
-                          ? 'bg-teal-900/50 text-teal-200'
-                          : 'bg-red-900/50 text-red-200'
+                          ? 'bg-teal-50 text-teal-700'
+                          : 'bg-red-50 text-red-600'
                       }`}
                     >
                       <span
@@ -256,41 +256,41 @@ export default function CustomerDetailPage() {
                     </button>
                   </div>
                   <label className="block text-sm">
-                    <span className="text-slate-400">Note (optional)</span>
+                    <span className="text-slate-500">Note (optional)</span>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={2}
                       maxLength={500}
                       placeholder="Add a note if needed…"
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                     />
                   </label>
                 </form>
               ) : (
-                <p className="mt-4 text-sm text-slate-400">Target reached</p>
+                <p className="mt-4 text-sm text-slate-500">Target reached</p>
               )}
               {message ? (
-                <p className="mt-3 text-sm text-teal-200">{message}</p>
+                <p className="mt-3 text-sm text-teal-700">{message}</p>
               ) : null}
               {waLink ? (
                 <a
                   href={waLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-flex text-sm font-medium text-teal-300 underline"
+                  className="mt-2 inline-flex text-sm font-medium text-teal-700 underline"
                 >
                   Send WhatsApp receipt
                 </a>
               ) : null}
               {error ? (
-                <p className="mt-3 text-sm text-red-300">{error}</p>
+                <p className="mt-3 text-sm text-red-600">{error}</p>
               ) : null}
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-white/10 bg-ink-900/70 p-5">
-            <h2 className="font-display text-xl text-white">History</h2>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="font-display text-xl text-slate-900">History</h2>
             <ul className="mt-4 space-y-2 text-sm">
               {(loan?.repayments || []).map((r, idx) => {
                 const a = Number(r.amount);
@@ -298,7 +298,7 @@ export default function CustomerDetailPage() {
                 return (
                   <li
                     key={r.id}
-                    className="border-b border-white/5 py-2 text-sm"
+                    className="border-b border-slate-100 py-2 text-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span>
@@ -306,7 +306,7 @@ export default function CustomerDetailPage() {
                       </span>
                       <span
                         className={`inline-flex items-center gap-1.5 ${
-                          ok ? 'text-teal-200' : 'text-red-200'
+                          ok ? 'text-teal-700' : 'text-red-600'
                         }`}
                       >
                         <span
@@ -316,12 +316,12 @@ export default function CustomerDetailPage() {
                         />
                         {money(a)}
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-500">
                         {new Date(r.collectedAt).toLocaleString()}
                       </span>
                     </div>
                     {r.notes?.trim() ? (
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-slate-500">
                         Note: {r.notes}
                       </p>
                     ) : null}

@@ -64,7 +64,7 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
 
   if (failed) {
     return (
-      <div className="flex aspect-square items-center justify-center bg-ink-950 px-2 text-center text-xs text-red-300/80">
+      <div className="flex aspect-square items-center justify-center bg-slate-50 px-2 text-center text-xs text-red-600">
         Could not load photo
       </div>
     );
@@ -72,7 +72,7 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
 
   if (!src) {
     return (
-      <div className="flex aspect-square items-center justify-center bg-ink-950 text-xs text-slate-500">
+      <div className="flex aspect-square items-center justify-center bg-slate-50 text-xs text-slate-500">
         Loading…
       </div>
     );
@@ -233,20 +233,20 @@ export default function GalleryPage() {
   if (!unlocked && pinSet) {
     return (
       <AppShell>
-        <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
-        <p className="mt-2 max-w-lg text-sm text-slate-400">
+        <h1 className="font-display text-3xl text-slate-900">Cloud gallery</h1>
+        <p className="mt-2 max-w-lg text-sm text-slate-500">
           Watch cloud photos captured from Add person. Enter the number
           password to open.
         </p>
 
         <form
           onSubmit={onUnlock}
-          className="mt-6 max-w-sm space-y-4 rounded-2xl border border-white/10 bg-ink-900/90 p-5"
+          className="mt-6 max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-5"
         >
           <label className="block text-sm">
-            <span className="text-slate-300">Number password (PIN)</span>
+            <span className="text-slate-600">Number password (PIN)</span>
             <input
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-3 tracking-[0.4em] outline-none ring-blue-500 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.4em] outline-none ring-blue-500 focus:ring-2"
               type="password"
               inputMode="numeric"
               pattern="\d{4,8}"
@@ -261,7 +261,7 @@ export default function GalleryPage() {
             />
           </label>
           {error ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
@@ -281,13 +281,13 @@ export default function GalleryPage() {
     <AppShell>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl text-white">Cloud gallery</h1>
+          <h1 className="font-display text-3xl text-slate-900">Cloud gallery</h1>
         </div>
         {pinSet ? (
           <button
             type="button"
             onClick={lockGallery}
-            className="text-xs text-slate-500 underline hover:text-slate-300"
+            className="text-xs text-slate-500 underline hover:text-slate-800"
           >
             Lock gallery
           </button>
@@ -297,14 +297,14 @@ export default function GalleryPage() {
       {!pinSet && isSuperAdmin ? (
         <form
           onSubmit={onSetPin}
-          className="mt-4 max-w-md space-y-3 rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4"
+          className="mt-4 max-w-md space-y-3 rounded-2xl border border-amber-500/30 bg-amber-50 p-4"
         >
-          <p className="text-sm text-amber-100">
+          <p className="text-sm text-amber-700">
             No gallery PIN yet. Set a 4–8 digit number password so the gallery
             can be locked later.
           </p>
           <input
-            className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2 tracking-[0.3em]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 tracking-[0.3em]"
             type="password"
             inputMode="numeric"
             maxLength={8}
@@ -316,7 +316,7 @@ export default function GalleryPage() {
             required
           />
           <input
-            className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2 tracking-[0.3em]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 tracking-[0.3em]"
             type="password"
             inputMode="numeric"
             maxLength={8}
@@ -338,19 +338,19 @@ export default function GalleryPage() {
       ) : null}
 
       {!pinSet && !isSuperAdmin ? (
-        <p className="mt-4 text-sm text-amber-200/90">
+        <p className="mt-4 text-sm text-amber-700">
           Gallery is open (no PIN set yet). Ask the super admin to set a number
           password in Settings.
         </p>
       ) : null}
 
       {statusMsg ? (
-        <p className="mt-4 text-sm text-teal-200" role="status">
+        <p className="mt-4 text-sm text-teal-700" role="status">
           {statusMsg}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-4 text-sm text-red-300" role="alert">
+        <p className="mt-4 text-sm text-red-600" role="alert">
           {error}
         </p>
       ) : null}
@@ -371,8 +371,8 @@ export default function GalleryPage() {
               onClick={() => setFilter(f)}
               className={`rounded-lg px-3 py-1.5 text-xs ${
                 filter === f
-                  ? 'bg-blue-600/30 text-blue-100'
-                  : 'border border-white/10 text-slate-400'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'border border-slate-200 text-slate-500'
               }`}
             >
               {label}
@@ -386,17 +386,17 @@ export default function GalleryPage() {
         {items.map((item) => (
           <article
             key={item.id}
-            className="overflow-hidden rounded-2xl border border-white/10 bg-ink-900/70"
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
           >
             <GalleryThumb
               id={item.id}
               alt={item.caption || 'Cloud gallery item'}
             />
             <div className="space-y-2 p-3 text-xs">
-              <p className="truncate text-sm text-white">
+              <p className="truncate text-sm text-slate-900">
                 {item.caption || 'Untitled'}
               </p>
-              <p className="text-slate-400">
+              <p className="text-slate-500">
                 {item.status}
                 {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
               </p>
@@ -417,7 +417,7 @@ export default function GalleryPage() {
         <p className="mt-8 text-center text-sm text-slate-500">
           No cloud photos yet. Use Data Capture or Upload from device, then
           Save Cloud on{' '}
-          <Link href="/customers/new" className="text-teal-300 underline">
+          <Link href="/customers/new" className="text-teal-700 underline">
             Add person
           </Link>
           . Older photos taken before this fix may need a new capture.

@@ -40,7 +40,7 @@ function amountTone(value: number) {
     return {
       ok: false,
       ring: 'ring-red-500/60 border-red-500/40',
-      badge: 'bg-red-900/50 text-red-200',
+      badge: 'bg-red-50 text-red-600',
       label: 'Enter an amount',
     };
   }
@@ -48,14 +48,14 @@ function amountTone(value: number) {
     return {
       ok: true,
       ring: 'ring-teal-500/50 border-teal-500/40',
-      badge: 'bg-teal-900/50 text-teal-200',
+      badge: 'bg-teal-50 text-teal-700',
       label: `Green · ${MIN_AED}–${MAX_AED} AED`,
     };
   }
   return {
     ok: false,
     ring: 'ring-red-500/60 border-red-500/40',
-    badge: 'bg-red-900/50 text-red-200',
+    badge: 'bg-red-50 text-red-600',
     label: `Red · outside ${MIN_AED}–${MAX_AED} AED`,
   };
 }
@@ -195,8 +195,8 @@ export default function CollectionsPage() {
   return (
     <AppShell>
       <header className="mb-6">
-        <h1 className="font-display text-3xl text-white">Collection</h1>
-        <p className="mt-1 max-w-xl text-sm text-slate-400">
+        <h1 className="font-display text-3xl text-slate-900">Collection</h1>
+        <p className="mt-1 max-w-xl text-sm text-slate-500">
           Collect from registered customers. Target is {money(MAX_AED)} — after
           each collection the remaining balance updates (e.g. collect{' '}
           {money(MIN_AED)} → remaining {money(MAX_AED - MIN_AED)}).
@@ -208,20 +208,20 @@ export default function CollectionsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search registered customers…"
-          className="w-full max-w-md rounded-lg border border-white/10 bg-ink-900 px-3 py-2"
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2"
         />
         <button
           type="submit"
-          className="rounded-lg border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-blue-50"
         >
           Search
         </button>
       </form>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-ink-900 text-slate-400">
+            <thead className="bg-white text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Customer</th>
                 <th className="px-4 py-3 font-medium">WhatsApp</th>
@@ -245,31 +245,31 @@ export default function CollectionsPage() {
                   <tr
                     key={row.id}
                     onClick={() => setSelectedId(row.id)}
-                    className={`cursor-pointer border-t border-white/5 ${
+                    className={`cursor-pointer border-t border-slate-100 ${
                       active
-                        ? 'bg-blue-600/20'
+                        ? 'bg-blue-100'
                         : 'hover:bg-white/[0.03]'
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-white">{row.name}</p>
+                      <p className="font-medium text-slate-900">{row.name}</p>
                       <p className="text-xs text-slate-500">
                         {row.customerCode}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-300">{row.phone}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.phone}</td>
                     <td className="px-4 py-3">
                       {money(rowCollected)} / {money(rowPrincipal)}
                     </td>
-                    <td className="px-4 py-3 font-medium text-amber-200">
+                    <td className="px-4 py-3 font-medium text-amber-700">
                       {money(rowRemaining)}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-md px-2 py-0.5 text-xs ${
                           row.loan?.status === 'ACTIVE'
-                            ? 'bg-teal-900/40 text-teal-200'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-teal-50 text-teal-700'
+                            : 'bg-slate-200 text-slate-500'
                         }`}
                       >
                         {row.loan?.status || '—'}
@@ -283,28 +283,28 @@ export default function CollectionsPage() {
           {!rows.length ? (
             <p className="p-6 text-center text-sm text-slate-500">
               No registered customers.{' '}
-              <Link href="/customers/new" className="text-teal-300 underline">
+              <Link href="/customers/new" className="text-teal-700 underline">
                 Add a person
               </Link>
             </p>
           ) : null}
         </div>
 
-        <aside className="space-y-4 rounded-2xl border border-white/10 bg-ink-900/80 p-5">
-          <h2 className="text-lg font-medium text-white">Record collection</h2>
+        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 className="text-lg font-medium text-slate-900">Record collection</h2>
           {selected ? (
             <>
               <div>
-                <p className="text-sm text-white">{selected.name}</p>
+                <p className="text-sm text-slate-900">{selected.name}</p>
                 <p className="text-xs text-slate-500">
                   {selected.customerCode} · {selected.phone}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-ink-950/80 p-3 text-center">
+                <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">
                       Target
                     </p>
-                    <p className="mt-0.5 text-sm font-medium text-white">
+                    <p className="mt-0.5 text-sm font-medium text-slate-900">
                       {money(principal)}
                     </p>
                   </div>
@@ -312,7 +312,7 @@ export default function CollectionsPage() {
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">
                       Collected
                     </p>
-                    <p className="mt-0.5 text-sm font-medium text-teal-200">
+                    <p className="mt-0.5 text-sm font-medium text-teal-700">
                       {money(collected)}
                     </p>
                   </div>
@@ -320,12 +320,12 @@ export default function CollectionsPage() {
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">
                       Remaining
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold text-amber-200">
+                    <p className="mt-0.5 text-sm font-semibold text-amber-700">
                       {money(remaining)}
                     </p>
                   </div>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full bg-teal-500 transition-all"
                     style={{
@@ -338,7 +338,7 @@ export default function CollectionsPage() {
                 </div>
                 <Link
                   href={`/customers/${selected.id}`}
-                  className="mt-2 inline-block text-xs text-teal-300 underline"
+                  className="mt-2 inline-block text-xs text-teal-700 underline"
                 >
                   Open customer
                 </Link>
@@ -347,14 +347,14 @@ export default function CollectionsPage() {
               {open ? (
                 <form onSubmit={onCollect} className="space-y-3">
                   <label className="block text-sm">
-                    <span className="text-slate-300">Amount (AED)</span>
+                    <span className="text-slate-600">Amount (AED)</span>
                     <input
                       type="number"
                       min={1}
                       step={1}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className={`mt-1 w-full rounded-lg border bg-ink-950 px-3 py-3 outline-none ring-2 ${tone.ring}`}
+                      className={`mt-1 w-full rounded-lg border bg-slate-50 px-3 py-3 outline-none ring-2 ${tone.ring}`}
                       required
                     />
                     <span
@@ -371,14 +371,14 @@ export default function CollectionsPage() {
                   </label>
 
                   <label className="block text-sm">
-                    <span className="text-slate-300">Note (optional)</span>
+                    <span className="text-slate-600">Note (optional)</span>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={3}
                       maxLength={500}
                       placeholder="Add a note if you need to remember something…"
-                      className="mt-1 w-full resize-y rounded-lg border border-white/10 bg-ink-950 px-3 py-2 outline-none ring-blue-500 focus:ring-2"
+                      className="mt-1 w-full resize-y rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 outline-none ring-blue-500 focus:ring-2"
                     />
                   </label>
 
@@ -391,7 +391,7 @@ export default function CollectionsPage() {
                   </button>
                 </form>
               ) : (
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-500">
                   Target reached — no more collections for this customer.
                 </p>
               )}
@@ -403,7 +403,7 @@ export default function CollectionsPage() {
           )}
 
           {message ? (
-            <p className="text-sm text-teal-200" role="status">
+            <p className="text-sm text-teal-700" role="status">
               {message}
             </p>
           ) : null}
@@ -412,13 +412,13 @@ export default function CollectionsPage() {
               href={waLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex text-sm font-medium text-teal-300 underline"
+              className="inline-flex text-sm font-medium text-teal-700 underline"
             >
               Send WhatsApp receipt
             </a>
           ) : null}
           {error ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
@@ -426,12 +426,12 @@ export default function CollectionsPage() {
       </div>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-medium text-white">
+        <h2 className="mb-3 text-lg font-medium text-slate-900">
           Recent collections
         </h2>
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-ink-900 text-slate-400">
+            <thead className="bg-white text-slate-500">
               <tr>
                 <th className="px-4 py-3">Receipt</th>
                 <th className="px-4 py-3">Customer</th>
@@ -445,7 +445,7 @@ export default function CollectionsPage() {
                 const a = Number(row.amount);
                 const ok = a >= MIN_AED && a <= MAX_AED;
                 return (
-                  <tr key={row.id} className="border-t border-white/5">
+                  <tr key={row.id} className="border-t border-slate-100">
                     <td className="px-4 py-3 font-mono text-xs">
                       {row.receiptNumber}
                     </td>
@@ -456,7 +456,7 @@ export default function CollectionsPage() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1.5 ${
-                          ok ? 'text-teal-200' : 'text-red-200'
+                          ok ? 'text-teal-700' : 'text-red-600'
                         }`}
                       >
                         <span
@@ -468,7 +468,7 @@ export default function CollectionsPage() {
                         {money(a)}
                       </span>
                     </td>
-                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-400">
+                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-500">
                       {row.notes?.trim() || '—'}
                     </td>
                     <td className="px-4 py-3 text-slate-500">

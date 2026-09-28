@@ -25,10 +25,10 @@ export default function RepaymentsPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 font-display text-3xl text-white">Receipts</h1>
-      <div className="overflow-x-auto rounded-2xl border border-white/10">
+      <h1 className="mb-6 font-display text-3xl text-slate-900">Receipts</h1>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-ink-900 text-slate-400">
+          <thead className="bg-white text-slate-500">
             <tr>
               <th className="px-4 py-3">Receipt</th>
               <th className="px-4 py-3">Customer</th>
@@ -43,7 +43,7 @@ export default function RepaymentsPage() {
               const a = Number(row.amount);
               const ok = a >= 100 && a <= 1800;
               return (
-                <tr key={row.id} className="border-t border-white/5">
+                <tr key={row.id} className="border-t border-slate-100">
                   <td className="px-4 py-3 font-mono text-xs">
                     {row.receiptNumber}
                   </td>
@@ -53,7 +53,7 @@ export default function RepaymentsPage() {
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex items-center gap-1.5 ${
-                        ok ? 'text-teal-200' : 'text-red-200'
+                        ok ? 'text-teal-700' : 'text-red-600'
                       }`}
                     >
                       <span
@@ -64,11 +64,11 @@ export default function RepaymentsPage() {
                       {money(a)}
                     </span>
                   </td>
-                  <td className="max-w-[200px] truncate px-4 py-3 text-slate-400">
+                  <td className="max-w-[200px] truncate px-4 py-3 text-slate-500">
                     {row.notes?.trim() || '—'}
                   </td>
                   <td className="px-4 py-3">{row.collectedBy.name}</td>
-                  <td className="px-4 py-3 text-slate-400">
+                  <td className="px-4 py-3 text-slate-500">
                     {new Date(row.collectedAt).toLocaleString()}
                   </td>
                 </tr>
