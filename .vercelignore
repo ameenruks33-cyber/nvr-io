@@ -1,0 +1,13 @@
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+**/*.db
+**/*.db-journal
+**/uploads
+**/node_modules
+**/.next
+**/dist
+apps/mobile
+backend/.agents
+**/.agents
