@@ -86,6 +86,8 @@ model Customer {
   name              String
   phone             String
   address           String
+  careOfName        String?  @map("care_of_name")
+  careOfPhone       String?  @map("care_of_phone")
   passportEncrypted String   @map("passport_encrypted")
   aadhaarEncrypted  String   @map("aadhaar_encrypted")
   photoStorageId    String?  @map("photo_storage_id")

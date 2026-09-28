@@ -12,6 +12,8 @@ type CustomerDetail = {
   name: string;
   phone: string;
   address: string;
+  careOfName?: string | null;
+  careOfPhone?: string | null;
   passportMasked: string;
   aadhaarMasked: string;
   passportNumber?: string;
@@ -153,7 +155,19 @@ export default function CustomerDetailPage() {
             )}
           </div>
           <div className="rounded-2xl border border-white/10 bg-ink-900/70 p-4 text-sm">
-            <p className="text-slate-400">Address</p>
+            {customer.careOfName || customer.careOfPhone ? (
+              <>
+                <p className="text-slate-400">C/O</p>
+                <p className="mt-1">
+                  {[customer.careOfName, customer.careOfPhone]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+                <p className="mt-3 text-slate-400">Address</p>
+              </>
+            ) : (
+              <p className="text-slate-400">Address</p>
+            )}
             <p className="mt-1">{customer.address}</p>
             <p className="mt-3 text-slate-400">Passport</p>
             <p className="mt-1 font-mono">

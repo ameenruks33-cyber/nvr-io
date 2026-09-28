@@ -40,6 +40,8 @@ export class CustomersService {
           name: dto.name.trim(),
           phone: dto.phone.trim(),
           address: dto.address.trim(),
+          careOfName: dto.careOfName?.trim() || null,
+          careOfPhone: dto.careOfPhone?.trim() || null,
           passportEncrypted: this.crypto.encrypt(dto.passportNumber.trim()),
           aadhaarEncrypted: this.crypto.encrypt(dto.aadhaarNumber.trim()),
           latitude: dto.latitude,
@@ -183,6 +185,8 @@ export class CustomersService {
       name: string;
       phone: string;
       address: string;
+      careOfName?: string | null;
+      careOfPhone?: string | null;
       passportEncrypted: string;
       aadhaarEncrypted: string;
       photoStorageId: string | null;
@@ -225,6 +229,8 @@ export class CustomersService {
       name: customer.name,
       phone: customer.phone,
       address: customer.address,
+      careOfName: customer.careOfName ?? null,
+      careOfPhone: customer.careOfPhone ?? null,
       passportMasked,
       aadhaarMasked,
       ...(opts?.includeSensitive ? { passportNumber, aadhaarNumber } : {}),

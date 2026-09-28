@@ -255,6 +255,8 @@ export default function NewCustomerPage() {
           name: form.get('name'),
           phone: form.get('phone'),
           address: form.get('address'),
+          careOfName: String(form.get('careOfName') || '').trim() || undefined,
+          careOfPhone: String(form.get('careOfPhone') || '').trim() || undefined,
           passportNumber: form.get('passportNumber'),
           aadhaarNumber: form.get('aadhaarNumber'),
           latitude: coords.latitude,
@@ -295,70 +297,28 @@ export default function NewCustomerPage() {
       >
         {(
           [
-            ['name', 'Full name', 'text'],
-            ['phone', 'Phone number', 'tel'],
-            ['address', 'Address', 'text'],
-            ['passportNumber', 'Passport number', 'text'],
-            ['aadhaarNumber', 'Aadhaar number', 'text'],
+            ['name', 'Full name', 'text', true],
+            ['phone', 'Phone number', 'tel', true],
+            ['careOfName', 'C/O name', 'text', false],
+            ['careOfPhone', 'C/O phone', 'tel', false],
+            ['address', 'Address', 'text', true],
+            ['passportNumber', 'Passport number', 'text', true],
+            ['aadhaarNumber', 'Aadhaar number', 'text', true],
           ] as const
-        ).map(([name, label, type]) => (
+        ).map(([name, label, type, required]) => (
           <label key={name} className="block text-sm">
             <span className="text-slate-300">{label}</span>
             <input
               name={name}
               type={type}
-              required
+              required={required}
               autoComplete="off"
               className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
             />
           </label>
         ))}
 
-        <div className="flex gap-2 text-sm">
-          <a
-            id="call-link"
-            className="rounded-lg border border-white/10 px-3 py-2 hover:bg-white/5"
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              const phone = (
-                document.querySelector(
-                  'input[name="phone"]',
-                ) as HTMLInputElement
-              )?.value;
-              if (phone) window.location.href = `tel:${phone}`;
-            }}
-          >
-            Call
-          </a>
-          <a
-            className="rounded-lg border border-white/10 px-3 py-2 hover:bg-white/5"
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              const phone = (
-                document.querySelector(
-                  'input[name="phone"]',
-                ) as HTMLInputElement
-              )?.value;
-              if (phone)
-                window.open(
-                  `https://wa.me/${phone.replace(/[^\d]/g, '')}`,
-                  '_blank',
-                );
-            }}
-          >
-            WhatsApp
-          </a>
-        </div>
-
         <div className="space-y-3 text-sm">
-          <span className="text-slate-300">Customer photo</span>
-          <p className="text-xs text-slate-500">
-            Use Data Capture (camera) or Upload from device, then tap Save
-            Cloud to save to the person and the shared cloud gallery.
-          </p>
-
           <label className="block text-sm">
             <span className="text-slate-400">Caption (optional)</span>
             <input

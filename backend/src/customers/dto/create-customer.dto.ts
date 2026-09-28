@@ -25,6 +25,16 @@ export class CreateCustomerDto {
   @MaxLength(500)
   address!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  careOfName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  careOfPhone?: string;
+
   @IsString()
   @MinLength(5)
   @MaxLength(30)
