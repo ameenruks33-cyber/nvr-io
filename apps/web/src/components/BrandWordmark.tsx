@@ -18,8 +18,8 @@ const sizeClass = {
 } as const;
 
 /**
- * Wordmark like the brand photo: lowercase serif,
- * "crick" black + "herose" red.
+ * Wordmark like the brand photo: serif,
+ * "Crick" black + "herose" red.
  */
 export function BrandWordmark({
   className = '',
@@ -28,9 +28,9 @@ export function BrandWordmark({
 }: BrandWordmarkProps) {
   const mark = (
     <span
-      className={`font-display font-semibold tracking-tight lowercase leading-none ${sizeClass[size]} ${className}`}
+      className={`font-display font-semibold tracking-tight leading-none ${sizeClass[size]} ${className}`}
     >
-      <span className="text-black">crick</span>
+      <span className="text-black">Crick</span>
       <span style={{ color: BRAND_HEROSE_RED }}>herose</span>
     </span>
   );
