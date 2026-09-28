@@ -34,7 +34,7 @@ export function BrandWordmark({
     <span
       role="img"
       aria-label="Crickherose"
-      className={`wordmark-3d font-display font-semibold tracking-tight leading-none ${sizeClass[size]} ${className}`}
+      className={`wordmark-3d whitespace-nowrap font-display font-semibold tracking-tight leading-none ${sizeClass[size]} ${className}`}
     >
       {letters.map(({ ch, color }, i) => (
         <span
@@ -52,7 +52,7 @@ export function BrandWordmark({
   if (!onDark) return mark;
 
   return (
-    <span className="inline-flex items-center rounded-lg bg-white px-2.5 py-1 shadow-sm">
+    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-lg bg-white px-2.5 py-1 shadow-sm">
       {mark}
     </span>
   );

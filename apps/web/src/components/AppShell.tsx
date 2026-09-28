@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <SpinningLogo size={40} className="rounded-xl" priority />
-          <BrandWordmark size="sm" onDark />
+          <BrandWordmark size="sm" />
         </Link>
         <button
           type="button"
@@ -141,8 +141,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-56 shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 md:flex">
         <div className="mb-8 flex items-center gap-3">
           <SpinningLogo size={48} className="rounded-xl" priority />
-          <div>
-            <BrandWordmark size="md" onDark />
+          <div className="min-w-0">
+            <BrandWordmark size="sm" />
             <p className="mt-1 text-xs text-slate-500">
               {isSuperAdmin ? 'Super admin' : 'Personal use'}
             </p>
