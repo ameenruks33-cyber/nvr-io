@@ -285,14 +285,32 @@ export default function SettingsPage() {
     }
     setWaTesting(true);
     try {
-      const r = await api<{ sent: boolean; error?: string }>('/whatsapp/test', {
+      const r = await api<{
+        sent: boolean;
+        configured: boolean;
+        deepLink: string | null;
+        error?: string;
+      }>('/whatsapp/test', {
         method: 'POST',
         body: JSON.stringify({ phone: waTestPhone.trim() }),
       });
       if (r.sent) {
-        setWaMsg('Test receipt sent. Check WhatsApp on that phone.');
+        setWaMsg('Test receipt sent automatically. Check WhatsApp on that phone.');
+      } else if (!r.configured) {
+        const opened = r.deepLink ? window.open(r.deepLink, '_blank') : null;
+        if (opened) opened.opener = null;
+        setWaErr(
+          `Automatic sending is not connected yet — save your WAHA server URL and API key with "Enable" ticked first.${
+            opened ? ' WhatsApp opened so you can send this test by tap.' : ''
+          }`,
+        );
       } else {
-        setWaErr(r.error || 'Test send failed');
+        setWaErr(
+          `Automatic send failed: ${r.error || 'unknown error'}.${
+            waProvider === 'waha' ? ' Check that the WAHA session shows WORKING.' : ''
+          }`,
+        );
+        void loadWhatsapp();
       }
     } catch (err) {
       setWaErr(err instanceof Error ? err.message : 'Test send failed');
