@@ -297,26 +297,51 @@ export default function NewCustomerPage() {
       >
         {(
           [
-            ['name', 'Full name', 'text', true],
-            ['phone', 'Phone number', 'tel', true],
-            ['careOfName', 'C/O name', 'text', false],
-            ['careOfPhone', 'C/O phone', 'tel', false],
-            ['address', 'Address', 'text', true],
-            ['passportNumber', 'Passport number', 'text', true],
-            ['aadhaarNumber', 'Aadhaar number', 'text', true],
+            ['name', 'Full name', 'text'],
+            ['phone', 'Phone number', 'tel'],
+            'careOf',
+            ['address', 'Address', 'text'],
+            ['passportNumber', 'Passport number', 'text'],
+            ['aadhaarNumber', 'Aadhaar number', 'text'],
           ] as const
-        ).map(([name, label, type, required]) => (
-          <label key={name} className="block text-sm">
-            <span className="text-slate-300">{label}</span>
-            <input
-              name={name}
-              type={type}
-              required={required}
-              autoComplete="off"
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
-            />
-          </label>
-        ))}
+        ).map((field) =>
+          field === 'careOf' ? (
+            <div key="careOf" className="block text-sm">
+              <span className="text-slate-300">C/O Name &amp; Phone</span>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <input
+                  name="careOfName"
+                  type="text"
+                  placeholder="Name"
+                  aria-label="C/O name"
+                  maxLength={120}
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                />
+                <input
+                  name="careOfPhone"
+                  type="tel"
+                  placeholder="Phone"
+                  aria-label="C/O phone"
+                  maxLength={20}
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+                />
+              </div>
+            </div>
+          ) : (
+            <label key={field[0]} className="block text-sm">
+              <span className="text-slate-300">{field[1]}</span>
+              <input
+                name={field[0]}
+                type={field[2]}
+                required
+                autoComplete="off"
+                className="mt-1 w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2"
+              />
+            </label>
+          ),
+        )}
 
         <div className="space-y-3 text-sm">
           <label className="block text-sm">
