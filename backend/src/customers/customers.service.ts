@@ -30,6 +30,11 @@ export class CustomersService {
     const daily = Number(
       dto.dailyPayment ?? this.config.get('DEFAULT_DAILY_PAYMENT') ?? 100,
     );
+    // Shown as the total; the account closes once `principal` is collected.
+    const total = Math.max(
+      Number(this.config.get('DEFAULT_TOTAL_AMOUNT') ?? 2000),
+      principal,
+    );
 
     const customerCode = await this.nextCustomerCode();
 
@@ -59,8 +64,8 @@ export class CustomersService {
           customerId: customer.id,
           principalAmount: new Prisma.Decimal(principal),
           dailyPayment: new Prisma.Decimal(daily),
-          totalPayable: new Prisma.Decimal(principal),
-          remainingAmount: new Prisma.Decimal(principal),
+          totalPayable: new Prisma.Decimal(total),
+          remainingAmount: new Prisma.Decimal(total),
           amountCollected: new Prisma.Decimal(0),
           status: 'ACTIVE',
         },

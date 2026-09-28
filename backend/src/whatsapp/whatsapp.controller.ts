@@ -98,8 +98,8 @@ export class WhatsappController {
       customerName: 'Test customer',
       phone: dto.phone,
       amountPaid: 100,
-      remaining: 1700,
-      principal: 1800,
+      remaining: 1900,
+      principal: 2000,
       receiptNumber: 'TEST-RECEIPT',
       completed: false,
     });

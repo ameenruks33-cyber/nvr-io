@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 
 type CustomerRow = {
@@ -13,6 +14,7 @@ type CustomerRow = {
   loan?: {
     amountCollected: string | number;
     principalAmount: string | number;
+    totalPayable?: string | number;
     status: string;
   };
 };
@@ -82,7 +84,11 @@ export default function CustomersPage() {
           <tbody>
             {rows.map((row) => {
               const collected = Number(row.loan?.amountCollected || 0);
-              const principal = Number(row.loan?.principalAmount || 1800);
+              const total = Math.max(
+                Number(row.loan?.totalPayable || 2000),
+                Number(row.loan?.principalAmount || 1800),
+              );
+              const closed = Boolean(row.loan) && row.loan?.status !== 'ACTIVE';
               return (
                 <tr
                   key={row.id}
@@ -99,7 +105,13 @@ export default function CustomersPage() {
                   <td className="px-4 py-3">{row.name}</td>
                   <td className="px-4 py-3">{row.phone}</td>
                   <td className="px-4 py-3">
-                    {money(collected)} / {money(principal)}
+                    {closed ? (
+                      <ClosedBadge label="Closed" />
+                    ) : (
+                      <>
+                        {money(collected)} / {money(total)}
+                      </>
+                    )}
                   </td>
                 </tr>
               );

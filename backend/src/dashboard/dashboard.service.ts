@@ -22,7 +22,7 @@ export class DashboardService {
       this.prisma.loan.count({ where: { status: 'COMPLETED' } }),
       this.prisma.loan.aggregate({
         _sum: {
-          principalAmount: true,
+          totalPayable: true,
           amountCollected: true,
           remainingAmount: true,
         },
@@ -40,7 +40,7 @@ export class DashboardService {
       totalCustomers,
       activeLoans,
       completedLoans,
-      totalDisbursed: sum(loanAgg._sum.principalAmount),
+      totalDisbursed: sum(loanAgg._sum.totalPayable),
       totalCollected: sum(loanAgg._sum.amountCollected),
       totalOutstanding: sum(loanAgg._sum.remainingAmount),
       todaysCollections: sum(todaysAgg._sum.amount),

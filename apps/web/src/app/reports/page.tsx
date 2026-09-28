@@ -26,9 +26,9 @@ export default function ReportsPage() {
       {stats ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {[
-            ['Total target', money(stats.totalDisbursed)],
+            ['Total', money(stats.totalDisbursed)],
             ['Collected', money(stats.totalCollected)],
-            ['Remaining', money(stats.totalOutstanding)],
+            ['Balance', money(stats.totalOutstanding)],
             ["Today's receipts", money(stats.todaysCollections)],
             ['Open records', String(stats.activeLoans)],
             ['Finished records', String(stats.completedLoans)],

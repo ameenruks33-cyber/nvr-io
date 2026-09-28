@@ -64,15 +64,18 @@ export class RepaymentsService {
       }
 
       const collected = Number(loan.amountCollected);
-      const principal = Number(loan.principalAmount);
+      const closeAt = Number(loan.principalAmount);
+      const total = Math.max(Number(loan.totalPayable), closeAt);
       const newTotal = collected + input.amount;
 
-      if (newTotal > principal + 0.001) {
-        throw new BadRequestException('Payment exceeds outstanding amount');
+      if (newTotal > closeAt + 0.001) {
+        throw new BadRequestException(
+          `Only AED ${(closeAt - collected).toFixed(2)} is needed to close this account`,
+        );
       }
 
-      const remaining = Math.max(principal - newTotal, 0);
-      const completed = newTotal >= principal;
+      const completed = newTotal >= closeAt - 0.001;
+      const remaining = completed ? 0 : Math.max(total - newTotal, 0);
       const receiptNumber = await this.nextReceiptNumber(tx);
 
       const repayment = await tx.repayment.create({
@@ -117,7 +120,10 @@ export class RepaymentsService {
 
     const amountPaid = Number(result.repayment.amount);
     const remaining = Number(result.loan.remainingAmount);
-    const principal = Number(result.loan.principalAmount);
+    const principal = Math.max(
+      Number(result.loan.totalPayable),
+      Number(result.loan.principalAmount),
+    );
 
     if (result.completed) {
       await this.notifications.createLoanCompleted(
@@ -241,16 +247,21 @@ export class RepaymentsService {
     });
   }
 
-  /** Pure helper used by unit tests */
-  static computeBalance(principal: number, collected: number, payment: number) {
+  /** Pure helper used by unit tests: closes at `closeAt`, balance counts from `total`. */
+  static computeBalance(
+    closeAt: number,
+    total: number,
+    collected: number,
+    payment: number,
+  ) {
     const newTotal = collected + payment;
     if (payment <= 0) throw new Error('Amount must be positive');
-    if (newTotal > principal) throw new Error('Payment exceeds outstanding amount');
-    const remaining = principal - newTotal;
+    if (newTotal > closeAt) throw new Error('Payment exceeds outstanding amount');
+    const completed = newTotal >= closeAt;
     return {
       collected: newTotal,
-      remaining,
-      status: newTotal >= principal ? 'COMPLETED' : 'ACTIVE',
+      remaining: completed ? 0 : total - newTotal,
+      status: completed ? 'COMPLETED' : 'ACTIVE',
     };
   }
 
@@ -265,6 +276,7 @@ export class RepaymentsService {
       amountCollected: Prisma.Decimal;
       remainingAmount: Prisma.Decimal;
       principalAmount: Prisma.Decimal;
+      totalPayable: Prisma.Decimal;
       status: string;
       completedAt: Date | null;
     },
@@ -277,6 +289,7 @@ export class RepaymentsService {
       collected: Number(loan.amountCollected),
       remaining: Number(loan.remainingAmount),
       principal: Number(loan.principalAmount),
+      total: Math.max(Number(loan.totalPayable), Number(loan.principalAmount)),
       status: loan.status,
       completedAt: loan.completedAt,
     };

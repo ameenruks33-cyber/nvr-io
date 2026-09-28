@@ -86,6 +86,21 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
+    // Accounts show a 2000 total but close at 1800 collected (last 200 waived).
+    // Only touches rows still on the old 1800/1800 setup, so it runs once.
+    try {
+      await this.$executeRawUnsafe(`
+        UPDATE "loans"
+        SET "total_payable" = 2000,
+            "remaining_amount" = CASE
+              WHEN "status" = 'ACTIVE' THEN GREATEST(2000 - "amount_collected", 0)
+              ELSE 0
+            END
+        WHERE "principal_amount" = 1800 AND "total_payable" = 1800;
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
   }
 
   async onModuleDestroy() {

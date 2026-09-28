@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 
 type LoanRow = {
   id: string;
   status: string;
   principalAmount: string | number;
+  totalPayable?: string | number;
   amountCollected: string | number;
   remainingAmount: string | number;
   customer: {
@@ -38,7 +40,7 @@ export default function LoansPage() {
             <tr>
               <th className="px-4 py-3">Person</th>
               <th className="px-4 py-3">Collected</th>
-              <th className="px-4 py-3">Remaining</th>
+              <th className="px-4 py-3">Balance</th>
             </tr>
           </thead>
           <tbody>
@@ -54,10 +56,19 @@ export default function LoansPage() {
                 </td>
                 <td className="px-4 py-3">
                   {money(Number(row.amountCollected))} /{' '}
-                  {money(Number(row.principalAmount))}
+                  {money(
+                    Math.max(
+                      Number(row.totalPayable || 2000),
+                      Number(row.principalAmount),
+                    ),
+                  )}
                 </td>
                 <td className="px-4 py-3">
-                  {money(Number(row.remainingAmount))}
+                  {row.status === 'ACTIVE' ? (
+                    money(Number(row.remainingAmount))
+                  ) : (
+                    <ClosedBadge label="Closed" />
+                  )}
                 </td>
               </tr>
             ))}

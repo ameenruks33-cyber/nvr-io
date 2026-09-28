@@ -3,10 +3,12 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 
 const MIN_AED = 100;
 const MAX_AED = 1800;
+const TOTAL_AED = 2000;
 
 type CustomerRow = {
   id: string;
@@ -18,6 +20,7 @@ type CustomerRow = {
     amountCollected: string | number;
     remainingAmount: string | number;
     principalAmount: string | number;
+    totalPayable?: string | number;
     dailyPayment: string | number;
     status: string;
   };
@@ -35,7 +38,7 @@ type RecentRow = {
   };
 };
 
-function amountTone(value: number) {
+function amountTone(value: number, maxPay: number) {
   if (!Number.isFinite(value) || value <= 0) {
     return {
       ok: false,
@@ -44,19 +47,19 @@ function amountTone(value: number) {
       label: 'Enter an amount',
     };
   }
-  if (value >= MIN_AED && value <= MAX_AED) {
+  if (value >= Math.min(MIN_AED, maxPay) && value <= maxPay) {
     return {
       ok: true,
       ring: 'ring-teal-500/50 border-teal-500/40',
       badge: 'bg-teal-50 text-teal-700',
-      label: `Green · ${MIN_AED}–${MAX_AED} AED`,
+      label: `Green · up to ${money(maxPay)} to close`,
     };
   }
   return {
     ok: false,
     ring: 'ring-red-500/60 border-red-500/40',
     badge: 'bg-red-50 text-red-600',
-    label: `Red · outside ${MIN_AED}–${MAX_AED} AED`,
+    label: `Red · enter up to ${money(maxPay)}`,
   };
 }
 
@@ -77,8 +80,20 @@ export default function CollectionsPage() {
     [rows, selectedId],
   );
 
+  const collected = Number(selected?.loan?.amountCollected || 0);
+  const principal = Number(selected?.loan?.principalAmount || MAX_AED);
+  const total = Math.max(
+    Number(selected?.loan?.totalPayable || TOTAL_AED),
+    principal,
+  );
+  const remaining = Number(
+    selected?.loan?.remainingAmount ?? Math.max(total - collected, 0),
+  );
+  const open = selected?.loan?.status === 'ACTIVE';
+  const maxPay = Math.max(principal - collected, 0);
+
   const amountNum = Number(amount);
-  const tone = amountTone(amountNum);
+  const tone = amountTone(amountNum, maxPay);
 
   async function loadCustomers(search = '') {
     try {
@@ -122,7 +137,7 @@ export default function CollectionsPage() {
       return;
     }
     if (selected.loan.status !== 'ACTIVE') {
-      setError('This customer’s target is already complete');
+      setError('This customer’s account is already closed');
       return;
     }
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
@@ -139,6 +154,8 @@ export default function CollectionsPage() {
         collected: number;
         remaining: number;
         principal: number;
+        total?: number;
+        status?: string;
         receiptNumber: string;
         amount: number;
         whatsapp?: {
@@ -155,7 +172,7 @@ export default function CollectionsPage() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      const target = Number(result.principal) || MAX_AED;
+      const target = Number(result.total || result.principal) || TOTAL_AED;
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
@@ -173,7 +190,9 @@ export default function CollectionsPage() {
         waNote = ` ${wa.error}`;
       }
       setMessage(
-        `Collected ${money(result.amount || amountNum)}. Remaining balance ${money(result.remaining)} of ${money(target)}.${waNote}`,
+        result.status === 'COMPLETED'
+          ? `Collected ${money(result.amount || amountNum)}. Account closed.${waNote}`
+          : `Collected ${money(result.amount || amountNum)}. Balance ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setAmount('100');
       setNotes('');
@@ -185,21 +204,14 @@ export default function CollectionsPage() {
     }
   }
 
-  const collected = Number(selected?.loan?.amountCollected || 0);
-  const principal = Number(selected?.loan?.principalAmount || MAX_AED);
-  const remaining = Number(
-    selected?.loan?.remainingAmount ?? Math.max(principal - collected, 0),
-  );
-  const open = selected?.loan?.status === 'ACTIVE';
-
   return (
     <AppShell>
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
         <p className="mt-1 max-w-xl text-sm text-slate-500">
-          Collect from registered customers. Target is {money(MAX_AED)} — after
-          each collection the remaining balance updates (e.g. collect{' '}
-          {money(MIN_AED)} → remaining {money(MAX_AED - MIN_AED)}).
+          Collect from registered customers. Total is {money(TOTAL_AED)} — the
+          account closes once {money(MAX_AED)} is collected (e.g. collect{' '}
+          {money(MIN_AED)} → balance {money(TOTAL_AED - MIN_AED)}).
         </p>
       </header>
 
@@ -226,20 +238,23 @@ export default function CollectionsPage() {
                 <th className="px-4 py-3 font-medium">Customer</th>
                 <th className="px-4 py-3 font-medium">WhatsApp</th>
                 <th className="px-4 py-3 font-medium">Collected</th>
-                <th className="px-4 py-3 font-medium">Remaining</th>
+                <th className="px-4 py-3 font-medium">Balance</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const rowCollected = Number(row.loan?.amountCollected || 0);
-                const rowPrincipal = Number(
-                  row.loan?.principalAmount || MAX_AED,
+                const rowTotal = Math.max(
+                  Number(row.loan?.totalPayable || TOTAL_AED),
+                  Number(row.loan?.principalAmount || MAX_AED),
                 );
                 const rowRemaining = Number(
                   row.loan?.remainingAmount ??
-                    Math.max(rowPrincipal - rowCollected, 0),
+                    Math.max(rowTotal - rowCollected, 0),
                 );
+                const rowClosed =
+                  Boolean(row.loan) && row.loan?.status !== 'ACTIVE';
                 const active = row.id === selectedId;
                 return (
                   <tr
@@ -259,21 +274,23 @@ export default function CollectionsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{row.phone}</td>
                     <td className="px-4 py-3">
-                      {money(rowCollected)} / {money(rowPrincipal)}
+                      {money(rowCollected)} / {money(rowTotal)}
                     </td>
-                    <td className="px-4 py-3 font-medium text-amber-700">
+                    <td
+                      className={`px-4 py-3 font-medium ${
+                        rowClosed ? 'text-emerald-700' : 'text-amber-700'
+                      }`}
+                    >
                       {money(rowRemaining)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-xs ${
-                          row.loan?.status === 'ACTIVE'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-slate-200 text-slate-500'
-                        }`}
-                      >
-                        {row.loan?.status || '—'}
-                      </span>
+                      {rowClosed ? (
+                        <ClosedBadge label="Closed" />
+                      ) : (
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                          {row.loan ? 'Open' : '—'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -302,10 +319,10 @@ export default function CollectionsPage() {
                 <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                      Target
+                      Total
                     </p>
                     <p className="mt-0.5 text-sm font-medium text-slate-900">
-                      {money(principal)}
+                      {money(total)}
                     </p>
                   </div>
                   <div>
@@ -318,16 +335,22 @@ export default function CollectionsPage() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                      Remaining
+                      Balance
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold text-amber-700">
+                    <p
+                      className={`mt-0.5 text-sm font-semibold ${
+                        open ? 'text-amber-700' : 'text-emerald-700'
+                      }`}
+                    >
                       {money(remaining)}
                     </p>
                   </div>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-teal-500 transition-all"
+                    className={`h-full rounded-full transition-all ${
+                      open ? 'bg-teal-500' : 'bg-emerald-500'
+                    }`}
                     style={{
                       width: `${Math.min(
                         100,
@@ -391,9 +414,13 @@ export default function CollectionsPage() {
                   </button>
                 </form>
               ) : (
-                <p className="text-sm text-slate-500">
-                  Target reached — no more collections for this customer.
-                </p>
+                <div className="space-y-2">
+                  <ClosedBadge />
+                  <p className="text-sm text-slate-500">
+                    {money(principal)} collected — no more collections for this
+                    customer.
+                  </p>
+                </div>
               )}
             </>
           ) : (

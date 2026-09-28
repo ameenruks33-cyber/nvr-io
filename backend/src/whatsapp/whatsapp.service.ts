@@ -120,7 +120,7 @@ export class WhatsappService {
       '',
     ];
     if (input.completed || Number(input.remaining) <= 0) {
-      lines.push('Status: Target completed. Thank you!');
+      lines.push('✅ Account closed. Thank you!');
     } else {
       lines.push('Thank you for your payment.');
     }

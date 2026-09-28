@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { AuthenticatedImage } from '@/components/AuthenticatedImage';
+import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 
 type CustomerDetail = {
@@ -28,6 +29,7 @@ type CustomerDetail = {
   loans: Array<{
     id: string;
     principalAmount: string | number;
+    totalPayable?: string | number;
     amountCollected: string | number;
     remainingAmount: string | number;
     dailyPayment: string | number;
@@ -60,9 +62,18 @@ export default function CustomerDetailPage() {
     load().catch((e) => setError(e.message));
   }, [params.id]);
 
+  const activeLoan = customer?.loans?.[0];
+  const maxPay = Math.max(
+    Number(activeLoan?.principalAmount || 1800) -
+      Number(activeLoan?.amountCollected || 0),
+    0,
+  );
   const amountNum = Number(amount);
   const amountOk =
-    Number.isFinite(amountNum) && amountNum >= 100 && amountNum <= 1800;
+    Number.isFinite(amountNum) &&
+    amountNum >= Math.min(100, maxPay) &&
+    amountNum > 0 &&
+    amountNum <= maxPay;
 
   async function collect(e: FormEvent) {
     e.preventDefault();
@@ -75,6 +86,8 @@ export default function CustomerDetailPage() {
         collected: number;
         remaining: number;
         principal: number;
+        total?: number;
+        status?: string;
         receiptNumber: string;
         amount: number;
         whatsapp?: {
@@ -91,7 +104,7 @@ export default function CustomerDetailPage() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      const target = Number(result.principal) || 1800;
+      const target = Number(result.total || result.principal) || 2000;
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
@@ -109,7 +122,9 @@ export default function CustomerDetailPage() {
         waNote = ` ${wa.error}`;
       }
       setMessage(
-        `Saved ${result.receiptNumber}: paid ${money(result.amount ?? amount)}. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,
+        result.status === 'COMPLETED'
+          ? `Saved: paid ${money(result.amount ?? amount)}. Account closed.${waNote}`
+          : `Saved: paid ${money(result.amount ?? amount)}. Balance ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setNotes('');
       setAmount('100');
@@ -130,14 +145,19 @@ export default function CustomerDetailPage() {
   const loan = customer.loans?.[0];
   const collected = Number(loan?.amountCollected || 0);
   const principal = Number(loan?.principalAmount || 1800);
+  const total = Math.max(Number(loan?.totalPayable || 2000), principal);
   const remaining = Number(loan?.remainingAmount || 0);
   const open = loan?.status === 'ACTIVE';
+  const closed = Boolean(loan) && !open;
 
   return (
     <AppShell>
       <div className="mb-6">
         <p className="text-sm text-slate-500">{customer.customerCode}</p>
-        <h1 className="font-display text-3xl text-slate-900">{customer.name}</h1>
+        <h1 className="flex flex-wrap items-center gap-3 font-display text-3xl text-slate-900">
+          {customer.name}
+          {closed ? <ClosedBadge /> : null}
+        </h1>
         <p className="mt-1 text-slate-600">
           {[
             `WhatsApp: ${customer.phone}`,
@@ -208,18 +228,21 @@ export default function CustomerDetailPage() {
               <h2 className="font-display text-xl text-slate-900">Payments</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-slate-500">Target</p>
-                  <p className="text-lg">{money(principal)}</p>
+                  <p className="text-xs text-slate-500">Total</p>
+                  <p className="text-lg">{money(total)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Collected</p>
                   <p className="text-lg">{money(collected)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Remaining</p>
+                  <p className="text-xs text-slate-500">Balance</p>
                   <p className="text-lg">{money(remaining)}</p>
                 </div>
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Account closes when {money(principal)} is collected.
+              </p>
               <p className="mt-3 text-sm text-slate-500">
                 Entries:{' '}
                 {Math.round(collected / Number(loan.dailyPayment || 100))} /{' '}
@@ -256,7 +279,9 @@ export default function CustomerDetailPage() {
                           amountOk ? 'bg-teal-400' : 'bg-red-400'
                         }`}
                       />
-                      {amountOk ? '100–1800 AED' : 'Outside 100–1800'}
+                      {amountOk
+                        ? `Up to ${money(maxPay)} to close`
+                        : `Enter up to ${money(maxPay)}`}
                     </span>
                     <button
                       type="submit"
@@ -278,7 +303,9 @@ export default function CustomerDetailPage() {
                   </label>
                 </form>
               ) : (
-                <p className="mt-4 text-sm text-slate-500">Target reached</p>
+                <div className="mt-4">
+                  <ClosedBadge />
+                </div>
               )}
               {message ? (
                 <p className="mt-3 text-sm text-teal-700">{message}</p>
