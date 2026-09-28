@@ -26,12 +26,26 @@ export function BrandWordmark({
   size = 'md',
   onDark = false,
 }: BrandWordmarkProps) {
+  const letters = [
+    ...Array.from('Crick', (ch) => ({ ch, color: '#000000' })),
+    ...Array.from('herose', (ch) => ({ ch, color: BRAND_HEROSE_RED })),
+  ];
   const mark = (
     <span
-      className={`font-display font-semibold tracking-tight leading-none ${sizeClass[size]} ${className}`}
+      role="img"
+      aria-label="Crickherose"
+      className={`wordmark-3d font-display font-semibold tracking-tight leading-none ${sizeClass[size]} ${className}`}
     >
-      <span className="text-black">Crick</span>
-      <span style={{ color: BRAND_HEROSE_RED }}>herose</span>
+      {letters.map(({ ch, color }, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          className="wordmark-letter"
+          style={{ color, animationDelay: `${i * 0.15}s` }}
+        >
+          {ch}
+        </span>
+      ))}
     </span>
   );
 
