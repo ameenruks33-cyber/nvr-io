@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
-
-/** Send first visit to the install page so phones see install steps immediately. */
-export default function HomePage() {
-  redirect('/app');
-}
+/**
+ * Home shows the install page directly. Must not redirect: older installed
+ * service workers follow redirects and browsers reject the result for page loads.
+ */
+export { default } from './app/page';
