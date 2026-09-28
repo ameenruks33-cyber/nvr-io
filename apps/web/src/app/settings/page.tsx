@@ -515,31 +515,22 @@ export default function SettingsPage() {
         <section className="mt-8 max-w-xl space-y-4 rounded-2xl border border-teal-500/25 bg-ink-900/80 p-5">
           <div>
             <h2 className="text-lg font-medium text-white">
-              WhatsApp auto receipts
+              WhatsApp receipts
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              When enabled, saving a collection automatically sends the receipt
-              (amount paid + remaining balance) to the registered customer’s
-              WhatsApp. Recommended: Green API — create an instance at{' '}
-              <a
-                href="https://console.green-api.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-teal-300 underline"
-              >
-                console.green-api.com
-              </a>
-              , scan the QR with your business WhatsApp, then paste Instance ID
-              and API token below.
+              After each saved collection, WhatsApp opens with the receipt
+              (name, date &amp; time, amount, total, remaining balance) ready
+              for the customer — the collector taps Send. This is free and needs
+              no setup. Optional: add a paid WhatsApp API below to send receipts
+              without the tap.
             </p>
             {waAutoSend ? (
               <p className="mt-2 text-sm text-teal-200">
                 Auto-send is ON ({waProvider}).
               </p>
             ) : (
-              <p className="mt-2 text-sm text-amber-200">
-                Auto-send is OFF — receipts will not go out until you enable and
-                save credentials.
+              <p className="mt-2 text-sm text-slate-300">
+                Using the free one-tap WhatsApp button.
               </p>
             )}
           </div>
@@ -561,7 +552,7 @@ export default function SettingsPage() {
                   setWaProvider(e.target.value as 'green-api' | 'meta')
                 }
               >
-                <option value="green-api">Green API (recommended)</option>
+                <option value="green-api">Green API</option>
                 <option value="meta">Meta WhatsApp Cloud API</option>
               </select>
             </label>

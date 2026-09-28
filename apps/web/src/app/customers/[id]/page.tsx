@@ -93,9 +93,14 @@ export default function CustomerDetailPage() {
       if (wa?.sent) {
         waNote = ' Receipt sent to customer WhatsApp.';
       } else if (wa?.deepLink) {
-        waNote = ' Opening WhatsApp to send receipt to customer…';
         setWaLink(wa.deepLink);
-        window.open(wa.deepLink, '_blank', 'noopener,noreferrer');
+        const waWindow = window.open(wa.deepLink, '_blank');
+        if (waWindow) {
+          waWindow.opener = null;
+          waNote = ' WhatsApp opened — tap Send to deliver the receipt.';
+        } else {
+          waNote = ' Tap "Send WhatsApp receipt" below to deliver it.';
+        }
       } else if (wa?.error) {
         waNote = ` ${wa.error}`;
       }
