@@ -49,6 +49,30 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
+    // WhatsApp login OTP
+    for (const sql of [
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "otp_enabled" BOOLEAN NOT NULL DEFAULT false;`,
+      `CREATE TABLE IF NOT EXISTS "login_challenges" (
+        "id" TEXT NOT NULL,
+        "user_id" TEXT NOT NULL,
+        "purpose" TEXT NOT NULL,
+        "code_hash" TEXT NOT NULL,
+        "attempts" INTEGER NOT NULL DEFAULT 0,
+        "expires_at" TIMESTAMP(3) NOT NULL,
+        "consumed_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "login_challenges_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "login_challenges_user_id_fkey" FOREIGN KEY ("user_id")
+          REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );`,
+      `CREATE INDEX IF NOT EXISTS "login_challenges_user_id_idx" ON "login_challenges"("user_id");`,
+    ]) {
+      try {
+        await this.$executeRawUnsafe(sql);
+      } catch {
+        // ignore if table not ready yet
+      }
+    }
     // C/O (care of) contact on customers
     for (const col of [
       `ADD COLUMN IF NOT EXISTS "care_of_name" TEXT`,

@@ -2,6 +2,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -16,6 +17,12 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  /** WhatsApp number used for login codes; empty string clears it. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^\+?[\d\s-]{8,20}$/, { message: 'Enter a valid WhatsApp number' })
+  phone?: string;
 
   @IsOptional()
   @IsString()

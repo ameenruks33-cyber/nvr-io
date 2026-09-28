@@ -43,6 +43,12 @@ export class UsersController {
     return this.users.setActive(assertSafeId(String(id)), true, user);
   }
 
+  @Patch(':id/otp-reset')
+  @Roles(UserRole.SUPER_ADMIN)
+  resetOtp(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.users.resetOtp(assertSafeId(String(id)), user);
+  }
+
   @Patch(':id/role')
   @Roles(UserRole.SUPER_ADMIN)
   setRole(

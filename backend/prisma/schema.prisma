@@ -53,10 +53,12 @@ model User {
   passwordHash String   @map("password_hash")
   role         UserRole
   isActive     Boolean  @default(true) @map("is_active")
+  otpEnabled   Boolean  @default(false) @map("otp_enabled")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   refreshTokens       RefreshToken[]
+  loginChallenges     LoginChallenge[]
   repayments          Repayment[]    @relation("CollectedBy")
   auditLogs           AuditLog[]
   customers           Customer[]     @relation("RegisteredBy")
@@ -64,6 +66,23 @@ model User {
   galleryVerifications GalleryItem[] @relation("GalleryVerifiedBy")
 
   @@map("users")
+}
+
+/// One-time WhatsApp codes for login (LOGIN) and turning OTP on (ENABLE).
+model LoginChallenge {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  purpose    String
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("login_challenges")
 }
 
 model RefreshToken {

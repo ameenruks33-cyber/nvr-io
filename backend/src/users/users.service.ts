@@ -68,10 +68,31 @@ export class UsersService {
         phone: true,
         role: true,
         isActive: true,
+        otpEnabled: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /** Lost-phone recovery: turn off WhatsApp login codes for another user. */
+  async resetOtp(id: string, actor: AuthUser) {
+    await this.assertCanManage(id, actor);
+    await this.prisma.user.update({
+      where: { id },
+      data: { otpEnabled: false },
+    });
+    await this.prisma.loginChallenge.updateMany({
+      where: { userId: { equals: String(id) }, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+    await this.audit.log({
+      userId: actor.id,
+      action: 'USER_OTP_RESET',
+      recordType: 'user',
+      recordId: id,
+    });
+    return { otpEnabled: false };
   }
 
   private async assertCanManage(targetId: string, actor: AuthUser) {
@@ -111,7 +132,7 @@ export class UsersService {
     // Kick them out of the app immediately when disabled
     if (!isActive) {
       await this.prisma.refreshToken.updateMany({
-        where: { userId: id, revokedAt: null },
+        where: { userId: { equals: String(id) }, revokedAt: null },
         data: { revokedAt: new Date() },
       });
     }

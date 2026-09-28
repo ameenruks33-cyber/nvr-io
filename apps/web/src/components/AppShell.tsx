@@ -30,6 +30,7 @@ const links: NavLink[] = [
   { href: '/users', label: 'Users', superAdminOnly: true },
   { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
   { href: '/settings', label: 'Settings', superAdminOnly: true },
+  { href: '/security', label: 'Security' },
   { href: '/updates', label: 'Updates', mobileAppOnly: true },
   { href: '/app', label: 'Install' },
 ];

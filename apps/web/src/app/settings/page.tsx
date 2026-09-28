@@ -31,6 +31,7 @@ type StaffUser = {
   email: string;
   role: string;
   isActive: boolean;
+  otpEnabled?: boolean;
 };
 
 function useWebsiteDesktopUi() {
@@ -316,6 +317,29 @@ export default function SettingsPage() {
       setWaErr(err instanceof Error ? err.message : 'Test send failed');
     } finally {
       setWaTesting(false);
+    }
+  }
+
+  async function resetStaffOtp(user: StaffUser) {
+    if (!isSuperAdmin || user.id === profile?.id) return;
+    if (
+      !window.confirm(
+        `Turn off WhatsApp login codes for ${user.name}? They will sign in with password only until they turn it on again.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(user.id);
+    setStaffErr('');
+    setStaffMsg('');
+    try {
+      await api(`/users/${user.id}/otp-reset`, { method: 'PATCH' });
+      setStaffMsg(`WhatsApp login codes turned off for ${user.name}.`);
+      await loadStaff();
+    } catch (e) {
+      setStaffErr(e instanceof Error ? e.message : 'Reset failed');
+    } finally {
+      setBusyId('');
     }
   }
 
@@ -916,8 +940,20 @@ export default function SettingsPage() {
                       }`}
                     >
                       {user.isActive ? 'App enabled' : 'App disabled'}
+                      {user.otpEnabled ? ' · WhatsApp login code ON' : ''}
                     </p>
                   </div>
+
+                  {canToggle && user.otpEnabled ? (
+                    <button
+                      type="button"
+                      disabled={busyId === user.id}
+                      onClick={() => void resetStaffOtp(user)}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                      Reset login code
+                    </button>
+                  ) : null}
 
                   {canToggle ? (
                     <button

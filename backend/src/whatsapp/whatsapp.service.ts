@@ -300,6 +300,48 @@ export class WhatsappService {
     };
   }
 
+  async isAutoSendReady(): Promise<boolean> {
+    const cfg = await this.resolveConfig();
+    return cfg.configured && cfg.enabled;
+  }
+
+  /** Sends a plain text via the configured provider only — never falls back to a deep link. */
+  async sendText(
+    phone: string,
+    message: string,
+  ): Promise<{ sent: boolean; error?: string }> {
+    const defaultCc =
+      this.config.get<string>('WHATSAPP_DEFAULT_COUNTRY') || '971';
+    const digits = this.toDigits(phone, defaultCc);
+    if (!digits) return { sent: false, error: 'WhatsApp number is missing or invalid' };
+    const cfg = await this.resolveConfig();
+    if (!cfg.configured || !cfg.enabled) {
+      return { sent: false, error: 'Automatic WhatsApp sending is not connected' };
+    }
+    const result =
+      cfg.provider === 'waha'
+        ? await this.sendViaWaha(cfg, digits, message, '')
+        : cfg.provider === 'green-api'
+          ? await this.sendViaGreenApi(cfg, digits, message, '')
+          : await this.sendViaMetaText(cfg, digits, message);
+    return { sent: result.sent, error: result.error };
+  }
+
+  private async sendViaMetaText(
+    cfg: ResolvedConfig,
+    digits: string,
+    message: string,
+  ): Promise<WhatsAppSendResult> {
+    return this.sendViaMeta({ ...cfg, templateName: null }, digits, message, '', {
+      customerName: '',
+      phone: digits,
+      amountPaid: 0,
+      remaining: 0,
+      principal: 0,
+      receiptNumber: '',
+    });
+  }
+
   private async resolveConfig(): Promise<ResolvedConfig> {
     const row = await this.prisma.appSetting.findUnique({
       where: { id: SETTINGS_ID },
