@@ -103,11 +103,13 @@ export class WhatsappService {
     const lines = [
       'CrickHerose — Collection Receipt',
       `Receipt: ${input.receiptNumber}`,
+      `Date & Time: ${dateTime}`,
+      '',
       `Name: ${input.customerName}`,
-      `Date & time: ${dateTime}`,
-      `Collected amount: AED ${paid}`,
-      `Total: AED ${total}`,
-      `Remaining balance: AED ${remaining}`,
+      `Amount Paid (Cash): AED ${paid}`,
+      `Balance Amount (Cash): AED ${remaining}`,
+      `Total Amount (Cash): AED ${total}`,
+      '',
     ];
     if (input.completed || Number(input.remaining) <= 0) {
       lines.push('Status: Target completed. Thank you!');
@@ -431,12 +433,12 @@ export class WhatsappService {
               components: [
                 {
                   type: 'body',
+                  // Template body order: {{1}} Name, {{2}} Amount Paid, {{3}} Balance, {{4}} Total
                   parameters: [
                     { type: 'text', text: input.customerName },
-                    { type: 'text', text: input.receiptNumber },
-                    { type: 'text', text: input.amountPaid.toFixed(2) },
-                    { type: 'text', text: input.remaining.toFixed(2) },
-                    { type: 'text', text: input.principal.toFixed(2) },
+                    { type: 'text', text: Number(input.amountPaid).toFixed(2) },
+                    { type: 'text', text: Number(input.remaining).toFixed(2) },
+                    { type: 'text', text: Number(input.principal).toFixed(2) },
                   ],
                 },
               ],
