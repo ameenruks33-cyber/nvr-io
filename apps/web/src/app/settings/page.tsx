@@ -7,6 +7,17 @@ import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
 
+type WaProvider = 'waha' | 'green-api' | 'meta';
+
+const WAHA_STATUS_TEXT: Record<string, string> = {
+  WORKING: 'WhatsApp number linked — receipts send automatically.',
+  SCAN_QR_CODE: 'Server running — open the WAHA dashboard and scan the QR code with your WhatsApp.',
+  STARTING: 'WAHA session is starting…',
+  STOPPED: 'WAHA session is stopped — start it in the WAHA dashboard.',
+  FAILED: 'WAHA session failed — restart it in the WAHA dashboard.',
+  UNREACHABLE: 'WAHA server not reachable — check the URL, or the server may be waking up.',
+};
+
 type Profile = {
   id: string;
   name: string;
@@ -75,9 +86,8 @@ export default function SettingsPage() {
 
   const [waEnabled, setWaEnabled] = useState(false);
   const [waAutoSend, setWaAutoSend] = useState(false);
-  const [waProvider, setWaProvider] = useState<'green-api' | 'meta'>(
-    'green-api',
-  );
+  const [waProvider, setWaProvider] = useState<WaProvider>('waha');
+  const [wahaStatus, setWahaStatus] = useState<string | null>(null);
   const [waInstanceId, setWaInstanceId] = useState('');
   const [waToken, setWaToken] = useState('');
   const [waTokenSet, setWaTokenSet] = useState(false);
@@ -97,6 +107,7 @@ export default function SettingsPage() {
       const s = await api<{
         autoSend: boolean;
         provider: string | null;
+        wahaStatus?: string | null;
         settings: {
           enabled: boolean;
           provider: string;
@@ -108,9 +119,9 @@ export default function SettingsPage() {
       }>('/whatsapp/settings');
       setWaAutoSend(Boolean(s.autoSend));
       setWaEnabled(Boolean(s.settings?.enabled));
-      setWaProvider(
-        s.settings?.provider === 'meta' ? 'meta' : 'green-api',
-      );
+      const p = s.settings?.provider;
+      setWaProvider(p === 'meta' || p === 'green-api' ? p : 'waha');
+      setWahaStatus(s.wahaStatus ?? null);
       setWaInstanceId(s.settings?.instanceId || '');
       setWaTokenSet(Boolean(s.settings?.tokenSet));
       setWaApiUrl(s.settings?.apiUrl || '');
@@ -257,6 +268,7 @@ export default function SettingsPage() {
           ? 'WhatsApp auto-send is ON. New collections will message customers automatically.'
           : 'WhatsApp settings saved. Auto-send is still off.',
       );
+      void loadWhatsapp();
     } catch (err) {
       setWaErr(err instanceof Error ? err.message : 'Could not save WhatsApp');
     } finally {
@@ -518,11 +530,10 @@ export default function SettingsPage() {
               WhatsApp receipts
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              After each saved collection, WhatsApp opens with the receipt
-              (name, date &amp; time, amount, total, remaining balance) ready
-              for the customer — the collector taps Send. This is free and needs
-              no setup. Optional: add a paid WhatsApp API below to send receipts
-              without the tap.
+              Without setup, WhatsApp opens with the receipt ready and the
+              collector taps Send. To send automatically for free, connect a
+              WAHA server (free, self-hosted) and link your WhatsApp number by
+              scanning its QR code.
             </p>
             {waAutoSend ? (
               <p className="mt-2 text-sm text-teal-700">
@@ -533,6 +544,15 @@ export default function SettingsPage() {
                 Using the free one-tap WhatsApp button.
               </p>
             )}
+            {waProvider === 'waha' && wahaStatus ? (
+              <p
+                className={`mt-1 text-sm ${
+                  wahaStatus === 'WORKING' ? 'text-teal-700' : 'text-amber-700'
+                }`}
+              >
+                {WAHA_STATUS_TEXT[wahaStatus] || `WAHA session: ${wahaStatus}`}
+              </p>
+            ) : null}
           </div>
           <form onSubmit={saveWhatsapp} className="space-y-3">
             <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -548,42 +568,68 @@ export default function SettingsPage() {
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 value={waProvider}
-                onChange={(e) =>
-                  setWaProvider(e.target.value as 'green-api' | 'meta')
-                }
+                onChange={(e) => setWaProvider(e.target.value as WaProvider)}
               >
-                <option value="green-api">Green API</option>
-                <option value="meta">Meta WhatsApp Cloud API</option>
+                <option value="waha">WAHA (free, self-hosted)</option>
+                <option value="green-api">Green API (paid)</option>
+                <option value="meta">Meta WhatsApp Cloud API (paid)</option>
               </select>
             </label>
+            {waProvider === 'waha' ? (
+              <label className="block text-sm">
+                <span className="text-slate-600">WAHA server URL</span>
+                <input
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                  value={waApiUrl}
+                  onChange={(e) => setWaApiUrl(e.target.value)}
+                  placeholder="https://your-name-crickherose-waha.hf.space"
+                  autoComplete="off"
+                />
+              </label>
+            ) : null}
             <label className="block text-sm">
               <span className="text-slate-600">
-                {waProvider === 'meta' ? 'Phone Number ID' : 'Instance ID'}
+                {waProvider === 'meta'
+                  ? 'Phone Number ID'
+                  : waProvider === 'waha'
+                    ? 'Session name'
+                    : 'Instance ID'}
               </span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 value={waInstanceId}
                 onChange={(e) => setWaInstanceId(e.target.value)}
                 placeholder={
-                  waProvider === 'meta' ? 'Phone Number ID' : 'idInstance'
+                  waProvider === 'meta'
+                    ? 'Phone Number ID'
+                    : waProvider === 'waha'
+                      ? 'default'
+                      : 'idInstance'
                 }
                 autoComplete="off"
               />
             </label>
             <label className="block text-sm">
               <span className="text-slate-600">
-                API token{waTokenSet ? ' (leave blank to keep current)' : ''}
+                {waProvider === 'waha' ? 'WAHA API key' : 'API token'}
+                {waTokenSet ? ' (leave blank to keep current)' : ''}
               </span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                 type="password"
                 value={waToken}
                 onChange={(e) => setWaToken(e.target.value)}
-                placeholder={waTokenSet ? '••••••••' : 'apiTokenInstance'}
+                placeholder={
+                  waTokenSet
+                    ? '••••••••'
+                    : waProvider === 'waha'
+                      ? 'WAHA_API_KEY'
+                      : 'apiTokenInstance'
+                }
                 autoComplete="new-password"
               />
             </label>
-            {waProvider === 'green-api' ? (
+            {waProvider === 'waha' ? null : waProvider === 'green-api' ? (
               <label className="block text-sm">
                 <span className="text-slate-600">API URL (optional)</span>
                 <input

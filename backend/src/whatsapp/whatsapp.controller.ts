@@ -2,21 +2,26 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Post,
   Put,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
+import { timingSafeEqual } from 'crypto';
 import { IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
-import { WhatsappService } from './whatsapp.service';
+import { WhatsappProvider, WhatsappService } from './whatsapp.service';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 
 class SaveWhatsappSettingsDto {
   @IsBoolean()
   enabled!: boolean;
 
-  @IsIn(['green-api', 'meta'])
-  provider!: 'green-api' | 'meta';
+  @IsIn(['green-api', 'meta', 'waha'])
+  provider!: WhatsappProvider;
 
   @IsString()
   instanceId!: string;
@@ -46,7 +51,27 @@ class TestWhatsappDto {
 
 @Controller('whatsapp')
 export class WhatsappController {
-  constructor(private readonly whatsapp: WhatsappService) {}
+  constructor(
+    private readonly whatsapp: WhatsappService,
+    private readonly config: ConfigService,
+  ) {}
+
+  /** Daily Vercel cron — keeps a free WAHA host from sleeping. */
+  @Public()
+  @Get('keepalive')
+  async keepalive(@Headers('authorization') auth?: string) {
+    const secret = this.config.get<string>('CRON_SECRET')?.trim();
+    const expected = Buffer.from(`Bearer ${secret ?? ''}`);
+    const given = Buffer.from(auth ?? '');
+    if (
+      !secret ||
+      expected.length !== given.length ||
+      !timingSafeEqual(expected, given)
+    ) {
+      throw new UnauthorizedException();
+    }
+    return { waha: await this.whatsapp.wahaSessionStatus() };
+  }
 
   @Get('status')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)

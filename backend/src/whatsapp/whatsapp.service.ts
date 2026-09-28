@@ -34,10 +34,20 @@ export type WhatsAppSendResult = {
   error?: string;
 };
 
+export type WhatsappProvider = 'green-api' | 'meta' | 'waha';
+
+const PROVIDERS: WhatsappProvider[] = ['green-api', 'meta', 'waha'];
+
+function toProvider(raw: string | null | undefined): WhatsappProvider {
+  return PROVIDERS.includes(raw as WhatsappProvider)
+    ? (raw as WhatsappProvider)
+    : 'green-api';
+}
+
 type ResolvedConfig = {
   configured: boolean;
   enabled: boolean;
-  provider: 'green-api' | 'meta' | null;
+  provider: WhatsappProvider | null;
   instanceId: string | null;
   token: string | null;
   apiUrl: string | null;
@@ -142,12 +152,15 @@ export class WhatsappService {
       where: { id: SETTINGS_ID },
     });
     const cfg = await this.resolveConfig();
+    const waha = await this.wahaSessionStatus();
     return {
       ...cfg,
+      token: undefined,
+      wahaStatus: waha?.status ?? null,
       autoSend: cfg.configured && cfg.enabled,
       settings: {
         enabled: row?.whatsappEnabled ?? false,
-        provider: row?.whatsappProvider || 'green-api',
+        provider: row?.whatsappProvider || 'waha',
         instanceId: row?.whatsappInstanceId || '',
         tokenSet: Boolean(row?.whatsappTokenEncrypted),
         apiUrl: row?.whatsappApiUrl || '',
@@ -160,7 +173,7 @@ export class WhatsappService {
   async saveSettings(
     input: {
       enabled: boolean;
-      provider: 'green-api' | 'meta';
+      provider: WhatsappProvider;
       instanceId: string;
       token?: string;
       apiUrl?: string;
@@ -173,8 +186,24 @@ export class WhatsappService {
       throw new ForbiddenException('Only super admin can configure WhatsApp');
     }
 
-    const provider = input.provider === 'meta' ? 'meta' : 'green-api';
-    const instanceId = input.instanceId.trim();
+    const provider = toProvider(input.provider);
+    const instanceId =
+      input.instanceId.trim() || (provider === 'waha' ? 'default' : '');
+    const apiUrl = input.apiUrl?.trim() || '';
+    if (apiUrl) {
+      let parsed: URL | null = null;
+      try {
+        parsed = new URL(apiUrl);
+      } catch {
+        parsed = null;
+      }
+      if (!parsed || parsed.protocol !== 'https:') {
+        throw new BadRequestException('API URL must be a valid https:// address');
+      }
+    }
+    if (input.enabled && provider === 'waha' && !apiUrl) {
+      throw new BadRequestException('WAHA server URL is required');
+    }
     const existing = await this.prisma.appSetting.findUnique({
       where: { id: SETTINGS_ID },
     });
@@ -198,7 +227,7 @@ export class WhatsappService {
         whatsappProvider: provider,
         whatsappInstanceId: instanceId || null,
         whatsappTokenEncrypted: tokenEncrypted,
-        whatsappApiUrl: input.apiUrl?.trim() || null,
+        whatsappApiUrl: apiUrl || null,
         whatsappTemplateName: input.templateName?.trim() || null,
         whatsappTemplateLang: input.templateLang?.trim() || 'en',
       },
@@ -207,7 +236,7 @@ export class WhatsappService {
         whatsappProvider: provider,
         whatsappInstanceId: instanceId || null,
         whatsappTokenEncrypted: tokenEncrypted,
-        whatsappApiUrl: input.apiUrl?.trim() || null,
+        whatsappApiUrl: apiUrl || null,
         whatsappTemplateName: input.templateName?.trim() || null,
         whatsappTemplateLang: input.templateLang?.trim() || 'en',
       },
@@ -248,9 +277,11 @@ export class WhatsappService {
     // Always try API when credentials exist (env or Settings)
     if (cfg.configured && cfg.enabled) {
       const apiResult =
-        cfg.provider === 'green-api'
-          ? await this.sendViaGreenApi(cfg, digits, message, deepLink)
-          : await this.sendViaMeta(cfg, digits, message, deepLink, input);
+        cfg.provider === 'waha'
+          ? await this.sendViaWaha(cfg, digits, message, deepLink)
+          : cfg.provider === 'green-api'
+            ? await this.sendViaGreenApi(cfg, digits, message, deepLink)
+            : await this.sendViaMeta(cfg, digits, message, deepLink, input);
       if (apiResult.sent) return apiResult;
       // Keep deep link so collector can still deliver the same receipt
       return { ...apiResult, deepLink, message };
@@ -284,8 +315,7 @@ export class WhatsappService {
         );
       }
       if (token) {
-        const provider =
-          row.whatsappProvider === 'meta' ? 'meta' : 'green-api';
+        const provider = toProvider(row.whatsappProvider);
         return {
           configured: true,
           enabled: true,
@@ -300,6 +330,23 @@ export class WhatsappService {
       }
     }
 
+    const wahaUrl = this.config.get<string>('WHATSAPP_WAHA_URL')?.trim();
+    const wahaKey = this.config.get<string>('WHATSAPP_WAHA_API_KEY')?.trim();
+    if (wahaUrl && wahaKey) {
+      return {
+        configured: true,
+        enabled: true,
+        provider: 'waha',
+        instanceId:
+          this.config.get<string>('WHATSAPP_WAHA_SESSION')?.trim() || 'default',
+        token: wahaKey,
+        apiUrl: wahaUrl,
+        templateName: null,
+        templateLang: 'en',
+        source: 'env',
+      };
+    }
+
     const envToken = this.config.get<string>('WHATSAPP_TOKEN')?.trim();
     const greenInstance = this.config
       .get<string>('WHATSAPP_GREEN_ID_INSTANCE')
@@ -311,7 +358,7 @@ export class WhatsappService {
       this.config.get<string>('WHATSAPP_PROVIDER') || ''
     ).toLowerCase();
 
-    let envProvider: 'green-api' | 'meta' | null = null;
+    let envProvider: WhatsappProvider | null = null;
     let envInstance: string | null = null;
     if (envToken && greenInstance && (envProviderRaw === 'green-api' || !metaPhoneId)) {
       envProvider = 'green-api';
@@ -354,6 +401,78 @@ export class WhatsappService {
       templateLang: 'en',
       source: 'none',
     };
+  }
+
+  /** WAHA session state, e.g. WORKING or SCAN_QR_CODE. Also keeps free hosts awake. */
+  async wahaSessionStatus(): Promise<{ status: string; error?: string } | null> {
+    const cfg = await this.resolveConfig();
+    if (cfg.provider !== 'waha' || !cfg.apiUrl || !cfg.token) return null;
+    const base = cfg.apiUrl.replace(/\/$/, '');
+    const session = encodeURIComponent(cfg.instanceId || 'default');
+    try {
+      const res = await fetch(`${base}/api/sessions/${session}`, {
+        headers: { 'X-Api-Key': cfg.token },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) return { status: 'UNREACHABLE', error: `HTTP ${res.status}` };
+      const data = (await res.json()) as { status?: string };
+      return { status: data.status || 'UNKNOWN' };
+    } catch (e) {
+      return {
+        status: 'UNREACHABLE',
+        error: e instanceof Error ? e.message : 'WAHA not reachable',
+      };
+    }
+  }
+
+  private async sendViaWaha(
+    cfg: ResolvedConfig,
+    digits: string,
+    message: string,
+    deepLink: string,
+  ): Promise<WhatsAppSendResult> {
+    const base = (cfg.apiUrl || '').replace(/\/$/, '');
+    try {
+      const res = await fetch(`${base}/api/sendText`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': cfg.token || '',
+        },
+        body: JSON.stringify({
+          session: cfg.instanceId || 'default',
+          chatId: `${digits}@c.us`,
+          text: message,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        this.logger.error(`WAHA ${res.status}: ${errText.slice(0, 300)}`);
+        return {
+          digits,
+          deepLink,
+          message,
+          sent: false,
+          configured: true,
+          provider: 'waha',
+          error: `WhatsApp send failed (${res.status})`,
+        };
+      }
+      return { digits, deepLink, message, sent: true, configured: true, provider: 'waha' };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'WhatsApp send failed';
+      this.logger.error(`WAHA: ${msg}`);
+      return {
+        digits,
+        deepLink,
+        message,
+        sent: false,
+        configured: true,
+        provider: 'waha',
+        error: msg,
+      };
+    }
   }
 
   private async sendViaGreenApi(
