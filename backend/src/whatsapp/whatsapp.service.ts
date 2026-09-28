@@ -112,7 +112,6 @@ export class WhatsappService {
 
     const lines = [
       'CrickHerose — Collection Receipt',
-      `Receipt: ${input.receiptNumber}`,
       `Date & Time: ${dateTime}`,
       '',
       `Name: ${input.customerName}`,
