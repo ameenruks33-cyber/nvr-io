@@ -298,7 +298,7 @@ export default function NewCustomerPage() {
         {(
           [
             ['name', 'Full Name', 'text'],
-            ['phone', 'WhatsApp Number', 'tel'],
+            ['phone', 'WhatsApp / Phone / Botim', 'tel'],
             'careOf',
             ['address', 'Address', 'text'],
             ['passportNumber', 'Passport Number', 'text'],
