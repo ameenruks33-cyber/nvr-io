@@ -5,9 +5,37 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { api } from '@/lib/api';
 
+// Vercel rejects request bodies over ~4.5 MB, so device photos are downscaled first.
+const MAX_UPLOAD_EDGE = 1600;
+
+async function shrinkImage(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+  const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', 0.85),
+  );
+  if (!blob) return file;
+  const base = file.name.replace(/\.[^.]+$/, '') || 'photo';
+  return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
+}
+
+type PendingPhoto = { file: File; url: string };
+
 export default function NewCustomerPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<PendingPhoto[]>([]);
+  const pendingRef = useRef<PendingPhoto[]>([]);
+  pendingRef.current = pending;
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,6 +101,11 @@ export default function NewCustomerPage() {
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  useEffect(
+    () => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.url)),
+    [],
+  );
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -102,35 +135,78 @@ export default function NewCustomerPage() {
     });
   }
 
-  async function captureAndUploadToCloud() {
+  async function uploadToGallery(file: File) {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (caption.trim()) fd.append('caption', caption.trim());
+    await api('/gallery/upload', { method: 'POST', body: fd });
+  }
+
+  function setPersonPhoto(file: File) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+    setPhoto(file);
+  }
+
+  async function onPickFiles(list: FileList | null) {
+    const files = Array.from(list || []).filter((f) => f.type.startsWith('image/'));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (!files.length) return;
+    setError('');
+    setPhotoStatus('');
+    const shrunk = await Promise.all(files.map(shrinkImage));
+    setPending((prev) => [
+      ...prev,
+      ...shrunk.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    ]);
+  }
+
+  function removePending(url: string) {
+    URL.revokeObjectURL(url);
+    setPending((prev) => prev.filter((p) => p.url !== url));
+  }
+
+  async function saveToCloud() {
     setUploading(true);
     setError('');
     setPhotoStatus('');
     try {
+      if (pending.length) {
+        const failed: PendingPhoto[] = [];
+        let saved = 0;
+        for (const p of pending) {
+          try {
+            await uploadToGallery(p.file);
+            saved += 1;
+          } catch {
+            failed.push(p);
+          }
+        }
+        if (saved) setPersonPhoto(pending.find((p) => !failed.includes(p))!.file);
+        pending.filter((p) => !failed.includes(p)).forEach((p) => URL.revokeObjectURL(p.url));
+        setPending(failed);
+        if (failed.length) {
+          setError(`${failed.length} photo(s) failed to upload. Tap Save Cloud to retry.`);
+        }
+        if (saved) {
+          setPhotoStatus(
+            `${saved} photo${saved > 1 ? 's' : ''} saved to cloud gallery. First one set for this person.`,
+          );
+          setCaption('');
+        }
+        return;
+      }
+
       const blob = await captureFrameBlob();
       const file = new File([blob], `nvr-cloud-${Date.now()}.jpg`, {
         type: 'image/jpeg',
       });
-
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
-      setPhoto(file);
-
-      const fd = new FormData();
-      fd.append('file', file);
-      if (caption.trim()) fd.append('caption', caption.trim());
-
-      await api('/gallery/upload', {
-        method: 'POST',
-        body: fd,
-      });
-
-      setPhotoStatus(
-        'Photo set for this person and saved to cloud gallery.',
-      );
+      setPersonPhoto(file);
+      await uploadToGallery(file);
+      setPhotoStatus('Photo set for this person and saved to cloud gallery.');
       setCaption('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Cloud capture failed');
+      setError(e instanceof Error ? e.message : 'Cloud save failed');
     } finally {
       setUploading(false);
     }
@@ -279,8 +355,8 @@ export default function NewCustomerPage() {
         <div className="space-y-3 text-sm">
           <span className="text-slate-300">Customer photo</span>
           <p className="text-xs text-slate-500">
-            Data Capture here — Save Cloud saves to the person and the shared
-            cloud gallery. Not the device Photos app.
+            Use Data Capture (camera) or Upload from device, then tap Save
+            Cloud to save to the person and the shared cloud gallery.
           </p>
 
           <label className="block text-sm">
@@ -321,7 +397,46 @@ export default function NewCustomerPage() {
             />
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          {pending.length ? (
+            <div>
+              <p className="text-xs text-slate-400">
+                {pending.length} photo{pending.length > 1 ? 's' : ''} ready —
+                tap Save Cloud to upload.
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {pending.map((p) => (
+                  <div key={p.url} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.url}
+                      alt="Selected photo"
+                      className="aspect-square w-full rounded-lg object-cover"
+                    />
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => removePending(p.url)}
+                      aria-label="Remove selected photo"
+                      className="absolute right-1 top-1 rounded-full bg-black/70 px-2 text-xs text-white hover:bg-black"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => void onPickFiles(e.target.files)}
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               disabled={cameraBusy || uploading || loading}
@@ -336,8 +451,16 @@ export default function NewCustomerPage() {
             </button>
             <button
               type="button"
-              disabled={!cameraOn || uploading || loading}
-              onClick={() => void captureAndUploadToCloud()}
+              disabled={uploading || loading}
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-xl bg-indigo-600 px-4 py-3.5 font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              Upload from device
+            </button>
+            <button
+              type="button"
+              disabled={(!cameraOn && !pending.length) || uploading || loading}
+              onClick={() => void saveToCloud()}
               className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
             >
               {uploading ? 'Saving…' : 'Save Cloud'}

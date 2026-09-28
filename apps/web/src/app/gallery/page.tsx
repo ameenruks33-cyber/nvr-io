@@ -415,7 +415,8 @@ export default function GalleryPage() {
 
       {!items.length ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          No cloud photos yet. Capture with Data Capture → Save Cloud on{' '}
+          No cloud photos yet. Use Data Capture or Upload from device, then
+          Save Cloud on{' '}
           <Link href="/customers/new" className="text-teal-300 underline">
             Add person
           </Link>
