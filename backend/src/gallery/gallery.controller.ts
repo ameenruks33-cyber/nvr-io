@@ -186,7 +186,7 @@ export class GalleryController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  @Roles(UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.gallery.remove(assertSafeId(String(id)), user);
   }

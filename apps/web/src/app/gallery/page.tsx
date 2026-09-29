@@ -384,7 +384,9 @@ export default function GalleryPage() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500">From Add person · can delete</p>
+        <p className="text-xs text-slate-500">
+          From Add person{isSuperAdmin ? ' · can delete' : ''}
+        </p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -405,14 +407,16 @@ export default function GalleryPage() {
                 {item.status}
                 {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
               </p>
-              <button
-                type="button"
-                disabled={deletingId === item.id}
-                onClick={() => void deletePhoto(item.id, item.caption)}
-                className="w-full rounded-lg bg-red-800/80 px-2 py-1.5 text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {deletingId === item.id ? 'Deleting…' : 'Delete'}
-              </button>
+              {isSuperAdmin ? (
+                <button
+                  type="button"
+                  disabled={deletingId === item.id}
+                  onClick={() => void deletePhoto(item.id, item.caption)}
+                  className="w-full rounded-lg bg-red-800/80 px-2 py-1.5 text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                </button>
+              ) : null}
             </div>
           </article>
         ))}
