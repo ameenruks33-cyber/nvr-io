@@ -64,8 +64,24 @@ model User {
   customers           Customer[]     @relation("RegisteredBy")
   galleryUploads      GalleryItem[]  @relation("GalleryUploadedBy")
   galleryVerifications GalleryItem[] @relation("GalleryVerifiedBy")
+  pettyCashExpenses   PettyCashExpense[]
 
   @@map("users")
+}
+
+/// Cash taken out of collections for expenses; `spentOn` is the UAE calendar day (YYYY-MM-DD).
+model PettyCashExpense {
+  id           String   @id @default(cuid())
+  amount       Decimal
+  spentOn      String   @map("spent_on")
+  purpose      String
+  recordedById String   @map("recorded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  recordedBy User @relation(fields: [recordedById], references: [id])
+
+  @@index([spentOn])
+  @@map("petty_cash_expenses")
 }
 
 /// One-time WhatsApp codes for login (LOGIN) and turning OTP on (ENABLE).

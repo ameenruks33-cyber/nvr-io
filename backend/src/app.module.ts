@@ -17,6 +17,7 @@ import { StorageModule } from './storage/storage.module';
 import { AdminModule } from './admin/admin.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { PettyCashModule } from './petty-cash/petty-cash.module';
 import { HealthController } from './health.controller';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -45,6 +46,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AdminModule,
     GalleryModule,
     WhatsappModule,
+    PettyCashModule,
   ],
   controllers: [HealthController],
   providers: [

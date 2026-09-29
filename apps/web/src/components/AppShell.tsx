@@ -25,6 +25,7 @@ const links: NavLink[] = [
   { href: '/customers', label: 'People' },
   { href: '/loans', label: 'Records' },
   { href: '/repayments', label: 'Receipts' },
+  { href: '/petty-cash', label: 'Petty Cash' },
   { href: '/reports', label: 'Summary' },
   { href: '/notifications', label: 'Notes' },
   { href: '/users', label: 'Users', superAdminOnly: true },

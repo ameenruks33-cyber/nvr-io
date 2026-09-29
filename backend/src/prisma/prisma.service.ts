@@ -86,6 +86,23 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
+    for (const sql of [
+      `CREATE TABLE IF NOT EXISTS "petty_cash_expenses" (
+        "id" TEXT PRIMARY KEY,
+        "amount" DECIMAL(65,30) NOT NULL,
+        "spent_on" TEXT NOT NULL,
+        "purpose" TEXT NOT NULL,
+        "recorded_by" TEXT NOT NULL REFERENCES "users"("id"),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE INDEX IF NOT EXISTS "petty_cash_expenses_spent_on_idx" ON "petty_cash_expenses"("spent_on");`,
+    ]) {
+      try {
+        await this.$executeRawUnsafe(sql);
+      } catch {
+        // ignore if table not ready yet
+      }
+    }
     // Accounts show a 2000 total but close at 1800 collected (last 200 waived).
     // Only touches rows still on the old 1800/1800 setup, so it runs once.
     try {
