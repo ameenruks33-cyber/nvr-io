@@ -47,6 +47,39 @@ export async function api<T>(
     headers.set('Content-Type', 'application/json');
   }
 
+  const res = await authFetch(path, options, headers);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    const message = Array.isArray(err.message)
+      ? err.message.join(', ')
+      : err.message || 'Request failed';
+    throw new Error(message);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+/** Authenticated file download (photos) with the same token refresh as `api`. */
+export async function apiBlob(path: string): Promise<Blob> {
+  let res = await authFetch(path, {}, new Headers());
+  if (res.status === 429 || res.status >= 500) {
+    await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
+    res = await authFetch(path, {}, new Headers());
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || `Load failed (${res.status})`);
+  }
+  return res.blob();
+}
+
+async function authFetch(
+  path: string,
+  options: RequestInit & { auth?: boolean },
+  headers: Headers,
+): Promise<Response> {
   let usedToken = '';
   if (options.auth !== false) {
     const session = getSession();
@@ -75,16 +108,7 @@ export async function api<T>(
     }
   }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    const message = Array.isArray(err.message)
-      ? err.message.join(', ')
-      : err.message || 'Request failed';
-    throw new Error(message);
-  }
-
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  return res;
 }
 
 let refreshing: Promise<AuthSession | null> | null = null;

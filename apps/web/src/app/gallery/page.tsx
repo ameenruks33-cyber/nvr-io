@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { api, getSession } from '@/lib/api';
+import { api, apiBlob, getSession } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type GalleryItem = {
@@ -23,11 +23,10 @@ const UNLOCK_KEY = 'nvr_gallery_unlocked';
 function GalleryThumb({ id, alt }: { id: string; alt: string }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const session = getSession();
-    if (!session) {
+    if (!getSession()) {
       setFailed(true);
       return;
     }
@@ -36,15 +35,7 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
     setFailed(false);
     setSrc(null);
 
-    fetch(`${apiBase}/gallery/${id}/file`, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-      mode: 'cors',
-      credentials: 'omit',
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(`load failed (${r.status})`);
-        return r.blob();
-      })
+    apiBlob(`/gallery/${id}/file`)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -61,13 +52,18 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [apiBase, id]);
+  }, [id, attempt]);
 
   if (failed) {
     return (
-      <div className="flex aspect-square items-center justify-center bg-slate-50 px-2 text-center text-xs text-red-600">
+      <button
+        type="button"
+        onClick={() => setAttempt((n) => n + 1)}
+        className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-slate-50 px-2 text-center text-xs text-red-600"
+      >
         Could not load photo
-      </div>
+        <span className="text-blue-700 underline">Tap to retry</span>
+      </button>
     );
   }
 

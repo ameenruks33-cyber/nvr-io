@@ -15,6 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { GalleryStatus, UserRole } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -123,6 +124,7 @@ export class GalleryController {
   }
 
   @Get(':id/file')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getFile(
     @Param('id') id: string,

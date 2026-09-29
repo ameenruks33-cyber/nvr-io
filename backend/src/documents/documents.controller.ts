@@ -7,6 +7,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 import { basename } from 'path';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -56,6 +57,7 @@ export class DocumentsController {
   }
 
   @Get('by-storage/:key')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getByStorageKey(
     @Param('key') key: string,

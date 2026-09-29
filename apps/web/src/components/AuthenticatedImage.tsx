@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSession } from '@/lib/api';
+import { apiBlob, getSession } from '@/lib/api';
 
 export function AuthenticatedImage({
   storageKey,
@@ -13,21 +13,13 @@ export function AuthenticatedImage({
   className?: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
   useEffect(() => {
-    const session = getSession();
-    if (!session || !storageKey) return;
+    if (!getSession() || !storageKey) return;
     let objectUrl: string | null = null;
     let cancelled = false;
 
-    fetch(`${apiBase}/documents/by-storage/${storageKey}`, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load image');
-        return r.blob();
-      })
+    apiBlob(`/documents/by-storage/${storageKey}`)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -41,7 +33,7 @@ export function AuthenticatedImage({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [apiBase, storageKey]);
+  }, [storageKey]);
 
   if (!src) {
     return (
