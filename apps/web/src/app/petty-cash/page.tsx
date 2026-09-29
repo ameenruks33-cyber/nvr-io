@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Expense = {
   id: string;
@@ -69,6 +70,8 @@ export default function PettyCashPage() {
     setIsSuperAdmin(getSession()?.user.role === 'SUPER_ADMIN');
     void load();
   }, [load]);
+
+  useLiveRefresh(() => void load());
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Stats = {
   totalCustomers: number;
@@ -19,11 +20,14 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = () => {
     api<Stats>('/dashboard')
       .then(setStats)
       .catch((e) => setError(e.message));
-  }, []);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   const cards = stats
     ? [

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Stats = {
   totalDisbursed: number;
@@ -16,9 +17,12 @@ type Stats = {
 export default function ReportsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
 
-  useEffect(() => {
-    api<Stats>('/dashboard').then(setStats);
-  }, []);
+  const load = () => {
+    api<Stats>('/dashboard').then(setStats).catch(() => undefined);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   return (
     <AppShell>

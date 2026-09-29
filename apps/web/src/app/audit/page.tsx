@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Row = {
   id: string;
@@ -19,11 +20,14 @@ export default function AuditPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = () => {
     api<Row[]>('/audit')
       .then(setRows)
       .catch((e) => setError(e.message));
-  }, []);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   return (
     <AppShell>

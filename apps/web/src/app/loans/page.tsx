@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type LoanRow = {
   id: string;
@@ -24,9 +25,12 @@ type LoanRow = {
 export default function LoansPage() {
   const [rows, setRows] = useState<LoanRow[]>([]);
 
-  useEffect(() => {
-    api<LoanRow[]>('/loans').then(setRows);
-  }, []);
+  const load = () => {
+    api<LoanRow[]>('/loans').then(setRows).catch(() => undefined);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   return (
     <AppShell>

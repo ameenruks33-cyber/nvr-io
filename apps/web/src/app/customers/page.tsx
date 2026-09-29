@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type CustomerRow = {
   id: string;
@@ -23,8 +24,10 @@ export default function CustomersPage() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [error, setError] = useState('');
+  const appliedSearch = useRef('');
 
   async function load(search = '') {
+    appliedSearch.current = search;
     try {
       const data = await api<CustomerRow[]>(
         `/customers${search ? `?q=${encodeURIComponent(search)}` : ''}`,
@@ -39,6 +42,8 @@ export default function CustomersPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useLiveRefresh(() => void load(appliedSearch.current));
 
   function onSearch(e: FormEvent) {
     e.preventDefault();

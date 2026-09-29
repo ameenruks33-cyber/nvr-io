@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Row = {
   id: string;
@@ -19,9 +20,12 @@ type Row = {
 export default function RepaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
-  useEffect(() => {
-    api<Row[]>('/repayments?limit=50').then(setRows);
-  }, []);
+  const load = () => {
+    api<Row[]>('/repayments?limit=50').then(setRows).catch(() => undefined);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   return (
     <AppShell>

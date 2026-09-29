@@ -17,14 +17,26 @@ const current = fs.existsSync(file)
   ? JSON.parse(fs.readFileSync(file, 'utf8'))
   : { version: '1.0.0', notes: [] };
 
+const now = new Date();
+
+// Patch is a UTC YYMMDDHHmm stamp so every deploy (local or Vercel) is newer than the last,
+// even when the committed app-update.json was not bumped.
 function bumpPatch(v) {
   const parts = String(v || '1.0.0').split('.').map((n) => parseInt(n, 10) || 0);
   while (parts.length < 3) parts.push(0);
-  parts[2] += 1;
-  return parts.join('.');
+  const stamp = Number(
+    [
+      String(now.getUTCFullYear()).slice(2),
+      String(now.getUTCMonth() + 1).padStart(2, '0'),
+      String(now.getUTCDate()).padStart(2, '0'),
+      String(now.getUTCHours()).padStart(2, '0'),
+      String(now.getUTCMinutes()).padStart(2, '0'),
+    ].join(''),
+  );
+  parts[2] = Math.max(parts[2] + 1, stamp);
+  return parts.slice(0, 3).join('.');
 }
 
-const now = new Date();
 const build = [
   now.getUTCFullYear(),
   String(now.getUTCMonth() + 1).padStart(2, '0'),
@@ -33,7 +45,13 @@ const build = [
   String(now.getUTCMinutes()).padStart(2, '0'),
 ].join('.');
 
-const noteArg = process.argv.slice(2).join(' ').trim();
+const noteArg =
+  process.argv.slice(2).join(' ').trim() ||
+  String(process.env.VERCEL_GIT_COMMIT_MESSAGE || '').split('\n')[0].trim();
+// A deploy right after a local bump keeps that bump's release note.
+const recentRelease =
+  Boolean(current.releasedAt) &&
+  now.getTime() - new Date(current.releasedAt).getTime() < 2 * 60 * 60 * 1000;
 const notes = Array.isArray(current.notes) ? [...current.notes] : [];
 if (noteArg) notes.unshift(noteArg);
 while (notes.length > 8) notes.pop();
@@ -74,8 +92,8 @@ const next = {
   title: 'CrickHerose update available',
   message:
     noteArg ||
-    current.message ||
-    'A new version of CrickHerose is ready. Tap Update to install on this device.',
+    (recentRelease ? current.message : '') ||
+    'New changes from the website are ready. Tap Update now to get them on this device.',
   notes,
   minVersion: current.minVersion || '1.0.0',
   force: Boolean(current.force),

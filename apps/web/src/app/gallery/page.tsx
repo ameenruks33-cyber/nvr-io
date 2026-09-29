@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type GalleryItem = {
   id: string;
@@ -150,6 +151,10 @@ export default function GalleryPage() {
     if (unlocked) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, unlocked]);
+
+  useLiveRefresh(() => {
+    if (unlocked) void load();
+  });
 
   async function onUnlock(e: FormEvent) {
     e.preventDefault();

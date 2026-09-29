@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 const MIN_AED = 100;
 const MAX_AED = 1800;
@@ -74,6 +75,7 @@ export default function CollectionsPage() {
   const [message, setMessage] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const appliedSearch = useRef('');
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) || null,
@@ -96,6 +98,7 @@ export default function CollectionsPage() {
   const tone = amountTone(amountNum, maxPay);
 
   async function loadCustomers(search = '') {
+    appliedSearch.current = search;
     try {
       const data = await api<CustomerRow[]>(
         `/customers${search ? `?q=${encodeURIComponent(search)}` : ''}`,
@@ -124,6 +127,11 @@ export default function CollectionsPage() {
     void loadRecent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useLiveRefresh(() => {
+    void loadCustomers(appliedSearch.current);
+    void loadRecent();
+  });
 
   function onSearch(e: FormEvent) {
     e.preventDefault();

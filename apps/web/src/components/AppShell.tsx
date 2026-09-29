@@ -6,6 +6,7 @@ import { clearSession, getSession } from '@/lib/api';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { SpinningLogo } from '@/components/SpinningLogo';
 import { isMobileAppSurface } from '@/lib/mobile-app';
+import { startLiveSync } from '@/lib/live-sync';
 import { useEffect, useMemo, useState } from 'react';
 
 type NavLink = {
@@ -82,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     setName(session.user.name);
     setRole(session.user.role || '');
+    startLiveSync();
   }, [router, pathname]);
 
   function logout() {

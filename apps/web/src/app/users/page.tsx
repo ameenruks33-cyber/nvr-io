@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, getSession } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type User = {
   id: string;
@@ -71,6 +72,8 @@ export default function UsersPage() {
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, [load]);
+
+  useLiveRefresh(() => void load());
 
   async function createUser(e: FormEvent) {
     e.preventDefault();

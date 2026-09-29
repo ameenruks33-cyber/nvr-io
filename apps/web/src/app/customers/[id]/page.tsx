@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { AuthenticatedImage } from '@/components/AuthenticatedImage';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type CustomerDetail = {
   id: string;
@@ -61,6 +62,10 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [params.id]);
+
+  useLiveRefresh(() => {
+    load().catch(() => undefined);
+  });
 
   const activeLoan = customer?.loans?.[0];
   const maxPay = Math.max(

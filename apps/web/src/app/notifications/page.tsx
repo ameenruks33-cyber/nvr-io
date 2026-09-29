@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/live-sync';
 
 type Row = {
   id: string;
@@ -16,9 +17,12 @@ type Row = {
 export default function NotificationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
-  useEffect(() => {
-    api<Row[]>('/notifications').then(setRows);
-  }, []);
+  const load = () => {
+    api<Row[]>('/notifications').then(setRows).catch(() => undefined);
+  };
+
+  useEffect(load, []);
+  useLiveRefresh(load);
 
   return (
     <AppShell>
