@@ -45,7 +45,7 @@ export default function RepaymentsPage() {
           <tbody>
             {rows.map((row) => {
               const a = Number(row.amount);
-              const ok = a >= 100 && a <= 1800;
+              const ok = a >= 100 && a <= 2000;
               return (
                 <tr key={row.id} className="border-t border-slate-100">
                   <td className="px-4 py-3 font-mono text-xs">

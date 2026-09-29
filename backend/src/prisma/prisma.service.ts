@@ -103,8 +103,8 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
-    // Accounts show a 2000 total but close at 1800 collected (last 200 waived).
-    // Only touches rows still on the old 1800/1800 setup, so it runs once.
+    // 1800 is given and 2000 is repaid. Only touches rows still on the old
+    // 1800/1800 setup, so it runs once.
     try {
       await this.$executeRawUnsafe(`
         UPDATE "loans"
@@ -114,6 +114,27 @@ export class PrismaService
               ELSE 0
             END
         WHERE "principal_amount" = 1800 AND "total_payable" = 1800;
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
+
+    // Accounts close only when the full total is repaid: reopen any closed early
+    // (e.g. at 1800 of 2000) and restore their true remaining balance.
+    try {
+      await this.$executeRawUnsafe(`
+        UPDATE "loans"
+        SET "status" = 'ACTIVE',
+            "remaining_amount" = "total_payable" - "amount_collected",
+            "completed_at" = NULL,
+            "closed_at" = NULL
+        WHERE "status" = 'COMPLETED' AND "amount_collected" < "total_payable";
+      `);
+      await this.$executeRawUnsafe(`
+        UPDATE "loans"
+        SET "remaining_amount" = GREATEST("total_payable" - "amount_collected", 0)
+        WHERE "status" = 'ACTIVE'
+          AND "remaining_amount" <> GREATEST("total_payable" - "amount_collected", 0);
       `);
     } catch {
       // ignore if table not ready yet

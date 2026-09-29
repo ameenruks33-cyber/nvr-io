@@ -30,7 +30,7 @@ export class CustomersService {
     const daily = Number(
       dto.dailyPayment ?? this.config.get('DEFAULT_DAILY_PAYMENT') ?? 100,
     );
-    // Shown as the total; the account closes once `principal` is collected.
+    // `principal` is given; the account closes once the full `total` is repaid.
     const total = Math.max(
       Number(this.config.get('DEFAULT_TOTAL_AMOUNT') ?? 2000),
       principal,

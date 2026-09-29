@@ -64,17 +64,19 @@ export class RepaymentsService {
       }
 
       const collected = Number(loan.amountCollected);
-      const closeAt = Number(loan.principalAmount);
-      const total = Math.max(Number(loan.totalPayable), closeAt);
+      const total = Math.max(
+        Number(loan.totalPayable),
+        Number(loan.principalAmount),
+      );
       const newTotal = collected + input.amount;
 
-      if (newTotal > closeAt + 0.001) {
+      if (newTotal > total + 0.001) {
         throw new BadRequestException(
-          `Only AED ${(closeAt - collected).toFixed(2)} is needed to close this account`,
+          `Only AED ${(total - collected).toFixed(2)} is needed to close this account`,
         );
       }
 
-      const completed = newTotal >= closeAt - 0.001;
+      const completed = newTotal >= total - 0.001;
       const remaining = completed ? 0 : Math.max(total - newTotal, 0);
       const receiptNumber = await this.nextReceiptNumber(tx);
 
@@ -247,17 +249,12 @@ export class RepaymentsService {
     });
   }
 
-  /** Pure helper used by unit tests: closes at `closeAt`, balance counts from `total`. */
-  static computeBalance(
-    closeAt: number,
-    total: number,
-    collected: number,
-    payment: number,
-  ) {
+  /** Pure helper used by unit tests: account closes once `total` is collected. */
+  static computeBalance(total: number, collected: number, payment: number) {
     const newTotal = collected + payment;
     if (payment <= 0) throw new Error('Amount must be positive');
-    if (newTotal > closeAt) throw new Error('Payment exceeds outstanding amount');
-    const completed = newTotal >= closeAt;
+    if (newTotal > total) throw new Error('Payment exceeds outstanding amount');
+    const completed = newTotal >= total;
     return {
       collected: newTotal,
       remaining: completed ? 0 : total - newTotal,

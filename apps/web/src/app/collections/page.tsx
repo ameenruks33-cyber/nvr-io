@@ -92,7 +92,7 @@ export default function CollectionsPage() {
     selected?.loan?.remainingAmount ?? Math.max(total - collected, 0),
   );
   const open = selected?.loan?.status === 'ACTIVE';
-  const maxPay = Math.max(principal - collected, 0);
+  const maxPay = Math.max(total - collected, 0);
 
   const amountNum = Number(amount);
   const tone = amountTone(amountNum, maxPay);
@@ -217,9 +217,10 @@ export default function CollectionsPage() {
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
         <p className="mt-1 max-w-xl text-sm text-slate-500">
-          Collect from registered customers. Total is {money(TOTAL_AED)} — the
-          account closes once {money(MAX_AED)} is collected (e.g. collect{' '}
-          {money(MIN_AED)} → balance {money(TOTAL_AED - MIN_AED)}).
+          Collect from registered customers. {money(MAX_AED)} is given and{' '}
+          {money(TOTAL_AED)} is repaid — the account closes once the full{' '}
+          {money(TOTAL_AED)} is collected (e.g. collect {money(MIN_AED)} →
+          balance {money(TOTAL_AED - MIN_AED)}).
         </p>
       </header>
 
@@ -362,7 +363,7 @@ export default function CollectionsPage() {
                     style={{
                       width: `${Math.min(
                         100,
-                        principal > 0 ? (collected / principal) * 100 : 0,
+                        total > 0 ? (collected / total) * 100 : 0,
                       )}%`,
                     }}
                   />
@@ -425,7 +426,7 @@ export default function CollectionsPage() {
                 <div className="space-y-2">
                   <ClosedBadge />
                   <p className="text-sm text-slate-500">
-                    {money(principal)} collected — no more collections for this
+                    {money(total)} collected — no more collections for this
                     customer.
                   </p>
                 </div>
@@ -478,7 +479,7 @@ export default function CollectionsPage() {
             <tbody>
               {recent.map((row) => {
                 const a = Number(row.amount);
-                const ok = a >= MIN_AED && a <= MAX_AED;
+                const ok = a >= MIN_AED && a <= TOTAL_AED;
                 return (
                   <tr key={row.id} className="border-t border-slate-100">
                     <td className="px-4 py-3 font-mono text-xs">

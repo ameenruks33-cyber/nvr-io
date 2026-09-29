@@ -69,8 +69,10 @@ export default function CustomerDetailPage() {
 
   const activeLoan = customer?.loans?.[0];
   const maxPay = Math.max(
-    Number(activeLoan?.principalAmount || 1800) -
-      Number(activeLoan?.amountCollected || 0),
+    Math.max(
+      Number(activeLoan?.totalPayable || 2000),
+      Number(activeLoan?.principalAmount || 1800),
+    ) - Number(activeLoan?.amountCollected || 0),
     0,
   );
   const amountNum = Number(amount);
@@ -246,12 +248,13 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Account closes when {money(principal)} is collected.
+                {money(principal)} given · account closes when the full{' '}
+                {money(total)} is collected.
               </p>
               <p className="mt-3 text-sm text-slate-500">
                 Entries:{' '}
                 {Math.round(collected / Number(loan.dailyPayment || 100))} /{' '}
-                {Math.round(principal / Number(loan.dailyPayment || 100))}
+                {Math.round(total / Number(loan.dailyPayment || 100))}
               </p>
 
               {open ? (
@@ -336,7 +339,7 @@ export default function CustomerDetailPage() {
             <ul className="mt-4 space-y-2 text-sm">
               {(loan?.repayments || []).map((r, idx) => {
                 const a = Number(r.amount);
-                const ok = a >= 100 && a <= 1800;
+                const ok = a >= 100 && a <= 2000;
                 return (
                   <li
                     key={r.id}
