@@ -47,9 +47,11 @@ export async function api<T>(
     headers.set('Content-Type', 'application/json');
   }
 
+  let usedToken = '';
   if (options.auth !== false) {
     const session = getSession();
     if (session?.accessToken) {
+      usedToken = session.accessToken;
       headers.set('Authorization', `Bearer ${session.accessToken}`);
     }
   }
@@ -59,11 +61,17 @@ export async function api<T>(
     headers,
   });
 
-  if (res.status === 401 && options.auth !== false) {
-    const refreshed = await tryRefresh();
+  if (res.status === 401 && options.auth !== false && usedToken) {
+    const refreshed = await refreshOnce(usedToken);
     if (refreshed) {
       headers.set('Authorization', `Bearer ${refreshed.accessToken}`);
       res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    } else if (
+      typeof window !== 'undefined' &&
+      !getSession() &&
+      !path.startsWith('/auth/')
+    ) {
+      window.location.replace('/login');
     }
   }
 
@@ -79,6 +87,25 @@ export async function api<T>(
   return res.json() as Promise<T>;
 }
 
+let refreshing: Promise<AuthSession | null> | null = null;
+
+/**
+ * Refresh tokens are single-use, so parallel 401s must share one refresh call;
+ * a second call with the same token would be rejected and sign the user out.
+ */
+function refreshOnce(usedToken: string): Promise<AuthSession | null> {
+  const current = getSession();
+  if (current && current.accessToken !== usedToken) {
+    return Promise.resolve(current);
+  }
+  if (!refreshing) {
+    refreshing = tryRefresh().finally(() => {
+      refreshing = null;
+    });
+  }
+  return refreshing;
+}
+
 async function tryRefresh(): Promise<AuthSession | null> {
   const session = getSession();
   if (!session?.refreshToken) return null;
@@ -89,6 +116,9 @@ async function tryRefresh(): Promise<AuthSession | null> {
       body: JSON.stringify({ refreshToken: session.refreshToken }),
     }).then((r) => (r.ok ? r.json() : null));
     if (!data) {
+      // Another tab may have rotated the token already.
+      const latest = getSession();
+      if (latest && latest.refreshToken !== session.refreshToken) return latest;
       clearSession();
       return null;
     }
@@ -100,7 +130,7 @@ async function tryRefresh(): Promise<AuthSession | null> {
     setSession(next);
     return next;
   } catch {
-    clearSession();
+    // Network error: keep the session so the next attempt can retry.
     return null;
   }
 }
