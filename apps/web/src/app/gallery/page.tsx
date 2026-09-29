@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, apiBlob, getSession } from '@/lib/api';
@@ -20,7 +20,15 @@ type GalleryItem = {
 
 const UNLOCK_KEY = 'nvr_gallery_unlocked';
 
-function GalleryThumb({ id, alt }: { id: string; alt: string }) {
+function GalleryThumb({
+  id,
+  alt,
+  onOpen,
+}: {
+  id: string;
+  alt: string;
+  onOpen: () => void;
+}) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -75,15 +83,149 @@ function GalleryThumb({ id, alt }: { id: string; alt: string }) {
     );
   }
 
-  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <img
-      src={src}
-      alt={alt}
-      draggable={false}
-      onContextMenu={(e) => e.preventDefault()}
-      className="aspect-square w-full object-cover select-none"
-    />
+    <button
+      type="button"
+      onClick={onOpen}
+      className="block w-full"
+      aria-label={`Open ${alt}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="aspect-square w-full object-cover select-none"
+      />
+    </button>
+  );
+}
+
+function PhotoViewer({
+  items,
+  index,
+  onIndex,
+  onClose,
+}: {
+  items: GalleryItem[];
+  index: number;
+  onIndex: (i: number) => void;
+  onClose: () => void;
+}) {
+  const item = items[index];
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const hasPrev = index > 0;
+  const hasNext = index < items.length - 1;
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    setSrc(null);
+    setFailed(false);
+    apiBlob(`/gallery/${item.id}/file`)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [item.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && hasPrev) onIndex(index - 1);
+      if (e.key === 'ArrowRight' && hasNext) onIndex(index + 1);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [index, hasPrev, hasNext, onIndex, onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.caption || 'Photo'}
+      className="fixed inset-0 z-[10000] flex flex-col bg-black/95"
+      onClick={onClose}
+    >
+      <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{item.caption || 'Untitled'}</p>
+          <p className="text-xs text-white/60">
+            {index + 1} / {items.length}
+            {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
+            {` · ${new Date(item.createdAt).toLocaleString()}`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full bg-white/10 px-4 py-2 text-lg leading-none hover:bg-white/20"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={item.caption || 'Photo'}
+            draggable={false}
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full select-none object-contain"
+          />
+        ) : (
+          <p className="text-sm text-white/70">
+            {failed ? 'Could not load photo' : 'Loading…'}
+          </p>
+        )}
+
+        {hasPrev ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(index - 1);
+            }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/15 px-4 py-3 text-xl text-white hover:bg-white/25"
+            aria-label="Previous photo"
+          >
+            ‹
+          </button>
+        ) : null}
+        {hasNext ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(index + 1);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/15 px-4 py-3 text-xl text-white hover:bg-white/25"
+            aria-label="Next photo"
+          >
+            ›
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -107,6 +249,8 @@ export default function GalleryPage() {
   const [newPinConfirm, setNewPinConfirm] = useState('');
   const [savingPin, setSavingPin] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const closeViewer = useCallback(() => setViewerIndex(null), []);
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
 
@@ -386,7 +530,7 @@ export default function GalleryPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => (
+        {items.map((item, i) => (
           <article
             key={item.id}
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
@@ -394,6 +538,7 @@ export default function GalleryPage() {
             <GalleryThumb
               id={item.id}
               alt={item.caption || 'Cloud gallery item'}
+              onOpen={() => setViewerIndex(i)}
             />
             <div className="space-y-2 p-3 text-xs">
               <p className="truncate text-sm text-slate-900">
@@ -427,6 +572,15 @@ export default function GalleryPage() {
           </Link>
           . Older photos taken before this fix may need a new capture.
         </p>
+      ) : null}
+
+      {viewerIndex !== null && items[viewerIndex] ? (
+        <PhotoViewer
+          items={items}
+          index={viewerIndex}
+          onIndex={setViewerIndex}
+          onClose={closeViewer}
+        />
       ) : null}
     </AppShell>
   );
