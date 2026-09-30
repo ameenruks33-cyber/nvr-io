@@ -6,28 +6,28 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
-import { extname } from 'path';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeId } from '../common/safe-input';
-import { StorageService } from '../storage/storage.service';
+
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Controller('customers')
 export class CustomersController {
-  constructor(
-    private readonly customers: CustomersService,
-    private readonly storage: StorageService,
-  ) {}
+  constructor(private readonly customers: CustomersService) {}
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
@@ -56,16 +56,36 @@ export class CustomersController {
     return this.customers.findOne(safeId, user, req.ip);
   }
 
+  @Get(':id/photo')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  async getPhoto(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const photo = await this.customers.getPhoto(assertSafeId(String(id)), user.id);
+    res.set({
+      'Content-Type': PHOTO_TYPES.includes(photo.mimeType)
+        ? photo.mimeType
+        : 'image/jpeg',
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return new StreamableFile(photo.bytes);
+  }
+
   @Post(':id/photo')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 4 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
+        if (!PHOTO_TYPES.includes(file.mimetype)) {
           return cb(
-            new BadRequestException('Only image uploads are allowed') as never,
+            new BadRequestException('Only JPG, PNG or WebP photos are allowed') as never,
             false,
           );
         }
@@ -78,9 +98,12 @@ export class CustomersController {
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: AuthUser,
   ) {
-    if (!file?.buffer) throw new BadRequestException('Photo file is required');
-    const ext = extname(file.originalname).toLowerCase() || '.jpg';
-    const key = await this.storage.saveImage(file.buffer, file.mimetype, ext);
-    return this.customers.attachPhoto(assertSafeId(id), key, user.id);
+    if (!file?.buffer?.length) throw new BadRequestException('Photo file is required');
+    return this.customers.attachPhoto(
+      assertSafeId(String(id)),
+      file.buffer,
+      file.mimetype,
+      user.id,
+    );
   }
 }

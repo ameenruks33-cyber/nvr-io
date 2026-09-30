@@ -1,11 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { AuthenticatedImage } from '@/components/AuthenticatedImage';
+import { CustomerPhoto } from '@/components/CustomerPhoto';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { shrinkImage } from '@/lib/image';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type CustomerDetail = {
@@ -53,10 +54,39 @@ export default function CustomerDetailPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
 
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
     setCustomer(data);
+  }
+
+  async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !customer) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoMsg('Could not use that file — pick a photo.');
+      return;
+    }
+    setUploadingPhoto(true);
+    setPhotoMsg('');
+    try {
+      const shrunk = await shrinkImage(file);
+      const fd = new FormData();
+      fd.append('photo', shrunk);
+      await api(`/customers/${customer.id}/photo`, { method: 'POST', body: fd });
+      await load();
+      setPhotoMsg('Photo saved.');
+    } catch (err) {
+      setPhotoMsg(
+        `Could not save photo: ${err instanceof Error ? err.message : 'try again'}`,
+      );
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   useEffect(() => {
@@ -179,17 +209,53 @@ export default function CustomerDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            {customer.photoStorageId ? (
-              <AuthenticatedImage
-                storageKey={customer.photoStorageId}
-                alt={`${customer.name} photo`}
-                className="aspect-square w-full object-cover"
-              />
-            ) : (
-              <div className="flex aspect-square items-center justify-center text-slate-500">
-                No photo
-              </div>
-            )}
+            <CustomerPhoto
+              customerId={customer.id}
+              version={customer.photoStorageId}
+              alt={`${customer.name} photo`}
+              className="aspect-square w-full object-cover"
+            />
+            <div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-3">
+              <label
+                className={`cursor-pointer rounded-lg bg-blue-600 px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-500 ${
+                  uploadingPhoto ? 'pointer-events-none opacity-60' : ''
+                }`}
+              >
+                Take photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  disabled={uploadingPhoto}
+                  onChange={(e) => void onPhotoPicked(e)}
+                />
+              </label>
+              <label
+                className={`cursor-pointer rounded-lg border border-slate-300 px-3 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-blue-50 ${
+                  uploadingPhoto ? 'pointer-events-none opacity-60' : ''
+                }`}
+              >
+                Upload from device
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={uploadingPhoto}
+                  onChange={(e) => void onPhotoPicked(e)}
+                />
+              </label>
+              {uploadingPhoto || photoMsg ? (
+                <p
+                  className={`col-span-2 text-xs ${
+                    photoMsg.startsWith('Could') ? 'text-red-600' : 'text-teal-700'
+                  }`}
+                  role="status"
+                >
+                  {uploadingPhoto ? 'Saving photo…' : photoMsg}
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
             {customer.careOfName || customer.careOfPhone ? (

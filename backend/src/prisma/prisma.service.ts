@@ -30,6 +30,19 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+    try {
+      await this.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "customer_photos" (
+          "customer_id" TEXT NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
+          "bytes" BYTEA NOT NULL,
+          "mime_type" TEXT NOT NULL,
+          "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "customer_photos_pkey" PRIMARY KEY ("customer_id")
+        );
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
     // WhatsApp auto-receipt settings on app_settings
     const waCols = [
       `ADD COLUMN IF NOT EXISTS "whatsapp_enabled" BOOLEAN NOT NULL DEFAULT false`,

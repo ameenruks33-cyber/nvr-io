@@ -141,10 +141,23 @@ model Customer {
   documents     Document[]
   notifications Notification[]
   galleryItems  GalleryItem[]
+  photo         CustomerPhoto?
 
   @@index([name])
   @@index([phone])
   @@map("customers")
+}
+
+/// Durable customer photo bytes (Vercel /tmp is wiped; R2 is not configured).
+model CustomerPhoto {
+  customerId String   @id @map("customer_id")
+  bytes      Bytes
+  mimeType   String   @map("mime_type")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_photos")
 }
 
 model Loan {

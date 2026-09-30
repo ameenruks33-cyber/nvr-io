@@ -6,6 +6,7 @@ import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class CustomersService {
@@ -14,6 +15,7 @@ export class CustomersService {
     private readonly crypto: FieldEncryptionService,
     private readonly audit: AuditService,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   private async nextCustomerCode() {
@@ -155,20 +157,32 @@ export class CustomersService {
     });
   }
 
-  async attachPhoto(customerId: string, storageKey: string, actorId: string) {
-    const customer = await this.prisma.customer.update({
+  async attachPhoto(
+    customerId: string,
+    bytes: Buffer,
+    mimeType: string,
+    actorId: string,
+  ) {
+    const existing = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      data: { photoStorageId: storageKey },
+      select: { id: true },
     });
+    if (!existing) throw new NotFoundException('Customer not found');
 
-    await this.prisma.document.create({
-      data: {
-        customerId,
-        documentType: 'CUSTOMER_PHOTO',
-        storageKey,
-        mimeType: 'image/jpeg',
-      },
-    });
+    // Also acts as a cache-busting version for the photo URL.
+    const storageKey = `db-${Date.now()}`;
+    const data = new Uint8Array(bytes);
+    const [, customer] = await this.prisma.$transaction([
+      this.prisma.customerPhoto.upsert({
+        where: { customerId },
+        create: { customerId, bytes: data, mimeType },
+        update: { bytes: data, mimeType },
+      }),
+      this.prisma.customer.update({
+        where: { id: customerId },
+        data: { photoStorageId: storageKey },
+      }),
+    ]);
 
     await this.audit.log({
       userId: actorId,
@@ -179,6 +193,59 @@ export class CustomersService {
     });
 
     return { id: customer.id, photoStorageId: storageKey };
+  }
+
+  /** Photo bytes: database copy first, then legacy file storage, then a linked cloud photo. */
+  async getPhoto(customerId: string, actorId: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, photoStorageId: true, photo: true },
+    });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    let result: { bytes: Buffer; mimeType: string } | null = null;
+    if (customer.photo) {
+      result = {
+        bytes: Buffer.from(customer.photo.bytes),
+        mimeType: customer.photo.mimeType,
+      };
+    }
+
+    if (!result && customer.photoStorageId && !customer.photoStorageId.startsWith('db-')) {
+      try {
+        const stream = await this.storage.openStream(customer.photoStorageId);
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+        result = { bytes: Buffer.concat(chunks), mimeType: 'image/jpeg' };
+      } catch {
+        // file was on ephemeral storage and is gone
+      }
+    }
+
+    if (!result) {
+      const cloud = await this.prisma.galleryItem.findFirst({
+        where: { customerId: { equals: customerId }, imageBytes: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { imageBytes: true, mimeType: true },
+      });
+      if (cloud?.imageBytes) {
+        result = {
+          bytes: Buffer.from(cloud.imageBytes),
+          mimeType: cloud.mimeType || 'image/jpeg',
+        };
+      }
+    }
+
+    if (!result) throw new NotFoundException('No photo for this customer');
+
+    await this.audit.log({
+      userId: actorId,
+      action: 'DOCUMENT_ACCESS',
+      recordType: 'customer',
+      recordId: customerId,
+      metadata: { documentType: 'CUSTOMER_PHOTO' },
+    });
+    return result;
   }
 
   private canViewSensitive(role: UserRole) {

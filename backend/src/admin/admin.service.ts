@@ -25,6 +25,7 @@ export class AdminService {
       const documents = await tx.document.deleteMany();
       const repayments = await tx.repayment.deleteMany();
       const loans = await tx.loan.deleteMany();
+      await tx.customerPhoto.deleteMany();
       const customers = await tx.customer.deleteMany();
       const auditLogs = await tx.auditLog.deleteMany({
         where: {

@@ -3,23 +3,28 @@
 import { useEffect, useState } from 'react';
 import { apiBlob, getSession } from '@/lib/api';
 
-export function AuthenticatedImage({
-  storageKey,
+export function CustomerPhoto({
+  customerId,
+  version,
   alt,
   className,
 }: {
-  storageKey: string;
+  customerId: string;
+  /** Changes whenever a new photo is uploaded so the image reloads. */
+  version?: string | null;
   alt: string;
   className?: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!getSession() || !storageKey) return;
+    if (!getSession() || !customerId) return;
     let objectUrl: string | null = null;
     let cancelled = false;
+    setLoading(true);
 
-    apiBlob(`/documents/by-storage/${storageKey}`)
+    apiBlob(`/customers/${customerId}/photo`)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -27,20 +32,23 @@ export function AuthenticatedImage({
       })
       .catch(() => {
         if (!cancelled) setSrc(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [storageKey]);
+  }, [customerId, version]);
 
   if (!src) {
     return (
       <div
         className={`flex items-center justify-center bg-slate-50 text-slate-500 ${className || ''}`}
       >
-        No photo
+        {loading ? 'Loading…' : 'No photo'}
       </div>
     );
   }
