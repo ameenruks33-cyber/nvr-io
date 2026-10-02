@@ -3,11 +3,13 @@ import './globals.css';
 import { PrivacyGuard } from '@/components/PrivacyGuard';
 import { UpdateNotifier } from '@/components/UpdateNotifier';
 import { APP_ICONS, APP_THEME_COLOR } from '@/lib/app-branding';
-import { APP_NAME, APP_TAGLINE } from '@/lib/brand';
+import { APP_NAME } from '@/lib/brand';
 
+// Neutral tab/history title so browser history doesn't reveal the app;
+// home-screen name (manifest / appleWebApp) keeps the brand.
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: `${APP_NAME} — ${APP_TAGLINE}`,
+  title: 'Notes',
+  description: 'Notes',
   applicationName: APP_NAME,
   manifest: '/manifest.webmanifest',
   icons: {
