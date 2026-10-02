@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Signing key comes from GitHub secrets at build time; it is never stored in the repo.
+def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+
+android {
+    namespace 'io.nvr.crickherose'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.nvr.crickherose'
+        minSdk 24
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv('APP_VERSION_CODE') ?: '1')
+        versionName System.getenv('APP_VERSION_NAME') ?: '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storeType 'pkcs12'
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig keystorePath ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'
+}

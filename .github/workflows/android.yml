@@ -1,0 +1,90 @@
+name: Android app
+
+# Builds the private Android app (WebView wrapper around the live site) and publishes the APK
+# as a GitHub Release. Signing key: secrets ANDROID_KEYSTORE_B64 + ANDROID_KEYSTORE_PASSWORD.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: android-app
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::warning::No signing key secrets; building with a temporary debug key."
+            exit 0
+          fi
+          ks="$RUNNER_TEMP/release.p12"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$ks"
+          alias=$(keytool -list -v -keystore "$ks" -storetype pkcs12 -storepass "$KEYSTORE_PASSWORD" \
+            | sed -n 's/^Alias name: //p' | head -n 1)
+          if [ -z "$alias" ]; then
+            echo "::error::Could not read the key alias from the keystore."
+            exit 1
+          fi
+          echo "ANDROID_KEYSTORE_PATH=$ks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$alias" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        working-directory: apps/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          cp apps/android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/CrickHerose.apk"
+          rm -f "$RUNNER_TEMP/release.p12"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrickHerose-apk
+          path: ${{ runner.temp }}/CrickHerose.apk
+          retention-days: 14
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: 1.0.${{ github.run_number }}
+        run: |
+          gh release create "android-v$VERSION" "$RUNNER_TEMP/CrickHerose.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Android app $VERSION" \
+            --notes "Private Android app. Download CrickHerose.apk on the phone and install it (allow 'Install unknown apps' when asked)." \
+            --latest
