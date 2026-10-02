@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { PrivacyGuard } from '@/components/PrivacyGuard';
 import { UpdateNotifier } from '@/components/UpdateNotifier';
 import { APP_ICONS, APP_THEME_COLOR } from '@/lib/app-branding';
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand';
@@ -21,6 +22,13 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'default',
     title: APP_NAME,
+  },
+  referrer: 'no-referrer',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false, noimageindex: true },
   },
 };
 
@@ -54,6 +62,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href={APP_ICONS.apple} />
       </head>
       <body className="min-h-screen font-sans text-slate-900 antialiased">
+        <PrivacyGuard />
         <UpdateNotifier />
         {children}
       </body>

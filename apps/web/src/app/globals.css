@@ -34,6 +34,14 @@ body {
   }
 }
 
+/* Blank screen while the app is in the background (recent-apps preview) */
+html.nvr-private body {
+  visibility: hidden;
+}
+html.nvr-private {
+  background: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -5,6 +5,7 @@ import express, { Express } from 'express';
 import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
+import { noTraceHeaders } from '../src/common/no-trace';
 
 let cached: Express | null = null;
 
@@ -18,7 +19,8 @@ async function bootstrap(): Promise<Express> {
     { logger: ['error', 'warn'] },
   );
 
-  app.use(helmet());
+  app.use(helmet({ referrerPolicy: { policy: 'no-referrer' } }));
+  app.use(noTraceHeaders);
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: (process.env.CORS_ORIGINS || '*').split(','),

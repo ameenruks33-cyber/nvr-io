@@ -89,17 +89,18 @@ export function UpdateNotifier() {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     const icon = info.icons?.icon192 || '/icon-192.png';
+    // Generic text: lock-screen notifications must not reveal app or customer details
     if (!('serviceWorker' in navigator)) {
-      new Notification(info.title, {
-        body: info.message,
+      new Notification('Update available', {
+        body: 'Tap to update.',
         icon,
         tag: `nvr-update-${info.version}`,
       });
       return;
     }
     const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification(info.title, {
-      body: info.message,
+    await reg.showNotification('Update available', {
+      body: 'Tap to update.',
       icon,
       badge: icon,
       tag: `nvr-update-${info.version}`,

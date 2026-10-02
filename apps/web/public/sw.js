@@ -85,8 +85,9 @@ async function showUpdateNotification(info) {
       ? info.icons.icon192
       : '/icon-192.png';
   try {
-    await self.registration.showNotification(info.title || 'NVR.io update available', {
-      body: info.message || 'A new version is ready. Tap to update.',
+    // Generic text: lock-screen notifications must not reveal app or customer details
+    await self.registration.showNotification('Update available', {
+      body: 'Tap to update.',
       icon,
       badge: icon,
       tag: `nvr-update-${info.version}`,

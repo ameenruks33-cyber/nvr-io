@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 
 const MIN_AED = 100;
 const MAX_AED = 1800;
@@ -187,9 +188,7 @@ export default function CollectionsPage() {
         waNote = ' Receipt sent to customer WhatsApp.';
       } else if (wa?.deepLink) {
         setWaLink(wa.deepLink);
-        const waWindow = window.open(wa.deepLink, '_blank');
-        if (waWindow) {
-          waWindow.opener = null;
+        if (openWhatsApp(wa.deepLink)) {
           waNote = ' WhatsApp opened — tap Send to deliver the receipt.';
         } else {
           waNote = ' Tap "Send WhatsApp receipt" below to deliver it.';
@@ -445,7 +444,7 @@ export default function CollectionsPage() {
           ) : null}
           {waLink ? (
             <a
-              href={waLink}
+              href={privateWhatsAppLink(waLink) ?? undefined}
               target="_blank"
               rel="noreferrer"
               className="inline-flex text-sm font-medium text-teal-700 underline"

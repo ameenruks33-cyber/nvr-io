@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { noTraceHeaders } from './common/no-trace';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -13,8 +14,10 @@ async function bootstrap() {
       // Web (nvr-io-web) and API (nvr-io-api) are different hosts — allow
       // authenticated blob fetches for gallery / document images.
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      referrerPolicy: { policy: 'no-referrer' },
     }),
   );
+  app.use(noTraceHeaders);
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: (process.env.CORS_ORIGINS || 'http://localhost:3000')

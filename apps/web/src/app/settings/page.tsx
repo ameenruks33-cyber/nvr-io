@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
+import { openWhatsApp } from '@/lib/privacy';
 
 type WaProvider = 'waha' | 'green-api' | 'meta';
 
@@ -298,8 +299,7 @@ export default function SettingsPage() {
       if (r.sent) {
         setWaMsg('Test receipt sent automatically. Check WhatsApp on that phone.');
       } else if (!r.configured) {
-        const opened = r.deepLink ? window.open(r.deepLink, '_blank') : null;
-        if (opened) opened.opener = null;
+        const opened = r.deepLink ? openWhatsApp(r.deepLink) : false;
         setWaErr(
           `Automatic sending is not connected yet — save your WAHA server URL and API key with "Enable" ticked first.${
             opened ? ' WhatsApp opened so you can send this test by tap.' : ''

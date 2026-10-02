@@ -1,3 +1,5 @@
+import { wipeLocalTraces } from './privacy';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export type AuthSession = {
@@ -36,6 +38,7 @@ export function setSession(session: AuthSession) {
 
 export function clearSession() {
   storage()?.removeItem(SESSION_KEY);
+  wipeLocalTraces();
 }
 
 export async function api<T>(

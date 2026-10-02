@@ -7,6 +7,7 @@ import { CustomerPhoto } from '@/components/CustomerPhoto';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 import { shrinkImage } from '@/lib/image';
+import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type CustomerDetail = {
@@ -148,9 +149,7 @@ export default function CustomerDetailPage() {
         waNote = ' Receipt sent to customer WhatsApp.';
       } else if (wa?.deepLink) {
         setWaLink(wa.deepLink);
-        const waWindow = window.open(wa.deepLink, '_blank');
-        if (waWindow) {
-          waWindow.opener = null;
+        if (openWhatsApp(wa.deepLink)) {
           waNote = ' WhatsApp opened — tap Send to deliver the receipt.';
         } else {
           waNote = ' Tap "Send WhatsApp receipt" below to deliver it.';
@@ -386,7 +385,7 @@ export default function CustomerDetailPage() {
               ) : null}
               {waLink ? (
                 <a
-                  href={waLink}
+                  href={privateWhatsAppLink(waLink) ?? undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-2 inline-flex text-sm font-medium text-teal-700 underline"
