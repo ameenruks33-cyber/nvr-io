@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CrickHerose</string>
+    <string name="lock_title">Unlock CrickHerose</string>
+    <string name="lock_subtitle">Confirm it is you before opening the app</string>
+    <string name="lock_required">Turn on a screen lock (PIN, pattern, or fingerprint) on this phone to use the app.</string>
+    <string name="lock_failed">Unlock failed: %1$s</string>
+    <string name="security_blocked">This device is not safe to run the app.\n\n%1$s</string>
 </resources>

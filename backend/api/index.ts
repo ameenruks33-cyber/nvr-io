@@ -23,7 +23,11 @@ async function bootstrap(): Promise<Express> {
   app.use(noTraceHeaders);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS || '*').split(','),
+    // Never default to "*": credentialed sessions must only talk to our web origin.
+    origin: (process.env.CORS_ORIGINS || 'https://nvr-io-web.vercel.app')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
     credentials: true,
   });
   app.useGlobalPipes(

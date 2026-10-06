@@ -1,14 +1,16 @@
 package io.nvr.crickherose;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
@@ -20,19 +22,24 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
- * Private wrapper around the live web app. Pages load inside the app, so nothing is written
- * to Chrome (or any other browser) history, and screenshots / the recent-apps preview are blocked.
+ * Private, hardened wrapper around the live web app.
+ * Pages never enter Chrome history; screenshots and the recent-apps preview are blocked;
+ * TLS is pinned; the device lock is required after backgrounding.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
     private static final String HOST = "nvr-io-web.vercel.app";
+    private static final String API_HOST = "nvr-io-api.vercel.app";
     private static final String START_URL = "https://" + HOST + "/login";
 
     private static final int REQ_FILE = 10;
@@ -40,7 +47,9 @@ public class MainActivity extends Activity {
     private static final int REQ_PERM_LOCATION = 21;
     private static final int REQ_PERM_CHOOSER = 22;
 
+    private FrameLayout root;
     private WebView web;
+    private AppLock appLock;
 
     private ValueCallback<Uri[]> fileCallback;
     private WebChromeClient.FileChooserParams chooserParams;
@@ -53,22 +62,43 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+
+        getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE);
+        if (Build.VERSION.SDK_INT >= 33) {
+            setRecentsScreenshotEnabled(false);
+        }
+
+        String threat = DeviceGuard.threat(this);
+        if (threat != null) {
+            showBlocked(threat);
+            return;
+        }
+
+        WebView.setWebContentsDebuggingEnabled(false);
+
+        root = new FrameLayout(this);
+        root.setFilterTouchesWhenObscured(true);
+        setContentView(root);
+
+        appLock = new AppLock(this, root);
+        if (!appLock.deviceLockAvailable()) {
+            showBlocked(getString(R.string.lock_required));
+            return;
+        }
 
         web = new WebView(this);
-        setContentView(web);
+        web.setFilterTouchesWhenObscured(true);
+        root.addView(web, 0, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
-        WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setGeolocationEnabled(true);
-        s.setMediaPlaybackRequiresUserGesture(false);
-        s.setAllowFileAccess(false);
-        s.setSaveFormData(false);
-        s.setUserAgentString(s.getUserAgentString() + " NVRApp");
+        hardenWebView(web);
 
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(web, false);
+        CookieManager cookies = CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+        cookies.setAcceptThirdPartyCookies(web, false);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -80,6 +110,11 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) showOffline();
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                CookieManager.getInstance().flush();
+            }
         });
         web.setWebChromeClient(new Chrome());
 
@@ -90,19 +125,52 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void hardenWebView(WebView view) {
+        WebSettings s = view.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setGeolocationEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setSaveFormData(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        if (Build.VERSION.SDK_INT >= 26) {
+            s.setSafeBrowsingEnabled(true);
+        }
+        s.setUserAgentString(s.getUserAgentString() + " NVRApp");
+    }
+
+    private void showBlocked(String reason) {
+        TextView tv = new TextView(this);
+        tv.setText(getString(R.string.security_blocked, reason));
+        tv.setTextColor(0xFF334155);
+        tv.setTextSize(16f);
+        tv.setPadding(48, 96, 48, 48);
+        setContentView(tv);
+    }
+
     private static boolean isOwnSite(Uri uri) {
-        return uri != null && "https".equals(uri.getScheme()) && HOST.equalsIgnoreCase(uri.getHost());
+        if (uri == null || !"https".equals(uri.getScheme())) return false;
+        String host = uri.getHost();
+        return HOST.equalsIgnoreCase(host) || API_HOST.equalsIgnoreCase(host);
+    }
+
+    private static boolean isAllowedNavigation(Uri uri) {
+        return uri != null
+                && "https".equals(uri.getScheme())
+                && HOST.equalsIgnoreCase(uri.getHost());
     }
 
     /** Returns true when the link was handed to another app instead of loading in the WebView. */
     private boolean openOutside(Uri uri) {
-        if (isOwnSite(uri)) return false;
+        if (isAllowedNavigation(uri)) return false;
         String scheme = uri.getScheme() == null ? "" : uri.getScheme();
         if ("about".equals(scheme) || "blob".equals(scheme) || "data".equals(scheme)) return false;
 
+        // Never navigate the WebView to a third-party https page (would leave our pin / privacy shell).
         Uri target = uri;
         String host = uri.getHost() == null ? "" : uri.getHost();
-        // Open map links in the Maps app (geo:) so coordinates never reach a browser history.
         boolean googleMaps = host.endsWith("maps.google.com")
                 || (host.equals("www.google.com") && uri.getPath() != null && uri.getPath().startsWith("/maps"));
         if (googleMaps) {
@@ -116,7 +184,7 @@ public class MainActivity extends Activity {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (ActivityNotFoundException ignored) {
-            // No app can open it (e.g. WhatsApp not installed); stay on the current page.
+            /* stay on current page */
         }
         return true;
     }
@@ -279,6 +347,38 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        if (appLock != null) appLock.onPause();
+        clearClipboard();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String threat = DeviceGuard.threat(this);
+        if (threat != null) {
+            showBlocked(threat);
+            return;
+        }
+        if (appLock != null) appLock.onResume();
+    }
+
+    private void clearClipboard() {
+        try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cm == null) return;
+            if (Build.VERSION.SDK_INT >= 28) {
+                cm.clearPrimaryClip();
+            } else {
+                cm.setPrimaryClip(ClipData.newPlainText("", ""));
+            }
+        } catch (Exception ignored) {
+            /* some OEMs restrict clipboard clear */
+        }
+    }
+
+    @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
         if (web != null && web.canGoBack()) {
@@ -300,6 +400,7 @@ public class MainActivity extends Activity {
             web.clearHistory();
             web.clearCache(true);
             web.clearFormData();
+            CookieManager.getInstance().removeSessionCookies(null);
             deleteRecursively(new File(getCacheDir(), "camera"));
         }
         if (web != null) {

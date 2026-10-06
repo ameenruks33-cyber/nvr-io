@@ -1,8 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  TLS pin-set for the live Vercel hosts.
+  Pins: Google Trust Services WR1 intermediate (stable), current leaf, GTS Root R1 backup.
+  Re-run pin extraction before expiration if Vercel rotates intermediates.
+-->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">nvr-io-web.vercel.app</domain>
+        <domain includeSubdomains="true">nvr-io-api.vercel.app</domain>
+        <pin-set expiration="2029-02-01">
+            <!-- WR1 intermediate (Google Trust Services) -->
+            <pin digest="SHA-256">yDu9og255NN5GEf+Bwa9rTrqFQ0EydZ0r1FCh9TdAW4=</pin>
+            <!-- Current *.vercel.app leaf (backup while WR1 still signs) -->
+            <pin digest="SHA-256">xRUwi70J41GFIbtkDY38VXIAoWtbsGGG+LWfenCZh7k=</pin>
+            <!-- GTS Root R1 -->
+            <pin digest="SHA-256">hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc=</pin>
+        </pin-set>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>
