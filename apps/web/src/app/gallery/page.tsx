@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { api, apiBlob, getSession } from '@/lib/api';
+import { api, apiBlob, getSession, GALLERY_UNLOCK_KEY } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type GalleryItem = {
@@ -18,7 +18,7 @@ type GalleryItem = {
   verifiedBy?: { id: string; name: string; email: string } | null;
 };
 
-const UNLOCK_KEY = 'nvr_gallery_unlocked';
+const UNLOCK_KEY = 'nvr_gallery_unlocked'; // UI state when no PIN is configured
 
 function GalleryThumb({
   id,
@@ -268,16 +268,19 @@ export default function GalleryPage() {
   useEffect(() => {
     const session = getSession();
     setRole(session?.user.role || '');
-    if (sessionStorage.getItem(UNLOCK_KEY) === '1') {
-      setUnlocked(true);
-    }
     api<{ pinSet: boolean }>('/gallery/pin-status')
       .then((s) => {
         setPinSet(s.pinSet);
-        // If no PIN configured yet, open gallery for signed-in staff
         if (!s.pinSet) {
           sessionStorage.setItem(UNLOCK_KEY, '1');
           setUnlocked(true);
+          return;
+        }
+        if (sessionStorage.getItem(GALLERY_UNLOCK_KEY)) {
+          setUnlocked(true);
+        } else {
+          sessionStorage.removeItem(UNLOCK_KEY);
+          setUnlocked(false);
         }
       })
       .catch(() => {
@@ -301,10 +304,11 @@ export default function GalleryPage() {
     setUnlocking(true);
     setError('');
     try {
-      await api('/gallery/unlock', {
+      const res = await api<{ unlockToken: string }>('/gallery/unlock', {
         method: 'POST',
         body: JSON.stringify({ pin: pin.trim() }),
       });
+      sessionStorage.setItem(GALLERY_UNLOCK_KEY, res.unlockToken);
       sessionStorage.setItem(UNLOCK_KEY, '1');
       setUnlocked(true);
       setPin('');
@@ -350,6 +354,7 @@ export default function GalleryPage() {
       return;
     }
     sessionStorage.removeItem(UNLOCK_KEY);
+    sessionStorage.removeItem(GALLERY_UNLOCK_KEY);
     setUnlocked(false);
   }
 

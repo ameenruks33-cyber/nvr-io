@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Res,
   StreamableFile,
   UploadedFile,
@@ -19,12 +20,13 @@ import { Throttle } from '@nestjs/throttler';
 import { GalleryStatus, UserRole } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { Readable } from 'stream';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeId } from '../common/safe-input';
 import { GalleryService } from './gallery.service';
+import { GalleryUnlockService } from './gallery-unlock.service';
 import { StorageService } from '../storage/storage.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -50,7 +52,13 @@ export class GalleryController {
     private readonly gallery: GalleryService,
     private readonly storage: StorageService,
     private readonly audit: AuditService,
+    private readonly galleryUnlock: GalleryUnlockService,
   ) {}
+
+  private unlockHeader(req: Request): string | undefined {
+    const raw = req.headers['x-gallery-unlock'];
+    return typeof raw === 'string' ? raw : raw?.[0];
+  }
 
   @Get('pin-status')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
@@ -87,13 +95,15 @@ export class GalleryController {
       },
     }),
   )
-  upload(
+  async upload(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
     @Body('caption') caption?: string,
     @Body('note') note?: string,
     @Body('customerId') customerId?: string,
   ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     return this.gallery.upload(file, user, {
       caption,
       note,
@@ -103,10 +113,12 @@ export class GalleryController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  list(
+  async list(
     @Query('status') status: string | undefined,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
   ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     let parsed: GalleryStatus | undefined;
     if (status) {
       if (!Object.values(GalleryStatus).includes(status as GalleryStatus)) {
@@ -119,18 +131,25 @@ export class GalleryController {
 
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  getOne(@Param('id') id: string) {
+  async getOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+  ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     return this.gallery.getOne(assertSafeId(String(id)));
   }
 
   @Get(':id/file')
-  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getFile(
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     const safeId = assertSafeId(String(id));
     const item = await this.gallery.getFilePayload(safeId);
 
@@ -168,11 +187,13 @@ export class GalleryController {
 
   @Patch(':id/status')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  setStatus(
+  async setStatus(
     @Param('id') id: string,
     @Body() dto: VerifyGalleryDto,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
   ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     if (
       dto.status !== GalleryStatus.VERIFIED &&
       dto.status !== GalleryStatus.REJECTED
@@ -189,7 +210,12 @@ export class GalleryController {
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+  ) {
+    await this.galleryUnlock.assertUnlocked(user, this.unlockHeader(req));
     return this.gallery.remove(assertSafeId(String(id)), user);
   }
 }

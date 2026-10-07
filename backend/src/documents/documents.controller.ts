@@ -26,6 +26,7 @@ export class DocumentsController {
   ) {}
 
   @Get(':id/file')
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getFile(
     @Param('id') id: string,
@@ -49,15 +50,18 @@ export class DocumentsController {
 
     res.set({
       'Content-Type': doc.mimeType || 'application/octet-stream',
-      'Content-Disposition': `inline; filename="${basename(doc.storageKey)}"`,
-      'Cache-Control': 'private, no-store',
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
     });
 
     return new StreamableFile(stream);
   }
 
   @Get('by-storage/:key')
-  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getByStorageKey(
     @Param('key') key: string,
@@ -65,18 +69,35 @@ export class DocumentsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const safeKey = basename(String(key));
+    const owned =
+      (await this.prisma.document.findFirst({
+        where: { storageKey: safeKey },
+        select: { id: true, mimeType: true },
+      })) ||
+      (await this.prisma.galleryItem.findFirst({
+        where: { storageKey: safeKey },
+        select: { id: true, mimeType: true },
+      }));
+    if (!owned) {
+      throw new NotFoundException('Document not found');
+    }
+
     const stream = await this.storage.openStream(safeKey);
 
     await this.audit.log({
       userId: user.id,
       action: 'DOCUMENT_ACCESS',
       recordType: 'document',
-      recordId: safeKey,
+      recordId: owned.id,
     });
 
     res.set({
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'private, no-store',
+      'Content-Type': owned.mimeType || 'image/jpeg',
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
     });
 
     return new StreamableFile(stream);

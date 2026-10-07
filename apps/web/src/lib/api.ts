@@ -25,6 +25,22 @@ export type AuthSession = {
 };
 
 const SESSION_KEY = 'nvr_session';
+/** Short-lived server token after gallery PIN unlock (session only). */
+export const GALLERY_UNLOCK_KEY = 'nvr_gallery_unlock_token';
+
+function attachGalleryUnlockHeader(path: string, headers: Headers) {
+  if (typeof window === 'undefined') return;
+  if (!path.startsWith('/gallery')) return;
+  if (
+    path.startsWith('/gallery/unlock') ||
+    path.startsWith('/gallery/pin') ||
+    path.startsWith('/gallery/pin-status')
+  ) {
+    return;
+  }
+  const token = sessionStorage.getItem(GALLERY_UNLOCK_KEY);
+  if (token) headers.set('X-Gallery-Unlock', token);
+}
 
 function storage(): Storage | null {
   if (typeof window === 'undefined') return null;
@@ -103,6 +119,7 @@ async function authFetch(
       headers.set('Authorization', `Bearer ${session.accessToken}`);
     }
   }
+  attachGalleryUnlockHeader(path, headers);
 
   let res = await fetch(`${API_URL}${path}`, {
     ...options,

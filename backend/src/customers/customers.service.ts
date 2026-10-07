@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { StorageService } from '../storage/storage.service';
+import { assertImageBuffer } from '../common/image-bytes';
 
 @Injectable()
 export class CustomersService {
@@ -168,6 +169,8 @@ export class CustomersService {
       select: { id: true },
     });
     if (!existing) throw new NotFoundException('Customer not found');
+
+    assertImageBuffer(bytes);
 
     // Also acts as a cache-busting version for the photo URL.
     const storageKey = `db-${Date.now()}`;

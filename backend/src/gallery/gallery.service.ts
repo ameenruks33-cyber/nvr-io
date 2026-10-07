@@ -11,7 +11,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../storage/storage.service';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
+import { assertImageBuffer } from '../common/image-bytes';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { GalleryUnlockService } from './gallery-unlock.service';
 
 const SETTINGS_ID = 'default';
 
@@ -22,6 +24,7 @@ export class GalleryService {
     private readonly audit: AuditService,
     private readonly storage: StorageService,
     private readonly crypto: FieldEncryptionService,
+    private readonly galleryUnlock: GalleryUnlockService,
   ) {}
 
   private async getSettings() {
@@ -79,7 +82,14 @@ export class GalleryService {
       throw new UnauthorizedException('Invalid PIN');
     }
     const ok = await argon2.verify(s.galleryPinHash, digits);
-    if (!ok) throw new UnauthorizedException('Wrong gallery PIN');
+    if (!ok) {
+      await this.audit.log({
+        userId: actor.id,
+        action: 'GALLERY_UNLOCK_FAILED',
+        recordType: 'gallery',
+      });
+      throw new UnauthorizedException('Wrong gallery PIN');
+    }
 
     await this.audit.log({
       userId: actor.id,
@@ -90,10 +100,8 @@ export class GalleryService {
     return {
       ok: true,
       unlockedAt: new Date().toISOString(),
-      // Client stores unlock for this browser session
-      unlockToken: Buffer.from(
-        `${actor.id}:${Date.now()}:gallery`,
-      ).toString('base64url'),
+      unlockToken: this.galleryUnlock.issueToken(actor.id),
+      expiresInSeconds: 8 * 60 * 60,
     };
   }
 
@@ -110,6 +118,7 @@ export class GalleryService {
         'Only images are allowed in the cloud gallery',
       );
     }
+    assertImageBuffer(file.buffer);
 
     const ext = file.originalname?.includes('.')
       ? `.${file.originalname.split('.').pop()?.toLowerCase()}`

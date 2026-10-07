@@ -57,7 +57,7 @@ export class CustomersController {
   }
 
   @Get(':id/photo')
-  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async getPhoto(
     @Param('id') id: string,
