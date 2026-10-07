@@ -12,4 +12,35 @@ export class HealthController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  /** Public security posture summary (no secrets). */
+  @Public()
+  @Get('security')
+  security() {
+    return {
+      transport: {
+        tls: 'required',
+        hsts: 'enabled',
+        androidCertificatePinning: true,
+      },
+      atRest: {
+        algorithm: 'AES-256-GCM',
+        fields: [
+          'passport',
+          'aadhaar',
+          'customer_photos',
+          'gallery_images',
+          'gallery_captions_notes',
+          'repayment_notes',
+          'whatsapp_token',
+        ],
+      },
+      privacy: {
+        noStoreCache: true,
+        noIndex: true,
+        referrerPolicy: 'no-referrer',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

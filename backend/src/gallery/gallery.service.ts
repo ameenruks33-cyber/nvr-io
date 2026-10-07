@@ -10,6 +10,7 @@ import { GalleryStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../storage/storage.service';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 
 const SETTINGS_ID = 'default';
@@ -20,6 +21,7 @@ export class GalleryService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
+    private readonly crypto: FieldEncryptionService,
   ) {}
 
   private async getSettings() {
@@ -126,18 +128,19 @@ export class GalleryService {
     );
 
     const maxDbBytes = 4 * 1024 * 1024;
-    const imageBytes =
+    // Store ciphertext in Neon — even a DB dump cannot open the photo.
+    const sealed =
       file.buffer.length <= maxDbBytes
-        ? new Uint8Array(file.buffer)
+        ? new Uint8Array(this.crypto.encryptBytes(file.buffer))
         : undefined;
 
     const item = await this.prisma.galleryItem.create({
       data: {
         storageKey,
-        imageBytes,
+        imageBytes: sealed,
         mimeType: file.mimetype,
-        caption: opts.caption?.trim() || null,
-        note: opts.note?.trim() || null,
+        caption: this.crypto.encryptOptional(opts.caption),
+        note: this.crypto.encryptOptional(opts.note),
         customerId: opts.customerId || null,
         uploadedById: user.id,
         status: GalleryStatus.PENDING,
@@ -150,6 +153,10 @@ export class GalleryService {
     // Never return raw bytes to API clients
     const { imageBytes: _omit, ...safe } = item;
     void _omit;
+    Object.assign(safe, {
+      caption: this.crypto.decryptLoose(safe.caption),
+      note: this.crypto.decryptLoose(safe.note),
+    });
 
     await this.audit.log({
       userId: user.id,
@@ -174,11 +181,11 @@ export class GalleryService {
   }
 
   /** Shared cloud gallery — all staff can read; filter by status for verification. */
-  list(status?: GalleryStatus, _user?: AuthUser) {
+  async list(status?: GalleryStatus, _user?: AuthUser) {
     const where: { status?: GalleryStatus } = {};
     if (status) where.status = status;
 
-    return this.prisma.galleryItem.findMany({
+    const rows = await this.prisma.galleryItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       select: {
@@ -199,6 +206,7 @@ export class GalleryService {
         customer: { select: { id: true, name: true, customerCode: true } },
       },
     });
+    return rows.map((row) => this.revealTextFields(row));
   }
 
   async getOne(id: string) {
@@ -223,7 +231,7 @@ export class GalleryService {
       },
     });
     if (!item) throw new NotFoundException('Gallery item not found');
-    return item;
+    return this.revealTextFields(item);
   }
 
   async getFilePayload(id: string) {
@@ -237,7 +245,31 @@ export class GalleryService {
       },
     });
     if (!item) throw new NotFoundException('Gallery item not found');
+
+    if (item.imageBytes && item.imageBytes.length > 0) {
+      const stored = Buffer.from(item.imageBytes);
+      const plain = this.crypto.decryptBytes(stored);
+      if (!this.crypto.isEncryptedBytes(stored)) {
+        void this.prisma.galleryItem
+          .update({
+            where: { id },
+            data: { imageBytes: new Uint8Array(this.crypto.encryptBytes(plain)) },
+          })
+          .catch(() => undefined);
+      }
+      return { ...item, imageBytes: plain };
+    }
     return item;
+  }
+
+  private revealTextFields<T extends { caption?: string | null; note?: string | null }>(
+    row: T,
+  ): T {
+    return {
+      ...row,
+      caption: this.crypto.decryptLoose(row.caption ?? null),
+      note: this.crypto.decryptLoose(row.note ?? null),
+    };
   }
 
   async setStatus(
@@ -261,7 +293,9 @@ export class GalleryService {
         status,
         verifiedById: actor.id,
         verifiedAt: new Date(),
-        note: note?.trim() || existing.note,
+        note: note?.trim()
+          ? this.crypto.encryptOptional(note)
+          : existing.note,
       },
       select: {
         id: true,
@@ -300,7 +334,7 @@ export class GalleryService {
       },
     });
 
-    return item;
+    return this.revealTextFields(item);
   }
 
   async remove(id: string, actor: AuthUser) {

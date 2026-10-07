@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -34,6 +35,7 @@ export class RepaymentsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly whatsapp: WhatsappService,
+    private readonly crypto: FieldEncryptionService,
   ) {}
 
   async recordRepayment(input: RecordRepaymentInput) {
@@ -87,7 +89,7 @@ export class RepaymentsService {
           collectedById: input.collectorId,
           latitude: input.latitude,
           longitude: input.longitude,
-          notes: input.notes,
+          notes: this.crypto.encryptOptional(input.notes),
           receiptNumber,
           idempotencyKey: input.idempotencyKey,
         },
@@ -223,17 +225,21 @@ export class RepaymentsService {
   }
 
   async listForLoan(loanId: string) {
-    return this.prisma.repayment.findMany({
+    const rows = await this.prisma.repayment.findMany({
       where: { loanId },
       orderBy: { collectedAt: 'asc' },
       include: {
         collectedBy: { select: { id: true, name: true } },
       },
     });
+    return rows.map((r) => ({
+      ...r,
+      notes: this.crypto.decryptLoose(r.notes),
+    }));
   }
 
   async listRecent(limit = 20) {
-    return this.prisma.repayment.findMany({
+    const rows = await this.prisma.repayment.findMany({
       take: limit,
       orderBy: { collectedAt: 'desc' },
       include: {
@@ -247,6 +253,10 @@ export class RepaymentsService {
         },
       },
     });
+    return rows.map((r) => ({
+      ...r,
+      notes: this.crypto.decryptLoose(r.notes),
+    }));
   }
 
   /** Pure helper used by unit tests: account closes once `total` is collected. */

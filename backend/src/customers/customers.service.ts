@@ -171,7 +171,8 @@ export class CustomersService {
 
     // Also acts as a cache-busting version for the photo URL.
     const storageKey = `db-${Date.now()}`;
-    const data = new Uint8Array(bytes);
+    // AES-256-GCM at rest — DB holds ciphertext only.
+    const data = new Uint8Array(this.crypto.encryptBytes(bytes));
     const [, customer] = await this.prisma.$transaction([
       this.prisma.customerPhoto.upsert({
         where: { customerId },
@@ -205,8 +206,19 @@ export class CustomersService {
 
     let result: { bytes: Buffer; mimeType: string } | null = null;
     if (customer.photo) {
+      const stored = Buffer.from(customer.photo.bytes);
+      const plain = this.crypto.decryptBytes(stored);
+      // Rewrite legacy plaintext rows as ciphertext on first read.
+      if (!this.crypto.isEncryptedBytes(stored)) {
+        void this.prisma.customerPhoto
+          .update({
+            where: { customerId },
+            data: { bytes: new Uint8Array(this.crypto.encryptBytes(plain)) },
+          })
+          .catch(() => undefined);
+      }
       result = {
-        bytes: Buffer.from(customer.photo.bytes),
+        bytes: plain,
         mimeType: customer.photo.mimeType,
       };
     }
@@ -230,7 +242,7 @@ export class CustomersService {
       });
       if (cloud?.imageBytes) {
         result = {
-          bytes: Buffer.from(cloud.imageBytes),
+          bytes: this.crypto.decryptBytes(Buffer.from(cloud.imageBytes)),
           mimeType: cloud.mimeType || 'image/jpeg',
         };
       }

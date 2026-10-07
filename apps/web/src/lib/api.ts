@@ -2,6 +2,17 @@ import { wipeLocalTraces } from './privacy';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+/** Production website must never call a cleartext API. */
+function assertSecureTransport() {
+  if (
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'https:' &&
+    API_URL.startsWith('http://')
+  ) {
+    throw new Error('Blocked insecure API URL over HTTPS');
+  }
+}
+
 export type AuthSession = {
   accessToken: string;
   refreshToken: string;
@@ -83,6 +94,7 @@ async function authFetch(
   options: RequestInit & { auth?: boolean },
   headers: Headers,
 ): Promise<Response> {
+  assertSecureTransport();
   let usedToken = '';
   if (options.auth !== false) {
     const session = getSession();
