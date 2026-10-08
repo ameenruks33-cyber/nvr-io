@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { StateAnimations } from '@/components/StateAnimations';
 import {
   TodayPendingNotice,
   type PendingTodayItem,
@@ -91,6 +92,14 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="font-display text-xl text-slate-900">Position</h2>
+        <p className="mb-5 mt-1 text-sm text-slate-500">
+          Drag the sliders to spring the tile around.
+        </p>
+        <StateAnimations />
+      </section>
     </AppShell>
   );
 };
