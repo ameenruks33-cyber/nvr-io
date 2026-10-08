@@ -45,8 +45,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Two-step login: password, then WhatsApp code (unless OTP_DISABLED break-glass).
-    if (this.loginRequiresOtp(user)) {
+    // Two-step login: password, then WhatsApp code — only when a code can
+    // actually be delivered. If auto-send is not connected, do not block sign-in.
+    if (
+      this.loginRequiresOtp(user) &&
+      user.phone?.trim() &&
+      (await this.whatsapp.isAutoSendReady())
+    ) {
       const challenge = await this.createChallenge(user, 'LOGIN');
       await this.audit.log({
         userId: user.id,
@@ -290,10 +295,14 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid session');
     }
+    const whatsappReady = await this.whatsapp.isAutoSendReady();
     return {
       ...user,
-      whatsappReady: await this.whatsapp.isAutoSendReady(),
-      twoFactorRequired: this.loginRequiresOtp(user as User),
+      whatsappReady,
+      twoFactorRequired:
+        this.loginRequiresOtp(user as User) &&
+        Boolean(user.phone?.trim()) &&
+        whatsappReady,
       twoFactorPolicy: this.isTwoFactorRequiredGlobally()
         ? 'required'
         : user.otpEnabled

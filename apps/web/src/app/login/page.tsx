@@ -133,7 +133,7 @@ export default function LoginPage() {
             <BrandWordmark size="lg" onDark />
           </div>
           <p className="mt-2 text-sm text-slate-500">
-            Password plus WhatsApp code (two-step verification)
+            Sign in with your email and password
           </p>
         </div>
 
