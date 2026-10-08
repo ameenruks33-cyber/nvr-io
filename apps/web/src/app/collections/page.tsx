@@ -324,6 +324,11 @@ export default function CollectionsPage() {
                 <p className="text-xs text-slate-500">
                   {selected.customerCode} · {selected.phone}
                 </p>
+                {open && remaining > 0 ? (
+                  <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+                    Remaining to collect: {money(remaining)} of {money(total)}
+                  </p>
+                ) : null}
                 <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">

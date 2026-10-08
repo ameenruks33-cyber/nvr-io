@@ -1,74 +1,133 @@
 import { Injectable } from '@nestjs/common';
+import { NotificationType, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthUser } from '../auth/decorators/current-user.decorator';
+
+type Audience = 'ALL' | 'ADMIN';
 
 @Injectable()
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createLoanCompleted(
-    customerId: string,
-    loanId: string,
-    amountPaid?: number,
-    remaining?: number,
-    principal?: number,
+  private async create(
+    data: {
+      customerId: string;
+      loanId: string;
+      type: NotificationType;
+      message: string;
+      audience?: Audience;
+    },
   ) {
-    const paid =
-      typeof amountPaid === 'number' ? `AED ${amountPaid.toFixed(2)}` : null;
-    const rem =
-      typeof remaining === 'number' && typeof principal === 'number'
-        ? `Remaining AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}`
-        : null;
-    const message = [
-      'CrickHerose: Target reached for this record.',
-      paid ? `Last payment ${paid}.` : null,
-      rem,
-      'WhatsApp receipt sent to customer when configured.',
-    ]
-      .filter(Boolean)
-      .join(' ');
-
     return this.prisma.notification.create({
       data: {
-        customerId,
-        loanId,
-        type: 'LOAN_COMPLETED',
-        message,
+        customerId: data.customerId,
+        loanId: data.loanId,
+        type: data.type,
+        message: data.message,
+        audience: data.audience ?? 'ALL',
         status: 'SENT',
         sentAt: new Date(),
       },
     });
   }
 
+  async createLoanCompleted(
+    customerId: string,
+    loanId: string,
+    amountPaid: number,
+    remaining: number,
+    total: number,
+    customerName: string,
+    collectorName: string,
+  ) {
+    await this.create({
+      customerId,
+      loanId,
+      type: 'LOAN_COMPLETED',
+      audience: 'ALL',
+      message: `Account closed for ${customerName}. Last payment AED ${amountPaid.toFixed(2)}. Full AED ${total.toFixed(2)} collected.`,
+    });
+    await this.create({
+      customerId,
+      loanId,
+      type: 'LOAN_COMPLETED',
+      audience: 'ADMIN',
+      message: `Admin: ${collectorName} closed ${customerName}'s account with AED ${amountPaid.toFixed(2)} (remaining AED ${remaining.toFixed(2)}).`,
+    });
+  }
+
+  /** Fires only when a collection is saved — staff + admin copies with remaining balance. */
   async createRepaymentReceived(
     customerId: string,
     loanId: string,
     amount: number,
-    remaining?: number,
-    principal?: number,
+    remaining: number,
+    total: number,
+    customerName: string,
+    collectorName: string,
   ) {
-    const rem =
-      typeof remaining === 'number' && typeof principal === 'number'
-        ? ` Remaining balance AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}.`
-        : '';
-    return this.prisma.notification.create({
-      data: {
-        customerId,
-        loanId,
-        type: 'REPAYMENT_RECEIVED',
-        message: `CrickHerose: Payment of AED ${amount.toFixed(2)} saved.${rem}`,
-        status: 'SENT',
-        sentAt: new Date(),
-      },
+    await this.create({
+      customerId,
+      loanId,
+      type: 'REPAYMENT_RECEIVED',
+      audience: 'ALL',
+      message: `Collection saved: AED ${amount.toFixed(2)} from ${customerName}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}.`,
+    });
+    await this.create({
+      customerId,
+      loanId,
+      type: 'REPAYMENT_RECEIVED',
+      audience: 'ADMIN',
+      message: `Admin: ${collectorName} collected AED ${amount.toFixed(2)} from ${customerName}. Remaining AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}.`,
     });
   }
 
-  findAll(limit = 50) {
+  async createPendingCollectionReminders(input: {
+    customerId: string;
+    loanId: string;
+    customerName: string;
+    customerCode: string;
+    remaining: number;
+    total: number;
+    dailyTarget: number;
+  }) {
+    const { customerId, loanId, customerName, customerCode, remaining, total, dailyTarget } =
+      input;
+    await this.create({
+      customerId,
+      loanId,
+      type: 'COLLECTION_REMINDER',
+      audience: 'ALL',
+      message: `Reminder: collect from ${customerName} (${customerCode}). Remaining AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}. Today's target about AED ${dailyTarget.toFixed(0)} — no payment recorded yet today.`,
+    });
+    await this.create({
+      customerId,
+      loanId,
+      type: 'COLLECTION_REMINDER',
+      audience: 'ADMIN',
+      message: `Admin reminder: ${customerName} (${customerCode}) still owes AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}. No collection logged today.`,
+    });
+  }
+
+  findAllForUser(user: AuthUser, limit = 50) {
+    const isAdmin =
+      user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN;
     return this.prisma.notification.findMany({
+      where: isAdmin ? undefined : { audience: 'ALL' },
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         customer: {
           select: { id: true, name: true, customerCode: true },
+        },
+        loan: {
+          select: {
+            id: true,
+            remainingAmount: true,
+            totalPayable: true,
+            principalAmount: true,
+            status: true,
+          },
         },
       },
     });

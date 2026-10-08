@@ -124,10 +124,16 @@ export class RepaymentsService {
 
     const amountPaid = Number(result.repayment.amount);
     const remaining = Number(result.loan.remainingAmount);
-    const principal = Math.max(
+    const total = Math.max(
       Number(result.loan.totalPayable),
       Number(result.loan.principalAmount),
     );
+    const customerName = result.customer.name;
+    const collector = await this.prisma.user.findUnique({
+      where: { id: input.collectorId },
+      select: { name: true },
+    });
+    const collectorName = collector?.name || 'Staff';
 
     if (result.completed) {
       await this.notifications.createLoanCompleted(
@@ -135,7 +141,9 @@ export class RepaymentsService {
         result.loan.id,
         amountPaid,
         remaining,
-        principal,
+        total,
+        customerName,
+        collectorName,
       );
       await this.audit.log({
         userId: input.collectorId,
@@ -149,7 +157,9 @@ export class RepaymentsService {
         result.loan.id,
         amountPaid,
         remaining,
-        principal,
+        total,
+        customerName,
+        collectorName,
       );
     }
 
@@ -168,7 +178,7 @@ export class RepaymentsService {
         phone: result.customer.phone,
         amountPaid,
         remaining,
-        principal,
+        principal: total,
         totalCollected: Number(result.loan.amountCollected),
         receiptNumber: result.repayment.receiptNumber,
         collectedAt: result.repayment.collectedAt,
@@ -195,7 +205,7 @@ export class RepaymentsService {
             customerId: result.loan.customerId,
             loanId: result.loan.id,
             type: 'SYSTEM',
-            message: `WhatsApp receipt auto-sent: paid AED ${amountPaid.toFixed(2)}, remaining AED ${remaining.toFixed(2)} of AED ${principal.toFixed(2)}.`,
+            message: `WhatsApp receipt auto-sent: paid AED ${amountPaid.toFixed(2)}, remaining AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}.`,
             status: 'SENT',
             sentAt: new Date(),
           },

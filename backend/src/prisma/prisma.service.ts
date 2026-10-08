@@ -152,6 +152,25 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+    try {
+      await this.$executeRawUnsafe(`
+        ALTER TABLE "notifications"
+        ADD COLUMN IF NOT EXISTS "audience" TEXT NOT NULL DEFAULT 'ALL';
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
+    try {
+      await this.$executeRawUnsafe(`
+        DO $$ BEGIN
+          ALTER TYPE "NotificationType" ADD VALUE 'COLLECTION_REMINDER';
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `);
+    } catch {
+      // ignore if enum already extended or not Postgres
+    }
   }
 
   async onModuleDestroy() {

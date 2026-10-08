@@ -30,6 +30,7 @@ enum DocumentType {
 enum NotificationType {
   LOAN_COMPLETED
   REPAYMENT_RECEIVED
+  COLLECTION_REMINDER
   SYSTEM
 }
 
@@ -224,6 +225,8 @@ model Notification {
   customerId String?           @map("customer_id")
   loanId    String?            @map("loan_id")
   type      NotificationType
+  /// ALL = every signed-in staff member; ADMIN = admin and super-admin only
+  audience  String             @default("ALL")
   message   String
   sentAt    DateTime?          @map("sent_at")
   status    NotificationStatus @default(PENDING)
