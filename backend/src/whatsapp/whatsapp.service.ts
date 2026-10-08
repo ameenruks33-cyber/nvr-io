@@ -300,7 +300,12 @@ export class WhatsappService {
 
   async isAutoSendReady(): Promise<boolean> {
     const cfg = await this.resolveConfig();
-    return cfg.configured && cfg.enabled;
+    if (!cfg.configured || !cfg.enabled) return false;
+    if (cfg.provider === 'waha') {
+      const session = await this.wahaSessionStatus();
+      return session?.status === 'WORKING';
+    }
+    return true;
   }
 
   /** Sends a plain text via the configured provider only — never falls back to a deep link. */

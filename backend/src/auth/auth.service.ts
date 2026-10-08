@@ -47,20 +47,33 @@ export class AuthService {
 
     // Two-step login: password, then WhatsApp code — only when a code can
     // actually be delivered. If auto-send is not connected, do not block sign-in.
-    if (
-      this.loginRequiresOtp(user) &&
-      user.phone?.trim() &&
-      (await this.whatsapp.isAutoSendReady())
-    ) {
-      const challenge = await this.createChallenge(user, 'LOGIN');
-      await this.audit.log({
-        userId: user.id,
-        action: 'LOGIN_OTP_SENT',
-        recordType: 'user',
-        recordId: user.id,
-        ipAddress: ip,
-      });
-      return challenge;
+    if (this.loginRequiresOtp(user) && user.phone?.trim()) {
+      if (await this.whatsapp.isAutoSendReady()) {
+        try {
+          const challenge = await this.createChallenge(user, 'LOGIN');
+          await this.audit.log({
+            userId: user.id,
+            action: 'LOGIN_OTP_SENT',
+            recordType: 'user',
+            recordId: user.id,
+            ipAddress: ip,
+          });
+          return challenge;
+        } catch (e) {
+          if (e instanceof ServiceUnavailableException) {
+            await this.audit.log({
+              userId: user.id,
+              action: 'LOGIN_OTP_SEND_FAILED',
+              recordType: 'user',
+              recordId: user.id,
+              ipAddress: ip,
+              metadata: { reason: e.message },
+            });
+            return this.completeLogin(user, ip);
+          }
+          throw e;
+        }
+      }
     }
 
     return this.completeLogin(user, ip);
