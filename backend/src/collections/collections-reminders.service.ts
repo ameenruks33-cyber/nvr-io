@@ -2,9 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { uaeCalendarDay } from './uae-day';
-
-/** Expected collection from each open customer every UAE calendar day. */
-export const DAILY_COLLECTION_AED = 100;
+import { DAILY_COLLECTION_AED, dueTodayAed } from './daily-collection';
 
 @Injectable()
 export class CollectionsRemindersService {
@@ -42,7 +40,7 @@ export class CollectionsRemindersService {
       );
       const dayStart = this.startOfUaeDayUtc(today);
       const dayEnd = this.startOfUaeDayUtc(this.nextUaeDay(today));
-      const dueToday = Math.min(DAILY_COLLECTION_AED, remaining);
+      const dueToday = dueTodayAed(remaining);
 
       const paidTodayAgg = await this.prisma.repayment.aggregate({
         where: {
