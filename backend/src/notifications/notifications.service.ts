@@ -89,23 +89,38 @@ export class NotificationsService {
     customerCode: string;
     remaining: number;
     total: number;
-    dailyTarget: number;
+    dueTodayAed: number;
+    collectedTodayAed: number;
   }) {
-    const { customerId, loanId, customerName, customerCode, remaining, total, dailyTarget } =
-      input;
+    const {
+      customerId,
+      loanId,
+      customerName,
+      customerCode,
+      remaining,
+      total,
+      dueTodayAed,
+      collectedTodayAed,
+    } = input;
+    const stillDueToday = Math.max(dueTodayAed - collectedTodayAed, 0);
+    const partial =
+      collectedTodayAed > 0
+        ? ` (AED ${collectedTodayAed.toFixed(0)} received today — AED ${stillDueToday.toFixed(0)} still due today)`
+        : '';
+
     await this.create({
       customerId,
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ALL',
-      message: `Reminder: collect from ${customerName} (${customerCode}). Remaining AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}. Today's target about AED ${dailyTarget.toFixed(0)} — no payment recorded yet today.`,
+      message: `Today's collection is pending for ${customerName}: collect AED ${dueTodayAed.toFixed(0)} today${partial}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)} (${customerCode}).`,
     });
     await this.create({
       customerId,
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ADMIN',
-      message: `Admin reminder: ${customerName} (${customerCode}) still owes AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)}. No collection logged today.`,
+      message: `Admin: Today's collection is pending for ${customerName}. AED ${stillDueToday.toFixed(0)} of today's AED ${dueTodayAed.toFixed(0)} is still due${partial}. Remaining AED ${remaining.toFixed(2)} (${customerCode}).`,
     });
   }
 

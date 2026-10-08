@@ -58,9 +58,9 @@ export default function NotificationsPage() {
     <AppShell>
       <h1 className="mb-2 font-display text-3xl text-slate-900">Notifications</h1>
       <p className="mb-6 max-w-2xl text-sm text-slate-500">
-        Collection confirmations appear when a payment is saved. Pending reminders
-        are sent each morning (UAE time) to collectors and admins for accounts
-        with no payment logged that day.
+        Collection confirmations appear when a payment is saved. If AED 100 is not
+        fully collected for a customer today (UAE time), collectors and admins
+        receive: &quot;Today&apos;s collection is pending for [customer name].&quot;
       </p>
       <ul className="space-y-3">
         {rows.map((row) => {

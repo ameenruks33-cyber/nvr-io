@@ -3,6 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { uaeCalendarDay } from './uae-day';
 
+/** Expected collection from each open customer every UAE calendar day. */
+export const DAILY_COLLECTION_AED = 100;
+
 @Injectable()
 export class CollectionsRemindersService {
   private readonly logger = new Logger(CollectionsRemindersService.name);
@@ -37,18 +40,19 @@ export class CollectionsRemindersService {
         Number(loan.totalPayable),
         Number(loan.principalAmount),
       );
-      const daily = Number(loan.dailyPayment || 100);
+      const dayStart = this.startOfUaeDayUtc(today);
+      const dayEnd = this.startOfUaeDayUtc(this.nextUaeDay(today));
+      const dueToday = Math.min(DAILY_COLLECTION_AED, remaining);
 
-      const paidToday = await this.prisma.repayment.count({
+      const paidTodayAgg = await this.prisma.repayment.aggregate({
         where: {
           loanId: loan.id,
-          collectedAt: {
-            gte: this.startOfUaeDayUtc(today),
-            lt: this.startOfUaeDayUtc(this.nextUaeDay(today)),
-          },
+          collectedAt: { gte: dayStart, lt: dayEnd },
         },
+        _sum: { amount: true },
       });
-      if (paidToday > 0) {
+      const paidToday = Number(paidTodayAgg._sum.amount || 0);
+      if (paidToday >= dueToday - 0.001) {
         skippedPaidToday++;
         continue;
       }
@@ -57,10 +61,7 @@ export class CollectionsRemindersService {
         where: {
           loanId: loan.id,
           type: 'COLLECTION_REMINDER',
-          createdAt: {
-            gte: this.startOfUaeDayUtc(today),
-            lt: this.startOfUaeDayUtc(this.nextUaeDay(today)),
-          },
+          createdAt: { gte: dayStart, lt: dayEnd },
         },
       });
       if (already > 0) {
@@ -75,7 +76,8 @@ export class CollectionsRemindersService {
         customerCode: loan.customer.customerCode,
         remaining,
         total,
-        dailyTarget: daily,
+        dueTodayAed: dueToday,
+        collectedTodayAed: paidToday,
       });
       reminded++;
     }

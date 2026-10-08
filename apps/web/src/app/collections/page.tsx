@@ -216,10 +216,11 @@ export default function CollectionsPage() {
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
         <p className="mt-1 max-w-xl text-sm text-slate-500">
-          Collect from registered customers. {money(MAX_AED)} is given and{' '}
+          Collect from registered customers. Add {money(MIN_AED)} every day
+          while the account is open. {money(MAX_AED)} is given and{' '}
           {money(TOTAL_AED)} is repaid — the account closes once the full{' '}
-          {money(TOTAL_AED)} is collected (e.g. collect {money(MIN_AED)} →
-          balance {money(TOTAL_AED - MIN_AED)}).
+          {money(TOTAL_AED)} is collected. If today&apos;s {money(MIN_AED)} is
+          not recorded, staff and admin get a reminder naming the customer.
         </p>
       </header>
 
