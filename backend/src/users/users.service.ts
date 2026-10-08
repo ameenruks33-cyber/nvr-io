@@ -36,6 +36,7 @@ export class UsersService {
         passwordHash,
         role: dto.role,
         isActive: true,
+        otpEnabled: Boolean(dto.phone?.trim()),
       },
       select: {
         id: true,

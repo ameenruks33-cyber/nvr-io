@@ -45,8 +45,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Break-glass: OTP_DISABLED=true on the API lets everyone in with password only.
-    if (user.otpEnabled && this.config.get('OTP_DISABLED') !== 'true') {
+    // Two-step login: password, then WhatsApp code (unless OTP_DISABLED break-glass).
+    if (this.loginRequiresOtp(user)) {
       const challenge = await this.createChallenge(user, 'LOGIN');
       await this.audit.log({
         userId: user.id,
@@ -116,6 +116,26 @@ export class AuthService {
       ipAddress: ip,
     });
     return { otpEnabled: false };
+  }
+
+  /** Production defaults to mandatory WhatsApp second step for every login. */
+  private loginRequiresOtp(user: User): boolean {
+    if (this.config.get('OTP_DISABLED') === 'true') return false;
+    const flag = this.config.get<string>('REQUIRE_TWO_FACTOR');
+    if (flag === 'false') return user.otpEnabled;
+    if (flag === 'true') return true;
+    return (
+      this.config.get('NODE_ENV') === 'production' ||
+      user.otpEnabled
+    );
+  }
+
+  isTwoFactorRequiredGlobally(): boolean {
+    if (this.config.get('OTP_DISABLED') === 'true') return false;
+    const flag = this.config.get<string>('REQUIRE_TWO_FACTOR');
+    if (flag === 'false') return false;
+    if (flag === 'true') return true;
+    return this.config.get('NODE_ENV') === 'production';
   }
 
   private async activeUser(userId: string) {
@@ -270,7 +290,16 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid session');
     }
-    return { ...user, whatsappReady: await this.whatsapp.isAutoSendReady() };
+    return {
+      ...user,
+      whatsappReady: await this.whatsapp.isAutoSendReady(),
+      twoFactorRequired: this.loginRequiresOtp(user as User),
+      twoFactorPolicy: this.isTwoFactorRequiredGlobally()
+        ? 'required'
+        : user.otpEnabled
+          ? 'optional'
+          : 'off',
+    };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto, ip?: string) {

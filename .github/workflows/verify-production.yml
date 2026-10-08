@@ -1,0 +1,48 @@
+name: Verify production security
+
+# After push to main, wait for Vercel Git deploy then verify 2FA policy + encryption.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Wait for Vercel deploy
+        run: |
+          echo "Waiting 120s for Vercel Git integration to finish…"
+          sleep 120
+
+      - name: Poll API health
+        run: |
+          for i in $(seq 1 15); do
+            if curl -sf "https://nvr-io-api.vercel.app/api/health" >/dev/null; then
+              echo "API is up (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i — API not ready, retry in 20s"
+            sleep 20
+          done
+          echo "API did not become ready in time"
+          exit 1
+
+      - name: Two-factor and end-to-end security verification
+        run: node scripts/verify-production-security.mjs

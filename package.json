@@ -22,7 +22,8 @@
     "cloud:deploy:api": "npx vercel deploy --prod --cwd backend",
     "build:web": "node scripts/bump-app-update.cjs && npm run build -w @jithu-buy/web",
     "ship": "node scripts/bump-app-update.cjs && node scripts/auto-ship.cjs",
-    "bump:update": "node scripts/bump-app-update.cjs"
+    "bump:update": "node scripts/bump-app-update.cjs",
+    "verify:production": "node scripts/verify-production-security.mjs"
   },
   "engines": {
     "node": ">=20"

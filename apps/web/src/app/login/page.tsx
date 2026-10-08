@@ -132,7 +132,9 @@ export default function LoginPage() {
           <div className="mt-4">
             <BrandWordmark size="lg" onDark />
           </div>
-          <p className="mt-2 text-sm text-slate-500">Secure staff login</p>
+          <p className="mt-2 text-sm text-slate-500">
+            Password plus WhatsApp code (two-step verification)
+          </p>
         </div>
 
         {showInstall ? (

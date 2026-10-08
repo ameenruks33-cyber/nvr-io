@@ -171,6 +171,15 @@ export class PrismaService
     } catch {
       // ignore if enum already extended or not Postgres
     }
+    try {
+      await this.$executeRawUnsafe(`
+        UPDATE "users"
+        SET "otp_enabled" = true
+        WHERE "phone" IS NOT NULL AND TRIM("phone") <> '' AND "otp_enabled" = false;
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
   }
 
   async onModuleDestroy() {
