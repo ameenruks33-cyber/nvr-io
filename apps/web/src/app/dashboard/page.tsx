@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { DragConstraints } from '@/components/DragConstraints';
 import { StateAnimations } from '@/components/StateAnimations';
 import {
   TodayPendingNotice,
@@ -94,11 +95,28 @@ export default function DashboardPage() {
       </div>
 
       <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-display text-xl text-slate-900">Position</h2>
+        <h2 className="font-display text-xl text-slate-900">Motion</h2>
         <p className="mb-5 mt-1 text-sm text-slate-500">
-          Drag the sliders to spring the tile around.
+          Spring controls and drag-within-bounds demos.
         </p>
-        <StateAnimations />
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-medium text-slate-700">Position</h3>
+            <p className="mb-4 mt-1 text-sm text-slate-500">
+              Drag the sliders to spring the tile around.
+            </p>
+            <StateAnimations />
+          </div>
+          <div className="shrink-0">
+            <h3 className="text-sm font-medium text-slate-700">
+              Drag constraints
+            </h3>
+            <p className="mb-4 mt-1 text-sm text-slate-500">
+              Drag the tile — it stays inside the box.
+            </p>
+            <DragConstraints />
+          </div>
+        </div>
       </section>
     </AppShell>
   );
