@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
@@ -66,6 +67,7 @@ function amountTone(value: number, maxPay: number) {
 }
 
 export default function CollectionsPage() {
+  const searchParams = useSearchParams();
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [recent, setRecent] = useState<RecentRow[]>([]);
@@ -126,8 +128,10 @@ export default function CollectionsPage() {
   useEffect(() => {
     void loadCustomers();
     void loadRecent();
+    const preselect = searchParams.get('customer');
+    if (preselect) setSelectedId(preselect);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useLiveRefresh(() => {
     void loadCustomers(appliedSearch.current);
