@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { DragConstraints } from '@/components/DragConstraints';
+import { Reordering } from '@/components/Reordering';
 import { StateAnimations } from '@/components/StateAnimations';
 import {
   TodayPendingNotice,
@@ -97,9 +98,9 @@ export default function DashboardPage() {
       <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="font-display text-xl text-slate-900">Motion</h2>
         <p className="mb-5 mt-1 text-sm text-slate-500">
-          Spring controls and drag-within-bounds demos.
+          Spring controls, drag bounds, and layout reordering.
         </p>
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
+        <div className="flex flex-col gap-10 xl:flex-row xl:flex-wrap xl:items-start xl:gap-12">
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-medium text-slate-700">Position</h3>
             <p className="mb-4 mt-1 text-sm text-slate-500">
@@ -115,6 +116,13 @@ export default function DashboardPage() {
               Drag the tile — it stays inside the box.
             </p>
             <DragConstraints />
+          </div>
+          <div className="shrink-0">
+            <h3 className="text-sm font-medium text-slate-700">Reordering</h3>
+            <p className="mb-4 mt-1 text-sm text-slate-500">
+              Tiles shuffle every second with layout animation.
+            </p>
+            <Reordering />
           </div>
         </div>
       </section>
