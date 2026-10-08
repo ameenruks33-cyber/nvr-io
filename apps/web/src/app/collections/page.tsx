@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
@@ -67,6 +67,20 @@ function amountTone(value: number, maxPay: number) {
 }
 
 export default function CollectionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell>
+          <p className="p-6 text-sm text-slate-500">Loading collection…</p>
+        </AppShell>
+      }
+    >
+      <CollectionsPageContent />
+    </Suspense>
+  );
+}
+
+function CollectionsPageContent() {
   const searchParams = useSearchParams();
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<CustomerRow[]>([]);
