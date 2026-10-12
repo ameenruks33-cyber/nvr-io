@@ -7,7 +7,9 @@ import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
+import { isMobileAppSurface } from '@/lib/mobile-app';
 import { openWhatsApp } from '@/lib/privacy';
+import { isAdminRole } from '@/lib/roles';
 
 type WaProvider = 'waha' | 'green-api' | 'meta';
 
@@ -455,11 +457,22 @@ export default function SettingsPage() {
           <strong className="text-slate-900">website</strong> (computer browser),
           not in the mobile app.
         </p>
+        {isAdminRole(profile?.role) ? (
+          <p className="text-xs text-slate-500">
+            Next time, open{' '}
+            <span className="font-mono text-slate-700">/login/admin</span> in
+            this app for admin sign-in with show/hide password.
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => {
             clearSession();
-            router.replace('/login');
+            const loginPath =
+              isMobileAppSurface() && isAdminRole(profile?.role)
+                ? '/login/admin'
+                : '/login';
+            router.replace(loginPath);
           }}
           className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-700 hover:bg-blue-50"
         >
