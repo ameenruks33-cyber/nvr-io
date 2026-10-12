@@ -66,8 +66,25 @@ model User {
   galleryUploads      GalleryItem[]  @relation("GalleryUploadedBy")
   galleryVerifications GalleryItem[] @relation("GalleryVerifiedBy")
   pettyCashExpenses   PettyCashExpense[]
+  calendarReminders   CalendarReminder[]
 
   @@map("users")
+}
+
+/// Personal UAE calendar day reminders (one note per user per day).
+model CalendarReminder {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  reminderDay String   @map("reminder_day")
+  message     String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reminderDay])
+  @@index([reminderDay])
+  @@map("calendar_reminders")
 }
 
 /// Cash taken out of collections for expenses; `spentOn` is the UAE calendar day (YYYY-MM-DD).

@@ -20,6 +20,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { PettyCashModule } from './petty-cash/petty-cash.module';
 import { SyncModule } from './sync/sync.module';
 import { CollectionsModule } from './collections/collections.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { HealthController } from './health.controller';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -51,6 +52,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     PettyCashModule,
     SyncModule,
     CollectionsModule,
+    CalendarModule,
   ],
   controllers: [HealthController],
   providers: [

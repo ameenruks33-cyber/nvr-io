@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { HomeCalendar } from '@/components/HomeCalendar';
 import {
   TodayPendingNotice,
   type PendingTodayItem,
@@ -75,6 +76,8 @@ export default function DashboardPage() {
       </header>
 
       {error ? <p className="text-red-600">{error}</p> : null}
+
+      <HomeCalendar />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (

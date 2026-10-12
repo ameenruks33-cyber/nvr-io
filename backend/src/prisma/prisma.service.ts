@@ -116,6 +116,31 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
+    try {
+      await this.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "calendar_reminders" (
+          "id" TEXT NOT NULL,
+          "user_id" TEXT NOT NULL,
+          "reminder_day" TEXT NOT NULL,
+          "message" TEXT NOT NULL,
+          "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "calendar_reminders_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "calendar_reminders_user_id_fkey" FOREIGN KEY ("user_id")
+            REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        );
+      `);
+      await this.$executeRawUnsafe(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "calendar_reminders_user_id_reminder_day_key"
+        ON "calendar_reminders"("user_id", "reminder_day");
+      `);
+      await this.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS "calendar_reminders_reminder_day_idx"
+        ON "calendar_reminders"("reminder_day");
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
     // 1800 is given and 2000 is repaid. Only touches rows still on the old
     // 1800/1800 setup, so it runs once.
     try {
