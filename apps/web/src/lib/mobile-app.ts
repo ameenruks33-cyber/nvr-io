@@ -1,10 +1,18 @@
 'use client';
 
+/** CrickHerose Android WebView shell (see apps/android MainActivity). */
+export function isNvrAndroidShell(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /NVRApp/i.test(navigator.userAgent || '');
+}
+
 /**
  * Updates are for the mobile app (installed PWA / phone), not the desktop website.
  */
 export function isMobileAppSurface(): boolean {
   if (typeof window === 'undefined') return false;
+
+  if (isNvrAndroidShell()) return true;
 
   const standalone =
     window.matchMedia('(display-mode: standalone)').matches ||

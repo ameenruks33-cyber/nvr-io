@@ -2,7 +2,13 @@ import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
-import { DisableOtpDto, LoginDto, RefreshDto, VerifyOtpDto } from './dto/auth.dto';
+import {
+  DisableOtpDto,
+  LoginDto,
+  LoginEmailDto,
+  RefreshDto,
+  VerifyOtpDto,
+} from './dto/auth.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
@@ -12,6 +18,13 @@ const OTP_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 40, ttl: 60_000 } })
+  @Post('login/password-toggle-eligible')
+  loginPasswordToggleEligible(@Body() dto: LoginEmailDto) {
+    return this.auth.loginPasswordToggleEligible(dto.email);
+  }
 
   @Public()
   @Throttle(OTP_THROTTLE)

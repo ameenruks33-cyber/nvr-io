@@ -12,7 +12,11 @@ type AdminPasswordInputProps = Omit<
 
 /** Password field; show/hide eye appears only for Admin and Super admin (signed in). */
 export function AdminPasswordInput(props: AdminPasswordInputProps) {
-  const [showToggle, setShowToggle] = useState(false);
+  const [showToggle, setShowToggle] = useState(() =>
+    typeof window !== 'undefined'
+      ? isAdminRole(getSession()?.user.role)
+      : false,
+  );
 
   useEffect(() => {
     setShowToggle(isAdminRole(getSession()?.user.role));

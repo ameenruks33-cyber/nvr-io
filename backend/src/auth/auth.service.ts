@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { User } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -31,6 +31,17 @@ export class AuthService {
     private readonly audit: AuditService,
     private readonly whatsapp: WhatsappService,
   ) {}
+
+  /** Mobile login UI: show password eye only for admin roles (same response if unknown email). */
+  async loginPasswordToggleEligible(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    const eligible =
+      user?.isActive === true &&
+      (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN);
+    return { eligible: Boolean(eligible) };
+  }
 
   async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findUnique({

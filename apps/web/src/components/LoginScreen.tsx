@@ -31,7 +31,10 @@ export function LoginScreen({ adminPanelLogin = false }: LoginScreenProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
-  const [mobileApp, setMobileApp] = useState(false);
+  const [mobileApp, setMobileApp] = useState(() =>
+    typeof window !== 'undefined' ? isMobileAppSurface() : false,
+  );
+  const [adminEmailEligible, setAdminEmailEligible] = useState(false);
   const [challenge, setChallenge] = useState<OtpChallenge | null>(null);
   const [code, setCode] = useState('');
   const [otpStatus, setOtpStatus] = useState<{
@@ -39,7 +42,8 @@ export function LoginScreen({ adminPanelLogin = false }: LoginScreenProps) {
     tone?: 'error' | 'success';
   } | null>(null);
 
-  const showPasswordToggle = mobileApp && adminPanelLogin;
+  const showPasswordToggle =
+    mobileApp && (adminPanelLogin || adminEmailEligible);
 
   useEffect(() => {
     setMobileApp(isMobileAppSurface());
@@ -53,6 +57,37 @@ export function LoginScreen({ adminPanelLogin = false }: LoginScreenProps) {
       void navigator.serviceWorker.register('/sw.js');
     }
   }, []);
+
+  useEffect(() => {
+    if (!mobileApp) {
+      setAdminEmailEligible(false);
+      return;
+    }
+    if (adminPanelLogin) {
+      setAdminEmailEligible(true);
+      return;
+    }
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed.includes('@')) {
+      setAdminEmailEligible(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void api<{ eligible: boolean }>('/auth/login/password-toggle-eligible', {
+        method: 'POST',
+        auth: false,
+        body: JSON.stringify({ email: trimmed }),
+        signal: controller.signal,
+      })
+        .then((res) => setAdminEmailEligible(res.eligible))
+        .catch(() => setAdminEmailEligible(false));
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [email, mobileApp, adminPanelLogin]);
 
   async function requestLogin() {
     const data = await api<LoginResponse>('/auth/login', {
