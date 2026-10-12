@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { money } from '@/lib/api';
 
@@ -53,14 +52,7 @@ export function TodayPendingNotice({
     >
       <p className="min-w-0 flex-1 leading-snug">
         <span className="font-medium">{label}</span>
-        <span className="text-amber-900"> ({money(totalPending)})</span>
-        .{' '}
-        <Link
-          href="/collections"
-          className="font-medium text-teal-800 underline decoration-teal-800/40 underline-offset-2 hover:text-teal-900"
-        >
-          Open Collection
-        </Link>
+        <span className="text-amber-900"> ({money(totalPending)})</span>.
       </p>
       <button
         type="button"
