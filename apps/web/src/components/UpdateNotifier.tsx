@@ -11,8 +11,8 @@ import {
 export type AppUpdateInfo = {
   app: string;
   version: string;
-  build: string;
-  releasedAt: string;
+  build?: string;
+  releasedAt?: string;
   title: string;
   message: string;
   notes?: string[];

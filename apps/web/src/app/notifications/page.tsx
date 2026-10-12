@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, money } from '@/lib/api';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type Row = {
@@ -74,7 +75,7 @@ export default function NotificationsPage() {
                 <span className="font-medium text-slate-700">
                   {typeLabel(row.type)}
                 </span>
-                <span>{new Date(row.createdAt).toLocaleString()}</span>
+                <span>{formatUaeDateTime(row.createdAt)}</span>
               </div>
               <p className="mt-2 text-sm text-slate-900">{row.message}</p>
               {remaining != null && remaining > 0 ? (

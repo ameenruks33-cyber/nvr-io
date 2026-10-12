@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { uaeDayBounds } from '../collections/uae-day';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -7,8 +8,7 @@ export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getStats() {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const { start: startOfDay, end: endOfDay } = uaeDayBounds();
 
     const [
       totalCustomers,
@@ -28,7 +28,7 @@ export class DashboardService {
         },
       }),
       this.prisma.repayment.aggregate({
-        where: { collectedAt: { gte: startOfDay } },
+        where: { collectedAt: { gte: startOfDay, lt: endOfDay } },
         _sum: { amount: true },
       }),
     ]);

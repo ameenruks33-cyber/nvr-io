@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 type Row = {
   id: string;
@@ -43,7 +44,7 @@ export default function AuditPage() {
             <div className="flex flex-wrap justify-between gap-2">
               <span className="font-medium text-teal-700">{row.action}</span>
               <span className="text-slate-500">
-                {new Date(row.createdAt).toLocaleString()}
+                {formatUaeDateTime(row.createdAt)}
               </span>
             </div>
             <p className="mt-1 text-slate-600">

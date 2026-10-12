@@ -107,10 +107,6 @@ export default function UpdatesPage() {
             <dt className="text-slate-500">Latest version</dt>
             <dd className="text-slate-900">{info?.version || '…'}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
-            <dt className="text-slate-500">Build</dt>
-            <dd className="text-slate-900">{info?.build || '…'}</dd>
-          </div>
         </dl>
 
         {info?.notes?.length ? (

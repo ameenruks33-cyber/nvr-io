@@ -10,6 +10,7 @@ import { api, clearSession, getSession, setSession } from '@/lib/api';
 import { isMobileAppSurface } from '@/lib/mobile-app';
 import { openWhatsApp } from '@/lib/privacy';
 import { isAdminRole } from '@/lib/roles';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 type WaProvider = 'waha' | 'green-api' | 'meta';
 
@@ -870,7 +871,7 @@ export default function SettingsPage() {
                     {photo.status}
                     {photo.uploadedBy ? ` · ${photo.uploadedBy.name}` : ''}
                     {' · '}
-                    {new Date(photo.createdAt).toLocaleString()}
+                    {formatUaeDateTime(photo.createdAt)}
                   </p>
                 </div>
                 <button

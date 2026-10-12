@@ -6,6 +6,7 @@ import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { api, apiBlob, getSession, GALLERY_UNLOCK_KEY } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 type GalleryItem = {
   id: string;
@@ -169,7 +170,7 @@ function PhotoViewer({
           <p className="text-xs text-white/60">
             {index + 1} / {items.length}
             {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
-            {` · ${new Date(item.createdAt).toLocaleString()}`}
+            {` · ${formatUaeDateTime(item.createdAt)}`}
           </p>
         </div>
         <button

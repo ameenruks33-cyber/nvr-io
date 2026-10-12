@@ -18,32 +18,46 @@ const current = fs.existsSync(file)
   : { version: '1.0.0', notes: [] };
 
 const now = new Date();
+const UAE = 'Asia/Dubai';
 
-// Patch is a UTC YYMMDDHHmm stamp so every deploy (local or Vercel) is newer than the last,
-// even when the committed app-update.json was not bumped.
+function uaeParts(d) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: UAE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const get = (type) => parts.find((p) => p.type === type)?.value || '00';
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+  };
+}
+
+const uaeNow = uaeParts(now);
+
+// Patch is a UAE YYMMDDHHmm stamp so every deploy is newer than the last.
 function bumpPatch(v) {
   const parts = String(v || '1.0.0').split('.').map((n) => parseInt(n, 10) || 0);
   while (parts.length < 3) parts.push(0);
   const stamp = Number(
     [
-      String(now.getUTCFullYear()).slice(2),
-      String(now.getUTCMonth() + 1).padStart(2, '0'),
-      String(now.getUTCDate()).padStart(2, '0'),
-      String(now.getUTCHours()).padStart(2, '0'),
-      String(now.getUTCMinutes()).padStart(2, '0'),
+      uaeNow.year.slice(2),
+      uaeNow.month,
+      uaeNow.day,
+      uaeNow.hour,
+      uaeNow.minute,
     ].join(''),
   );
   parts[2] = Math.max(parts[2] + 1, stamp);
   return parts.slice(0, 3).join('.');
 }
-
-const build = [
-  now.getUTCFullYear(),
-  String(now.getUTCMonth() + 1).padStart(2, '0'),
-  String(now.getUTCDate()).padStart(2, '0'),
-  String(now.getUTCHours()).padStart(2, '0'),
-  String(now.getUTCMinutes()).padStart(2, '0'),
-].join('.');
 
 const noteArg =
   process.argv.slice(2).join(' ').trim() ||
@@ -87,7 +101,6 @@ const icons = {
 const next = {
   app: 'CrickHerose',
   version,
-  build,
   releasedAt: now.toISOString(),
   title: 'CrickHerose update available',
   message:
@@ -169,5 +182,7 @@ if (fs.existsSync(swFile)) {
   fs.writeFileSync(swFile, sw);
 }
 
-console.log(`Updated app-update.json → v${version} (${build})`);
+console.log(
+  `Updated app-update.json → v${version} (${uaeNow.day}/${uaeNow.month}/${uaeNow.year} ${uaeNow.hour}:${uaeNow.minute} UAE)`,
+);
 console.log(`Versioned icons → /${iconDirRel}/`);

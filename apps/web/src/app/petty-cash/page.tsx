@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, getSession, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { formatUaeCalendarDay, formatUaeTime } from '@/lib/uae-datetime';
 
 type Expense = {
   id: string;
@@ -32,14 +33,7 @@ type Summary = {
 
 function dayLabel(date: string, today: string) {
   if (date === today) return 'Today';
-  const d = new Date(`${date}T12:00:00Z`);
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatUaeCalendarDay(date);
 }
 
 const inputClass =
@@ -273,10 +267,7 @@ export default function PettyCashPage() {
                         <p className="text-slate-900">{x.purpose}</p>
                         <p className="text-xs text-slate-500">
                           by {x.recordedBy.name} ·{' '}
-                          {new Date(x.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatUaeTime(x.createdAt)}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">

@@ -8,6 +8,7 @@ import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 const MIN_AED = 100;
 const MAX_AED = 1800;
@@ -531,7 +532,7 @@ function CollectionsPageContent() {
                       {row.notes?.trim() || '—'}
                     </td>
                     <td className="px-4 py-3 text-slate-500">
-                      {new Date(row.collectedAt).toLocaleString()}
+                      {formatUaeDateTime(row.collectedAt)}
                     </td>
                   </tr>
                 );

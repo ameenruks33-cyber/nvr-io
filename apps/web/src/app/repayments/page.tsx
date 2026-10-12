@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 type Row = {
   id: string;
@@ -73,7 +74,7 @@ export default function RepaymentsPage() {
                   </td>
                   <td className="px-4 py-3">{row.collectedBy.name}</td>
                   <td className="px-4 py-3 text-slate-500">
-                    {new Date(row.collectedAt).toLocaleString()}
+                    {formatUaeDateTime(row.collectedAt)}
                   </td>
                 </tr>
               );

@@ -9,6 +9,7 @@ import { api, money } from '@/lib/api';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
+import { formatUaeDateTime } from '@/lib/uae-datetime';
 
 type CustomerDetail = {
   id: string;
@@ -427,7 +428,7 @@ export default function CustomerDetailPage() {
                         {money(a)}
                       </span>
                       <span className="text-slate-500">
-                        {new Date(r.collectedAt).toLocaleString()}
+                        {formatUaeDateTime(r.collectedAt)}
                       </span>
                     </div>
                     {r.notes?.trim() ? (
