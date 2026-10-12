@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { money } from '@/lib/api';
 
@@ -24,6 +25,7 @@ export function TodayPendingNotice({
   items: PendingTodayItem[];
 }) {
   const [closed, setClosed] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -42,26 +44,65 @@ export function TodayPendingNotice({
   function dismiss() {
     sessionStorage.setItem(dismissKey(date), '1');
     setClosed(true);
+    setExpanded(false);
   }
 
   return (
     <div
-      className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200/80 bg-amber-50/95 px-3 py-2.5 text-sm text-amber-950 shadow-sm"
+      className="mb-4 overflow-hidden rounded-lg border border-amber-200/80 bg-amber-50/95 text-sm text-amber-950 shadow-sm"
       role="status"
       aria-live="polite"
     >
-      <p className="min-w-0 flex-1 leading-snug">
-        <span className="font-medium">{label}</span>
-        <span className="text-amber-900"> ({money(totalPending)})</span>.
-      </p>
-      <button
-        type="button"
-        onClick={dismiss}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-lg leading-none text-amber-900/70 hover:bg-amber-100 hover:text-amber-950"
-        aria-label="Close reminder"
-      >
-        ×
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="min-h-11 min-w-0 flex-1 px-3 py-2.5 text-left leading-snug active:bg-amber-100/80"
+          aria-expanded={expanded}
+          aria-controls="pending-customers-list"
+        >
+          <span className="font-medium">{label}</span>
+          <span className="text-amber-900"> ({money(totalPending)})</span>.
+          <span className="mt-0.5 block text-xs font-normal text-amber-800/90">
+            {expanded ? 'Tap to hide names' : 'Tap to see names'}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            dismiss();
+          }}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-lg leading-none text-amber-900/70 hover:bg-amber-100 hover:text-amber-950"
+          aria-label="Close reminder"
+        >
+          ×
+        </button>
+      </div>
+      {expanded ? (
+        <ul
+          id="pending-customers-list"
+          className="max-h-48 overflow-y-auto border-t border-amber-200/80 bg-white/60 px-3 py-2"
+        >
+          {items.map((row) => (
+            <li
+              key={row.loanId}
+              className="flex items-center justify-between gap-2 border-b border-amber-100/80 py-2 last:border-0"
+            >
+              <span className="min-w-0 truncate font-medium text-slate-900">
+                {row.customerName}
+              </span>
+              <Link
+                href={`/collections?customer=${encodeURIComponent(row.customerId)}`}
+                className="shrink-0 text-xs font-medium text-teal-800 underline underline-offset-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {money(row.pendingTodayAed)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
