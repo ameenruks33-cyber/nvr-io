@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { OtpCodeInput } from '@/components/OtpCodeInput';
 import { api, clearSession } from '@/lib/api';
@@ -195,9 +196,8 @@ export default function SecurityPage() {
             <>
               <label className="block text-sm">
                 <span className="text-slate-600">Current password</span>
-                <input
+                <AdminPasswordInput
                   className={inputClass}
-                  type="password"
                   value={phonePassword}
                   onChange={(e) => setPhonePassword(e.target.value)}
                   required
@@ -282,9 +282,8 @@ export default function SecurityPage() {
               <span className="text-slate-600">
                 Password (to turn login codes off)
               </span>
-              <input
+              <AdminPasswordInput
                 className={inputClass}
-                type="password"
                 value={offPassword}
                 onChange={(e) => setOffPassword(e.target.value)}
                 required

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { api, apiBlob, getSession, GALLERY_UNLOCK_KEY } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
@@ -395,9 +396,8 @@ export default function GalleryPage() {
         >
           <label className="block text-sm">
             <span className="text-slate-600">Number password (PIN)</span>
-            <input
+            <AdminPasswordInput
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.4em] outline-none ring-blue-500 focus:ring-2"
-              type="password"
               inputMode="numeric"
               pattern="\d{4,8}"
               maxLength={8}
@@ -453,9 +453,8 @@ export default function GalleryPage() {
             No gallery PIN yet. Set a 4–8 digit number password so the gallery
             can be locked later.
           </p>
-          <input
+          <AdminPasswordInput
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 tracking-[0.3em]"
-            type="password"
             inputMode="numeric"
             maxLength={8}
             value={newPin}
@@ -465,9 +464,8 @@ export default function GalleryPage() {
             placeholder="New PIN"
             required
           />
-          <input
+          <AdminPasswordInput
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 tracking-[0.3em]"
-            type="password"
             inputMode="numeric"
             maxLength={8}
             value={newPinConfirm}

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, getSession } from '@/lib/api';
@@ -236,9 +237,8 @@ export default function UsersPage() {
           </label>
           <label className="block text-sm">
             <span className="text-slate-600">Password</span>
-            <input
+            <AdminPasswordInput
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

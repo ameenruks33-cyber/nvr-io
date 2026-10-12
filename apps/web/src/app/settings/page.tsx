@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AdminPasswordInput } from '@/components/AdminPasswordInput';
 import { AppShell } from '@/components/AppShell';
 import { SuperAdminOnly } from '@/components/SuperAdminOnly';
 import { api, clearSession, getSession, setSession } from '@/lib/api';
@@ -510,9 +511,8 @@ export default function SettingsPage() {
 
           <label className="block text-sm">
             <span className="text-slate-600">Current password</span>
-            <input
+            <AdminPasswordInput
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
-              type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               autoComplete="current-password"
@@ -521,9 +521,8 @@ export default function SettingsPage() {
 
           <label className="block text-sm">
             <span className="text-slate-600">New password</span>
-            <input
+            <AdminPasswordInput
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
-              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               minLength={10}
@@ -533,9 +532,8 @@ export default function SettingsPage() {
 
           <label className="block text-sm">
             <span className="text-slate-600">Confirm new password</span>
-            <input
+            <AdminPasswordInput
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={10}
@@ -656,9 +654,8 @@ export default function SettingsPage() {
                 {waProvider === 'waha' ? 'WAHA API key' : 'API token'}
                 {waTokenSet ? ' (leave blank to keep current)' : ''}
               </span>
-              <input
+              <AdminPasswordInput
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
-                type="password"
                 value={waToken}
                 onChange={(e) => setWaToken(e.target.value)}
                 placeholder={
@@ -752,9 +749,8 @@ export default function SettingsPage() {
           <form onSubmit={saveGalleryPin} className="space-y-3">
             <label className="block text-sm">
               <span className="text-slate-600">New number password</span>
-              <input
+              <AdminPasswordInput
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
-                type="password"
                 inputMode="numeric"
                 pattern="\d{4,8}"
                 maxLength={8}
@@ -769,9 +765,8 @@ export default function SettingsPage() {
             </label>
             <label className="block text-sm">
               <span className="text-slate-600">Confirm number password</span>
-              <input
+              <AdminPasswordInput
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 tracking-[0.35em] outline-none ring-blue-500 focus:ring-2"
-                type="password"
                 inputMode="numeric"
                 pattern="\d{4,8}"
                 maxLength={8}
