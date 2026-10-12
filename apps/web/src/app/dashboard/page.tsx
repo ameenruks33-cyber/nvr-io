@@ -61,7 +61,7 @@ export default function DashboardPage() {
         <TodayPendingNotice date={pending.date} items={pending.items} />
       ) : null}
 
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 pr-0 sm:pr-[min(22rem,40vw)]">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 md:pr-[min(22rem,40vw)]">
         <div>
           <h1 className="font-display text-3xl text-slate-900">Home</h1>
           <p className="mt-1 text-sm text-slate-500">
