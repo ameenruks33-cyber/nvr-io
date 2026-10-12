@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { DragConstraints } from '@/components/DragConstraints';
-import { StateAnimations } from '@/components/StateAnimations';
 import {
   TodayPendingNotice,
   type PendingTodayItem,
@@ -61,7 +59,7 @@ export default function DashboardPage() {
         <TodayPendingNotice date={pending.date} items={pending.items} />
       ) : null}
 
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 md:pr-[min(22rem,40vw)]">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl text-slate-900">Home</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -93,31 +91,6 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
-
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-display text-xl text-slate-900">Motion</h2>
-        <p className="mb-5 mt-1 text-sm text-slate-500">
-          Spring controls and drag-within-bounds demos.
-        </p>
-        <div className="flex flex-col gap-10 xl:flex-row xl:flex-wrap xl:items-start xl:gap-12">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-medium text-slate-700">Position</h3>
-            <p className="mb-4 mt-1 text-sm text-slate-500">
-              Drag the sliders to spring the tile around.
-            </p>
-            <StateAnimations />
-          </div>
-          <div className="shrink-0">
-            <h3 className="text-sm font-medium text-slate-700">
-              Drag constraints
-            </h3>
-            <p className="mb-4 mt-1 text-sm text-slate-500">
-              Drag the tile — it stays inside the box.
-            </p>
-            <DragConstraints />
-          </div>
-        </div>
-      </section>
     </AppShell>
   );
-};
+}
