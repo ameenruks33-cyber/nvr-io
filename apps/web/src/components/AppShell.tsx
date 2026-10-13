@@ -36,7 +36,6 @@ const links: NavLink[] = [
     href: '/admin/monthly-audit',
     label: 'Monthly audit',
     adminOnly: true,
-    desktopOnly: true,
   },
   { href: '/users', label: 'Users', superAdminOnly: true },
   { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
@@ -79,11 +78,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       { href: '/collections', label: 'Collect' },
       { href: '/customers', label: 'People' },
     ];
-    if (isSuperAdmin) {
-      return [...base, { href: '/settings', label: 'Settings' }];
+    if (isAdmin) {
+      return [...base, { href: '/admin/monthly-audit', label: 'Audit' }];
     }
     return [...base, { href: '/gallery', label: 'File' }];
-  }, [isSuperAdmin]);
+  }, [isAdmin]);
 
   useEffect(() => {
     setIsMobileApp(isMobileAppSurface());

@@ -1,5 +1,5 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'crickherose-shell-v1-1-2610132044';
+const CACHE = 'crickherose-shell-v1-1-2610132051';
 // '/' only redirects to /app — never precache redirect responses
 const PRECACHE = ['/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
@@ -10,7 +10,6 @@ function isApiPath(pathname) {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/gallery/') ||
-    pathname.startsWith('/admin/') ||
     pathname.startsWith('/users/') ||
     pathname.startsWith('/records/') ||
     pathname.startsWith('/payments/') ||
