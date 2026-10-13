@@ -66,7 +66,7 @@ async function main() {
     fail(`Protected API should return 401 without token, got ${protectedRoute.status}`);
   }
 
-  const webMarker = 'Tap for full calendar · UAE time';
+  const webMarker = 'nvr-home-calendar-app-icon';
   let webOk = false;
   for (let i = 1; i <= 24; i++) {
     const dash = await fetch(`${WEB}/dashboard?t=${Date.now()}`, {
