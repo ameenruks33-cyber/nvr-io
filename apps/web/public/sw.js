@@ -1,5 +1,5 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'crickherose-shell-v1-1-2610131831';
+const CACHE = 'crickherose-shell-v1-1-2610131839';
 // '/' only redirects to /app — never precache redirect responses
 const PRECACHE = ['/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
@@ -167,6 +167,10 @@ self.addEventListener('fetch', (event) => {
 
   // Page loads: let the network handle redirects natively; offline → cached shell
   if (req.mode === 'navigate') {
+    if (url.pathname === '/dashboard') {
+      event.respondWith(fetch(req, { cache: 'no-store' }));
+      return;
+    }
     event.respondWith(
       fetch(req).catch(() =>
         caches

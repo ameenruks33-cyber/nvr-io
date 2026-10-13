@@ -54,10 +54,9 @@ jobs:
       - name: Install
         if: env.VERCEL_TOKEN != ''
         run: npm install
-      - name: Pull Vercel env
+      - name: Pull Vercel env (monorepo root)
         if: env.VERCEL_TOKEN != ''
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-        working-directory: .
       - name: Build
         if: env.VERCEL_TOKEN != ''
         run: npx vercel build --prod --token=$VERCEL_TOKEN

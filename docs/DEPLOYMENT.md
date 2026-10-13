@@ -35,7 +35,7 @@ Installed mobile app: after web deploy, open **Updates** (`/updates`) → **Upda
 | Service | Status |
 |---------|--------|
 | GitHub `ameenruks33-cyber/nvr-io` | Connected |
-| Vercel `nvr-io-web` | Git-connected |
+| Vercel `nvr-io-web` | Git-connected — **Root Directory must be repo root `.`**, not `apps/web` (subfolder builds fail) |
 | Vercel `nvr-io-api` | Git-connected (`rootDirectory=backend`) |
 | Neon `nvr-io-db` | Attached to API |
 | Cloudflare Wrangler | Logged in; enable R2 in dashboard for uploads |

@@ -18,7 +18,7 @@
     "test": "npm run test -w @jithu-buy/backend",
     "lint": "npm run lint -w @jithu-buy/web",
     "cloud:setup": "node scripts/setup-cloud.mjs",
-    "cloud:deploy:web": "npx vercel deploy --prod --cwd apps/web",
+    "cloud:deploy:web": "npx vercel deploy --prod --yes",
     "cloud:deploy:api": "npx vercel deploy --prod --cwd backend",
     "build:web": "node scripts/bump-app-update.cjs && npm run build -w @jithu-buy/web",
     "ship": "node scripts/bump-app-update.cjs && node scripts/auto-ship.cjs",
