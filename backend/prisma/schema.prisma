@@ -274,6 +274,20 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+/// Auto-generated monthly account audit (admin read-only).
+model MonthlyAuditReport {
+  id          String   @id @default(cuid())
+  periodMonth String   @unique @map("period_month")
+  periodStart String   @map("period_start")
+  periodEnd   String   @map("period_end")
+  title       String
+  generatedAt DateTime @default(now()) @map("generated_at")
+  report      Json
+
+  @@index([generatedAt])
+  @@map("monthly_audit_reports")
+}
+
 /// App-wide settings (gallery number password, WhatsApp auto-receipts, etc.)
 model AppSetting {
   id                      String   @id @default("default")

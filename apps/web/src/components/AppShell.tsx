@@ -6,6 +6,7 @@ import { clearSession, getSession } from '@/lib/api';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { SpinningLogo } from '@/components/SpinningLogo';
 import { isMobileAppSurface } from '@/lib/mobile-app';
+import { isAdminRole } from '@/lib/roles';
 import { startLiveSync } from '@/lib/live-sync';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -15,6 +16,8 @@ type NavLink = {
   desktopOnly?: boolean;
   /** Only Super Admin sees this item */
   superAdminOnly?: boolean;
+  /** Admin + Super Admin only */
+  adminOnly?: boolean;
   /** Only mobile app / phone — hidden on desktop website */
   mobileAppOnly?: boolean;
 };
@@ -29,6 +32,12 @@ const links: NavLink[] = [
   { href: '/petty-cash', label: 'Petty Cash' },
   { href: '/reports', label: 'Summary' },
   { href: '/notifications', label: 'Notes' },
+  {
+    href: '/admin/monthly-audit',
+    label: 'Monthly audit',
+    adminOnly: true,
+    desktopOnly: true,
+  },
   { href: '/users', label: 'Users', superAdminOnly: true },
   { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
   { href: '/settings', label: 'Settings', superAdminOnly: true },
@@ -46,15 +55,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isMobileApp, setIsMobileApp] = useState(false);
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isAdmin = isAdminRole(role);
 
   const visibleLinks = useMemo(
     () =>
       links.filter((link) => {
         if (link.superAdminOnly && !isSuperAdmin) return false;
+        if (link.adminOnly && !isAdmin) return false;
         if (link.mobileAppOnly && !isMobileApp) return false;
         return true;
       }),
-    [isSuperAdmin, isMobileApp],
+    [isSuperAdmin, isAdmin, isMobileApp],
   );
 
   const mobileMenuLinks = useMemo(

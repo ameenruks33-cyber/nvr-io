@@ -141,6 +141,26 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+    try {
+      await this.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "monthly_audit_reports" (
+          "id" TEXT NOT NULL,
+          "period_month" TEXT NOT NULL,
+          "period_start" TEXT NOT NULL,
+          "period_end" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "generated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "report" JSONB NOT NULL,
+          CONSTRAINT "monthly_audit_reports_pkey" PRIMARY KEY ("id")
+        );
+      `);
+      await this.$executeRawUnsafe(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "monthly_audit_reports_period_month_key"
+        ON "monthly_audit_reports"("period_month");
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
     // 1800 is given and 2000 is repaid. Only touches rows still on the old
     // 1800/1800 setup, so it runs once.
     try {

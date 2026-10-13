@@ -1,7 +1,7 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610131839",
-  "releasedAt": "2026-10-13T14:39:23.839Z",
+  "version": "1.1.2610132023",
+  "releasedAt": "2026-10-13T16:23:36.632Z",
   "title": "CrickHerose update available",
   "message": "Fix Vercel monorepo deploy; new Home calendar live",
   "notes": [
@@ -19,10 +19,10 @@
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610131839/favicon.png",
-    "icon192": "/icons/v1.1.2610131839/icon-192.png",
-    "icon512": "/icons/v1.1.2610131839/icon-512.png",
-    "apple": "/icons/v1.1.2610131839/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610131839/logo.jpg"
+    "favicon": "/icons/v1.1.2610132023/favicon.png",
+    "icon192": "/icons/v1.1.2610132023/icon-192.png",
+    "icon512": "/icons/v1.1.2610132023/icon-512.png",
+    "apple": "/icons/v1.1.2610132023/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610132023/logo.jpg"
   }
 }
