@@ -14,6 +14,7 @@ import {
 } from '@/lib/mobile-app';
 
 const STORAGE_KEY = 'nvr_app_version';
+const DISMISS_KEY = 'nvr_update_dismissed';
 
 export default function UpdatesPage() {
   const router = useRouter();
@@ -55,6 +56,17 @@ export default function UpdatesPage() {
   async function enableNotifications() {
     if (!('Notification' in window)) return;
     await Notification.requestPermission();
+  }
+
+  async function clearNotificationBar() {
+    if (!info) return;
+    setBusy(true);
+    try {
+      sessionStorage.setItem(DISMISS_KEY, info.version);
+      await clearUpdateNotifications(info.version);
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!allowed) {
@@ -125,6 +137,14 @@ export default function UpdatesPage() {
             className="w-full rounded-lg bg-red-600 px-4 py-3 font-medium text-white hover:bg-red-500 disabled:opacity-60"
           >
             {busy ? 'Updating…' : 'Update now'}
+          </button>
+          <button
+            type="button"
+            disabled={busy || !info}
+            onClick={() => void clearNotificationBar()}
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-blue-50 disabled:opacity-60"
+          >
+            Clear notification
           </button>
           <button
             type="button"

@@ -31,6 +31,7 @@ export type AppUpdateInfo = {
 const STORAGE_KEY = 'nvr_app_version';
 const CHECK_MS = 20_000;
 const NOTIFY_ASKED_KEY = 'nvr_notify_asked';
+const DISMISS_KEY = 'nvr_update_dismissed';
 
 function cmpVersion(a: string, b: string) {
   const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
@@ -77,11 +78,18 @@ export function UpdateNotifier() {
   const applyUpdate = useCallback(async (info: AppUpdateInfo) => {
     setBusy(true);
     try {
+      sessionStorage.removeItem(DISMISS_KEY);
       await clearUpdateNotifications(info.version);
       await applyAppUpdate(info, '/dashboard?updated=1');
     } finally {
       setBusy(false);
     }
+  }, []);
+
+  const clearUpdateAlert = useCallback(async (info: AppUpdateInfo) => {
+    sessionStorage.setItem(DISMISS_KEY, info.version);
+    await clearUpdateNotifications(info.version);
+    setUpdate(null);
   }, []);
 
   const maybeNotify = useCallback(async (info: AppUpdateInfo) => {
@@ -138,6 +146,10 @@ export function UpdateNotifier() {
         return;
       }
       if (cmpVersion(info.version, stored) > 0) {
+        if (sessionStorage.getItem(DISMISS_KEY) === info.version) {
+          setUpdate(null);
+          return;
+        }
         setUpdate(info);
         void maybeNotify(info);
       } else {
@@ -299,13 +311,21 @@ export function UpdateNotifier() {
                 v{update.version} · {update.message}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link
                 href={safeUpdatePath(update.updateUrl)}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-blue-700 hover:bg-blue-50"
               >
                 Details
               </Link>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void clearUpdateAlert(update)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-white"
+              >
+                Clear alert
+              </button>
               <button
                 type="button"
                 disabled={busy}

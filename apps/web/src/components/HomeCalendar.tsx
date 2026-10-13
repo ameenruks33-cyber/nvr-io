@@ -69,8 +69,9 @@ function AnalogClock({ hours, minutes }: { hours: number; minutes: number }) {
 }
 
 export function HomeCalendar() {
-  const [today, setToday] = useState(uaeToday);
-  const [clock, setClock] = useState(() => uaeClockParts());
+  const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState('');
+  const [clock, setClock] = useState({ hours: 0, minutes: 0 });
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => uaeToday().slice(0, 7));
   const [reminders, setReminders] = useState<Record<string, string>>({});
@@ -85,6 +86,7 @@ export function HomeCalendar() {
   }, [today]);
 
   useEffect(() => {
+    setMounted(true);
     const tick = () => {
       setToday(uaeToday());
       setClock(uaeClockParts());
@@ -106,6 +108,7 @@ export function HomeCalendar() {
   }, []);
 
   useEffect(() => {
+    if (!today) return;
     void loadReminders(today.slice(0, 7)).catch(() => setReminders({}));
   }, [today, loadReminders]);
 
@@ -183,7 +186,16 @@ export function HomeCalendar() {
     setOpen(true);
   }
 
-  const monthLabel = uaeMonthYearLabel(today.slice(0, 7));
+  const monthLabel = today ? uaeMonthYearLabel(today.slice(0, 7)) : '';
+
+  if (!mounted || !today) {
+    return (
+      <div
+        className="mx-auto mb-6 h-[11rem] w-full max-w-[17.5rem] animate-pulse rounded-3xl bg-gradient-to-br from-blue-400/40 to-blue-600/40"
+        aria-hidden
+      />
+    );
+  }
 
   return (
     <>
@@ -339,14 +351,17 @@ export function HomeCalendar() {
                   >
                     {busy ? 'Saving…' : 'Save reminder'}
                   </button>
-                  {reminders[selectedDay] ? (
+                  {reminders[selectedDay] || draft.trim() ? (
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => void clearReminder()}
+                      onClick={() => {
+                        if (reminders[selectedDay]) void clearReminder();
+                        else setDraft('');
+                      }}
                       className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                     >
-                      Remove
+                      Clear
                     </button>
                   ) : null}
                 </div>

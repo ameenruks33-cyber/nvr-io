@@ -66,6 +66,31 @@ async function main() {
     fail(`Protected API should return 401 without token, got ${protectedRoute.status}`);
   }
 
+  const webMarker = 'Tap for full calendar · UAE time';
+  let webOk = false;
+  for (let i = 1; i <= 24; i++) {
+    const dash = await fetch(`${WEB}/dashboard?t=${Date.now()}`, {
+      redirect: 'follow',
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    const html = await dash.text();
+    if (dash.status === 200 && html.includes(webMarker)) {
+      console.log(`Web dashboard includes latest Home calendar (attempt ${i})`);
+      webOk = true;
+      break;
+    }
+    console.log(
+      `Web deploy marker missing (attempt ${i}/24) — waiting 30s for Vercel Git build…`,
+    );
+    await new Promise((r) => setTimeout(r, 30_000));
+  }
+  if (!webOk) {
+    fail(
+      `Web still serving an old Home build (expected "${webMarker}"). ` +
+        'Check Vercel Git link for nvr-io-web or run Deploy NVR.io workflow manually with VERCEL_TOKEN.',
+    );
+  }
+
   if (failures.length) {
     console.error('\nVerification failed:', failures.length, 'issue(s)');
     process.exit(1);
