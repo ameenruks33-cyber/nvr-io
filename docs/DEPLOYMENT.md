@@ -20,6 +20,16 @@ In this workspace:
 
 You do **not** need a manual `vercel deploy` for routine updates once Git is linked.
 
+### If production looks old (no Clear alert / wrong calendar)
+
+GitHub `main` can be ahead of what **nvr-io-web** serves when Vercel Git auto-build stops.
+
+1. Open [Vercel → nvr-io-web → Deployments](https://vercel.com) and confirm the latest commit matches GitHub `main`.
+2. If not, click **Redeploy** on the latest successful build, or fix **Settings → Git** (repo `ameenruks33-cyber/nvr-io`, branch `main`).
+3. Optional backup: add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and project IDs below as GitHub repo secrets, then run **Actions → Deploy NVR.io → Run workflow** (backup job deploys web + API).
+
+Installed mobile app: after web deploy, open **Updates** (`/updates`) → **Update now** or **Clear notification**.
+
 ## One-time links (already done for this project)
 
 | Service | Status |

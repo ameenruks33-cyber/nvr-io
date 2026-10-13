@@ -28,57 +28,72 @@ jobs:
 
   deploy-web:
     name: Deploy web → Vercel (backup)
-    # Secrets cannot be used in job-level `if` on push; run manually when Git deploy is stuck.
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: notify-git-deploy
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
     steps:
+      - name: Skip without Vercel token
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "::warning::VERCEL_TOKEN is not set — skipping backup web deploy."
+          echo "If nvr-io-web.vercel.app is stale, add secrets (docs/DEPLOYMENT.md) and re-run this workflow,"
+          echo "or redeploy from the Vercel dashboard → nvr-io-web → Deployments → Redeploy."
+
       - uses: actions/checkout@v4
+        if: env.VERCEL_TOKEN != ''
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
+        if: env.VERCEL_TOKEN != ''
         with:
           node-version: "22"
           cache: npm
       - name: Install
+        if: env.VERCEL_TOKEN != ''
         run: npm install
       - name: Pull Vercel env
-        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        if: env.VERCEL_TOKEN != ''
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
         working-directory: .
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
       - name: Build
-        run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
+        if: env.VERCEL_TOKEN != ''
+        run: npx vercel build --prod --token=$VERCEL_TOKEN
       - name: Deploy
-        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
+        if: env.VERCEL_TOKEN != ''
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
   deploy-api:
     name: Deploy API → Vercel (backup)
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: notify-git-deploy
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
     steps:
+      - name: Skip without Vercel token
+        if: env.VERCEL_TOKEN == ''
+        run: echo "::warning::VERCEL_TOKEN is not set — skipping backup API deploy."
+
       - uses: actions/checkout@v4
+        if: env.VERCEL_TOKEN != ''
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
+        if: env.VERCEL_TOKEN != ''
         with:
           node-version: "22"
           cache: npm
       - name: Install
+        if: env.VERCEL_TOKEN != ''
         run: npm install
       - name: Generate Prisma
+        if: env.VERCEL_TOKEN != ''
         run: npx prisma generate
         working-directory: backend
       - name: Deploy
-        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd backend
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
+        if: env.VERCEL_TOKEN != ''
+        run: npx vercel deploy --prod --token=$VERCEL_TOKEN --cwd backend
