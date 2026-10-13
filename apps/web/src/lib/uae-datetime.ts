@@ -28,6 +28,18 @@ export function formatUaeTime(value: string | Date): string {
 
 /** `YYYY-MM-DD` calendar day in UAE. */
 /** Current UAE calendar day `YYYY-MM-DD`. */
+export function uaeClockParts(d = new Date()): { hours: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: UAE_TIME_ZONE,
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).formatToParts(d);
+  const hours = Number(parts.find((p) => p.type === 'hour')?.value || 0);
+  const minutes = Number(parts.find((p) => p.type === 'minute')?.value || 0);
+  return { hours, minutes };
+}
+
 export function uaeToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: UAE_TIME_ZONE }).format(
     new Date(),

@@ -6,11 +6,11 @@ import {
   addUaeCalendarDays,
   daysInUaeMonth,
   shiftUaeMonth,
+  uaeClockParts,
   uaeDayNumber,
   uaeMonthYearLabel,
   uaeToday,
   uaeWeekdayIndex,
-  uaeWeekdayShort,
 } from '@/lib/uae-datetime';
 
 type ReminderRow = {
@@ -19,55 +19,58 @@ type ReminderRow = {
   message: string;
 };
 
-function CalendarCard({
-  day,
-  emphasis,
-  tilt,
-  zIndex,
-}: {
-  day: string;
-  emphasis?: boolean;
-  tilt: string;
-  zIndex: number;
-}) {
+function AnalogClock({ hours, minutes }: { hours: number; minutes: number }) {
+  const minuteAngle = minutes * 6;
+  const hourAngle = (hours % 12) * 30 + minutes * 0.5;
   return (
-    <div
-      className={`pointer-events-none absolute w-[5.5rem] select-none sm:w-[6.25rem] ${tilt}`}
-      style={{ zIndex }}
-      aria-hidden
-    >
-      <div className="overflow-hidden rounded-2xl shadow-lg">
-        <div className="relative bg-gradient-to-b from-red-500 to-red-600 px-3 pb-2 pt-3 text-center">
-          <div className="mx-auto mb-1 flex justify-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-white/40" />
-            <span className="h-2 w-2 rounded-full bg-white/40" />
-          </div>
-          <p className="text-xs font-bold tracking-wide text-white">
-            {uaeWeekdayShort(day)}
-          </p>
-        </div>
-        <div
-          className={`px-2 py-4 text-center ${
-            emphasis
-              ? 'bg-white/90 backdrop-blur-sm'
-              : 'bg-slate-800 text-white'
-          }`}
-        >
-          <p
-            className={`font-display text-4xl leading-none ${
-              emphasis ? 'text-slate-900' : 'text-white'
-            }`}
-          >
-            {uaeDayNumber(day)}
-          </p>
-        </div>
-      </div>
-    </div>
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden>
+      <circle cx="36" cy="36" r="34" fill="#1d4ed8" />
+      <circle cx="36" cy="36" r="28" fill="#fff" />
+      {[...Array(12)].map((_, i) => {
+        const a = (i * 30 * Math.PI) / 180;
+        const x1 = 36 + Math.sin(a) * 22;
+        const y1 = 36 - Math.cos(a) * 22;
+        const x2 = 36 + Math.sin(a) * 25;
+        const y2 = 36 - Math.cos(a) * 25;
+        return (
+          <line
+            key={i}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#1d4ed8"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        );
+      })}
+      <line
+        x1="36"
+        y1="36"
+        x2={36 + Math.sin((hourAngle * Math.PI) / 180) * 14}
+        y2={36 - Math.cos((hourAngle * Math.PI) / 180) * 14}
+        stroke="#1e3a8a"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <line
+        x1="36"
+        y1="36"
+        x2={36 + Math.sin((minuteAngle * Math.PI) / 180) * 20}
+        y2={36 - Math.cos((minuteAngle * Math.PI) / 180) * 20}
+        stroke="#1e40af"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="36" cy="36" r="3" fill="#dc2626" />
+    </svg>
   );
 }
 
 export function HomeCalendar() {
   const [today, setToday] = useState(uaeToday);
+  const [clock, setClock] = useState(() => uaeClockParts());
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => uaeToday().slice(0, 7));
   const [reminders, setReminders] = useState<Record<string, string>>({});
@@ -76,19 +79,18 @@ export function HomeCalendar() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
 
-  const triplet = useMemo(
-    () => ({
-      prev: addUaeCalendarDays(today, -1),
-      current: today,
-      next: addUaeCalendarDays(today, 1),
-    }),
-    [today],
-  );
+  const previewDays = useMemo(() => {
+    const start = addUaeCalendarDays(today, -10);
+    return Array.from({ length: 20 }, (_, i) => addUaeCalendarDays(start, i));
+  }, [today]);
 
   useEffect(() => {
-    const tick = () => setToday(uaeToday());
+    const tick = () => {
+      setToday(uaeToday());
+      setClock(uaeClockParts());
+    };
     tick();
-    const id = window.setInterval(tick, 60_000);
+    const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -102,6 +104,10 @@ export function HomeCalendar() {
     }
     setReminders(map);
   }, []);
+
+  useEffect(() => {
+    void loadReminders(today.slice(0, 7)).catch(() => setReminders({}));
+  }, [today, loadReminders]);
 
   useEffect(() => {
     if (!open) return;
@@ -177,25 +183,58 @@ export function HomeCalendar() {
     setOpen(true);
   }
 
+  const monthLabel = uaeMonthYearLabel(today.slice(0, 7));
+
   return (
     <>
       <button
         type="button"
         onClick={() => openMonth()}
-        className="group relative mx-auto mb-6 flex h-[9.5rem] w-full max-w-xs items-center justify-center rounded-2xl bg-gradient-to-b from-slate-100 to-slate-200/80 ring-1 ring-slate-200 transition hover:from-slate-50 hover:ring-accent/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="group mx-auto mb-6 block w-full max-w-[17.5rem] rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-4 shadow-lg ring-1 ring-blue-400/40 transition hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         aria-label="Open calendar and reminders"
       >
-        <CalendarCard day={triplet.prev} tilt="-rotate-6 -translate-x-14" zIndex={1} />
-        <CalendarCard
-          day={triplet.current}
-          emphasis
-          tilt="-translate-y-1"
-          zIndex={3}
-        />
-        <CalendarCard day={triplet.next} tilt="rotate-6 translate-x-14" zIndex={2} />
-        <span className="absolute bottom-2 text-xs font-medium text-slate-600 group-hover:text-accent">
-          Tap for full calendar
-        </span>
+        <div className="relative pb-2">
+          <div className="overflow-hidden rounded-2xl bg-white shadow-md">
+            <div className="bg-gradient-to-b from-red-500 to-red-600 px-3 pb-2 pt-2">
+              <div className="mb-1 flex justify-center gap-3">
+                <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-b from-slate-200 to-slate-400 shadow-inner" />
+                <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-b from-slate-200 to-slate-400 shadow-inner" />
+              </div>
+              <p className="text-center text-xs font-semibold tracking-wide text-white">
+                {monthLabel}
+              </p>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5 p-2.5">
+              {previewDays.map((day) => {
+                const isToday = day === today;
+                const hasReminder = Boolean(reminders[day]);
+                return (
+                  <span
+                    key={day}
+                    className={`flex aspect-square items-center justify-center rounded-md text-[10px] font-semibold sm:text-xs ${
+                      isToday
+                        ? 'bg-red-500 text-white shadow-sm'
+                        : hasReminder
+                          ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300'
+                          : 'bg-slate-200/80 text-slate-600'
+                    }`}
+                  >
+                    {uaeDayNumber(day)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className="absolute -bottom-1 -right-1 rounded-full bg-blue-600 p-0.5 shadow-lg ring-2 ring-white"
+            aria-hidden
+          >
+            <AnalogClock hours={clock.hours} minutes={clock.minutes} />
+          </div>
+        </div>
+        <p className="mt-3 text-center text-xs font-medium text-blue-100 group-hover:text-white">
+          Tap for full calendar · UAE time
+        </p>
       </button>
 
       {open ? (
@@ -255,7 +294,7 @@ export function HomeCalendar() {
                     onClick={() => setSelectedDay(day)}
                     className={`relative flex h-10 flex-col items-center justify-center rounded-lg text-sm ${
                       day === today
-                        ? 'bg-accent font-semibold text-white'
+                        ? 'bg-red-500 font-semibold text-white'
                         : selectedDay === day
                           ? 'bg-blue-100 font-medium text-slate-900'
                           : 'text-slate-800 hover:bg-slate-100'
@@ -273,7 +312,10 @@ export function HomeCalendar() {
             </div>
 
             {selectedDay ? (
-              <form onSubmit={saveReminder} className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+              <form
+                onSubmit={saveReminder}
+                className="mt-4 space-y-2 border-t border-slate-200 pt-4"
+              >
                 <p className="text-sm font-medium text-slate-900">
                   Reminder · {selectedDay}
                 </p>
