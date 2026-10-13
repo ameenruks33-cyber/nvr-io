@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { applyAppUpdate } from '@/lib/apply-app-update';
+import { cmpVersion, getInstalledAppVersion } from '@/lib/app-version';
 import {
   clearUpdateNotifications,
   isMobileAppSurface,
@@ -28,21 +29,9 @@ export type AppUpdateInfo = {
   };
 };
 
-const STORAGE_KEY = 'nvr_app_version';
 const CHECK_MS = 20_000;
 const NOTIFY_ASKED_KEY = 'nvr_notify_asked';
 const DISMISS_KEY = 'nvr_update_dismissed';
-
-function cmpVersion(a: string, b: string) {
-  const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const d = (pa[i] || 0) - (pb[i] || 0);
-    if (d !== 0) return d;
-  }
-  return 0;
-}
 
 async function fetchUpdateFile(): Promise<AppUpdateInfo | null> {
   const res = await fetch(`/app-update.json?t=${Date.now()}`, {
@@ -132,21 +121,11 @@ export function UpdateNotifier() {
     try {
       const info = await fetchUpdateFile();
       if (!info?.version) return;
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) {
-        localStorage.setItem(STORAGE_KEY, info.version);
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.getRegistration();
-          reg?.active?.postMessage({
-            type: 'ACK_UPDATE',
-            version: info.version,
-          });
-        }
-        setUpdate(null);
-        return;
-      }
-      if (cmpVersion(info.version, stored) > 0) {
-        if (sessionStorage.getItem(DISMISS_KEY) === info.version) {
+      const installed = getInstalledAppVersion();
+      if (cmpVersion(info.version, installed) > 0) {
+        const dismissed =
+          !info.force && sessionStorage.getItem(DISMISS_KEY) === info.version;
+        if (dismissed) {
           setUpdate(null);
           return;
         }

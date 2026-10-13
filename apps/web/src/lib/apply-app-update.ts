@@ -1,9 +1,8 @@
 'use client';
 
 import type { AppUpdateInfo } from '@/components/UpdateNotifier';
+import { persistInstalledAppVersion } from '@/lib/app-version';
 import { clearUpdateNotifications } from '@/lib/mobile-app';
-
-const STORAGE_KEY = 'nvr_app_version';
 
 type UpdateIcons = {
   favicon?: string;
@@ -103,7 +102,7 @@ export async function applyAppUpdate(
     await Promise.all(keys.map((k) => caches.delete(k)));
   }
 
-  localStorage.setItem(STORAGE_KEY, info.version);
+  persistInstalledAppVersion(info.version);
   if (info.iconsUpdated) {
     sessionStorage.setItem('nvr_icon_updated', info.version);
   }

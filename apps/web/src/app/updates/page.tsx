@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation';
 import type { AppUpdateInfo } from '@/components/UpdateNotifier';
 import { applyAppUpdate } from '@/lib/apply-app-update';
 import { APP_ICONS } from '@/lib/app-branding';
+import { getInstalledAppVersion } from '@/lib/app-version';
 import {
   clearUpdateNotifications,
   isDesktopWebsite,
   isMobileAppSurface,
 } from '@/lib/mobile-app';
 
-const STORAGE_KEY = 'nvr_app_version';
 const DISMISS_KEY = 'nvr_update_dismissed';
 
 export default function UpdatesPage() {
@@ -31,7 +31,7 @@ export default function UpdatesPage() {
       return;
     }
     setAllowed(true);
-    setCurrent(localStorage.getItem(STORAGE_KEY) || 'not installed yet');
+    setCurrent(getInstalledAppVersion());
     if (sessionStorage.getItem('nvr_icon_updated')) {
       setIconRefreshed(true);
       sessionStorage.removeItem('nvr_icon_updated');

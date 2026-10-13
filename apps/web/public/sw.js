@@ -1,5 +1,5 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'crickherose-shell-v1-1-2610132037';
+const CACHE = 'crickherose-shell-v1-1-2610132044';
 // '/' only redirects to /app — never precache redirect responses
 const PRECACHE = ['/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
@@ -104,16 +104,31 @@ async function showUpdateNotification(info) {
   }
 }
 
+function bundleVersionFromCacheName() {
+  const m = /^crickherose-shell-v(.+)$/.exec(CACHE);
+  if (!m) return null;
+  return m[1].replace(/-/g, '.');
+}
+
+async function resolveInstalledVersion() {
+  let stored = await readStoredVersion();
+  const bundle = bundleVersionFromCacheName();
+  if (bundle) {
+    if (!stored || cmpVersion(stored, bundle) > 0) {
+      stored = bundle;
+      await writeStoredVersion(bundle);
+    }
+  }
+  return stored;
+}
+
 async function checkForUpdateAndNotify() {
   try {
     const info = await fetchUpdateInfo();
     if (!info?.version) return null;
 
-    const stored = await readStoredVersion();
-    if (!stored) {
-      await writeStoredVersion(info.version);
-      return null;
-    }
+    const stored = await resolveInstalledVersion();
+    if (!stored) return null;
 
     if (cmpVersion(info.version, stored) > 0) {
       await notifyClients(info);
@@ -167,12 +182,8 @@ self.addEventListener('fetch', (event) => {
 
   // Page loads: let the network handle redirects natively; offline → cached shell
   if (req.mode === 'navigate') {
-    if (url.pathname === '/dashboard') {
-      event.respondWith(fetch(req, { cache: 'no-store' }));
-      return;
-    }
     event.respondWith(
-      fetch(req).catch(() =>
+      fetch(req, { cache: 'no-store' }).catch(() =>
         caches
           .match(url.pathname)
           .then((r) => unredirect(r) || caches.match('/app'))
