@@ -213,10 +213,11 @@ export function HomeCalendar() {
     <>
       <span className="sr-only">{HOME_CALENDAR_MARKER}</span>
 
+      <div className="mb-4 w-fit max-w-full self-start">
       {!mounted || !today ? (
         <div
           data-calendar={HOME_CALENDAR_MARKER}
-          className="mx-auto mb-4 aspect-[4/5] w-[10.5rem] max-w-[85%] animate-pulse rounded-2xl bg-gradient-to-br from-blue-400/50 to-blue-700/50 shadow-inner sm:w-44"
+          className="aspect-[4/5] w-[10.5rem] max-w-full animate-pulse rounded-2xl bg-gradient-to-br from-blue-400/50 to-blue-700/50 shadow-inner sm:w-44"
           aria-hidden
         />
       ) : (
@@ -224,7 +225,7 @@ export function HomeCalendar() {
           type="button"
           data-calendar={HOME_CALENDAR_MARKER}
           onClick={() => openMonth()}
-          className="group mx-auto mb-4 flex w-[10.5rem] max-w-[85%] touch-manipulation flex-col rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-2 shadow-md ring-1 ring-blue-400/50 transition active:scale-[0.98] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-44 sm:p-2.5"
+          className="group flex w-[10.5rem] max-w-full touch-manipulation flex-col rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-2 shadow-md ring-1 ring-blue-400/50 transition active:scale-[0.98] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-44 sm:p-2.5"
           aria-label="Open calendar and reminders"
         >
           <div className="relative w-full pb-2">
@@ -283,6 +284,7 @@ export function HomeCalendar() {
           ) : null}
         </button>
       )}
+      </div>
 
       {open ? (
         <div
