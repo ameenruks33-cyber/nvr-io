@@ -234,13 +234,6 @@ function CollectionsPageContent() {
     <AppShell>
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
-        <p className="mt-1 max-w-xl text-sm text-slate-500">
-          Collect from registered customers. Add {money(MIN_AED)} every day
-          while the account is open. {money(MAX_AED)} is given and{' '}
-          {money(TOTAL_AED)} is repaid — the account closes once the full{' '}
-          {money(TOTAL_AED)} is collected. If today&apos;s {money(MIN_AED)} is
-          not recorded, staff and admin get a reminder naming the customer.
-        </p>
       </header>
 
       <form onSubmit={onSearch} className="mb-4 flex gap-2">
