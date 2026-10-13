@@ -216,7 +216,7 @@ export function HomeCalendar() {
       {!mounted || !today ? (
         <div
           data-calendar={HOME_CALENDAR_MARKER}
-          className="mx-auto mb-6 aspect-[4/5] w-full max-w-[20rem] animate-pulse rounded-[1.75rem] bg-gradient-to-br from-blue-400/50 to-blue-700/50 shadow-inner sm:max-w-[22rem]"
+          className="mx-auto mb-4 aspect-[4/5] w-[10.5rem] max-w-[85%] animate-pulse rounded-2xl bg-gradient-to-br from-blue-400/50 to-blue-700/50 shadow-inner sm:w-44"
           aria-hidden
         />
       ) : (
@@ -224,22 +224,22 @@ export function HomeCalendar() {
           type="button"
           data-calendar={HOME_CALENDAR_MARKER}
           onClick={() => openMonth()}
-          className="group mx-auto mb-6 flex w-full max-w-[20rem] touch-manipulation flex-col rounded-[1.75rem] bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-3 shadow-lg ring-1 ring-blue-400/50 transition active:scale-[0.98] hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:max-w-[22rem] sm:p-4"
+          className="group mx-auto mb-4 flex w-[10.5rem] max-w-[85%] touch-manipulation flex-col rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-2 shadow-md ring-1 ring-blue-400/50 transition active:scale-[0.98] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-44 sm:p-2.5"
           aria-label="Open calendar and reminders"
         >
-          <div className="relative w-full pb-3 sm:pb-4">
-            <div className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
-              <div className="bg-gradient-to-b from-red-500 to-red-600 px-3 pb-2.5 pt-2.5 sm:px-4">
-                <div className="mb-1.5 flex justify-center gap-4">
-                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-b from-slate-100 to-slate-400 shadow-sm" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-b from-slate-100 to-slate-400 shadow-sm" />
+          <div className="relative w-full pb-2">
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+              <div className="bg-gradient-to-b from-red-500 to-red-600 px-2 pb-1.5 pt-1.5">
+                <div className="mb-0.5 flex justify-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-b from-slate-100 to-slate-400 shadow-sm" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-b from-slate-100 to-slate-400 shadow-sm" />
                 </div>
-                <p className="text-center text-[11px] font-bold uppercase tracking-wider text-white sm:text-xs">
+                <p className="text-center text-[9px] font-bold uppercase tracking-wide text-white">
                   {monthLabel}
                 </p>
               </div>
               <div
-                className="grid grid-cols-5 gap-1 p-2 sm:gap-1.5 sm:p-3"
+                className="grid grid-cols-5 gap-0.5 p-1.5"
                 aria-hidden
               >
                 {previewDays.map((day) => {
@@ -248,7 +248,7 @@ export function HomeCalendar() {
                   return (
                     <span
                       key={day}
-                      className={`flex aspect-square min-h-[1.75rem] items-center justify-center rounded-md text-[11px] font-bold shadow-sm sm:min-h-[2rem] sm:text-xs ${
+                      className={`flex aspect-square items-center justify-center rounded-[3px] text-[8px] font-bold leading-none sm:text-[9px] ${
                         isToday
                           ? 'bg-red-500 text-white ring-1 ring-red-600'
                           : hasReminder
@@ -263,21 +263,21 @@ export function HomeCalendar() {
               </div>
             </div>
             <div
-              className="pointer-events-none absolute -bottom-0.5 -right-0.5 rounded-full bg-blue-600 p-0.5 shadow-lg ring-[3px] ring-white sm:-bottom-1 sm:-right-1"
+              className="pointer-events-none absolute -bottom-0.5 -right-0.5 rounded-full bg-blue-600 p-px shadow-md ring-2 ring-white"
               aria-hidden
             >
               <AnalogClock
                 hours={clock.hours}
                 minutes={clock.minutes}
-                className="h-[3.75rem] w-[3.75rem] sm:h-[4.5rem] sm:w-[4.5rem]"
+                className="h-9 w-9 sm:h-10 sm:w-10"
               />
             </div>
           </div>
-          <p className="text-center text-[11px] font-semibold text-blue-100 sm:text-xs">
+          <p className="text-center text-[9px] font-semibold leading-tight text-blue-100">
             Tap for full calendar
           </p>
           {timeLabel ? (
-            <p className="mt-0.5 text-center text-[10px] font-medium text-blue-200/90 sm:text-[11px]">
+            <p className="mt-px text-center text-[8px] font-medium leading-tight text-blue-200/90">
               {timeLabel} · UAE
             </p>
           ) : null}
