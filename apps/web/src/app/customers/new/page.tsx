@@ -437,9 +437,9 @@ export default function NewCustomerPage() {
             method: 'POST',
             body: fd,
           });
-          setPhotoMsg('Photo saved.');
+          setPhotoStatus('Photo saved.');
         } catch (photoErr) {
-          setPhotoMsg(
+          setPhotoStatus(
             photoErr instanceof Error
               ? `Person saved. Photo failed: ${photoErr.message}`
               : 'Person saved. Photo failed — retry from their profile.',
