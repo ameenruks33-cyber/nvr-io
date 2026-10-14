@@ -10,7 +10,7 @@ type Props = {
   compact?: boolean;
 };
 
-/** Admin-only control — parent must not render for collectors. */
+/** Super-admin-only control — parent must not render for other roles. */
 export function DeleteCollectionButton({
   repaymentId,
   receiptNumber,

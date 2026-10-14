@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141148",
-  "releasedAt": "2026-10-14T07:48:08.523Z",
+  "version": "1.1.2610141153",
+  "releasedAt": "2026-10-14T07:53:27.351Z",
   "title": "CrickHerose update available",
-  "message": "\\ Add quick calculator on Petty Cash page\\",
+  "message": "\\ Super Admin only for petty cash edit/delete and collection delete\\",
   "notes": [
+    "\\ Super Admin only for petty cash edit/delete and collection delete\\",
     "\\ Add quick calculator on Petty Cash page\\",
     "\\ Separate petty cash totals: general vs loan expense cards\\",
     "\\ Petty cash: customer cash vs general expense forms\\",
     "Edit petty cash expenses in daily log",
     "Petty cash person payments separate from general expenses",
     "Show total expenses on Petty Cash page",
-    "Sync service worker cache for auto-ship",
-    "Admin can delete collections from Collection and Receipts"
+    "Sync service worker cache for auto-ship"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141148/favicon.png",
-    "icon192": "/icons/v1.1.2610141148/icon-192.png",
-    "icon512": "/icons/v1.1.2610141148/icon-512.png",
-    "apple": "/icons/v1.1.2610141148/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141148/logo.jpg"
+    "favicon": "/icons/v1.1.2610141153/favicon.png",
+    "icon192": "/icons/v1.1.2610141153/icon-192.png",
+    "icon512": "/icons/v1.1.2610141153/icon-512.png",
+    "apple": "/icons/v1.1.2610141153/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141153/logo.jpg"
   }
 }

@@ -7,7 +7,7 @@ import { CustomerPhoto } from '@/components/CustomerPhoto';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
-import { isAdminRole } from '@/lib/roles';
+import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
@@ -60,7 +60,7 @@ export default function CustomerDetailPage() {
   const [waLink, setWaLink] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
@@ -68,7 +68,7 @@ export default function CustomerDetailPage() {
   }
 
   useEffect(() => {
-    setIsAdmin(isAdminRole(getSession()?.user.role));
+    setIsSuperAdmin(isSuperAdminRole(getSession()?.user.role));
   }, []);
 
   async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
@@ -437,7 +437,7 @@ export default function CustomerDetailPage() {
                       <span className="text-slate-500">
                         {formatUaeDateTime(r.collectedAt)}
                       </span>
-                      {isAdmin ? (
+                      {isSuperAdmin ? (
                         <DeleteCollectionButton
                           repaymentId={r.id}
                           receiptNumber={r.receiptNumber}

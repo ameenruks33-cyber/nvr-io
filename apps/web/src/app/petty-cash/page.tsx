@@ -388,22 +388,24 @@ export default function PettyCashPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-medium text-red-600">−{money(x.amount)}</span>
-                <button
-                  type="button"
-                  onClick={() => startEdit(x)}
-                  className="text-xs text-blue-700 underline hover:text-blue-900"
-                >
-                  Edit
-                </button>
                 {isSuperAdmin ? (
-                  <button
-                    type="button"
-                    onClick={() => void removeExpense(x)}
-                    disabled={deletingId === x.id}
-                    className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
-                  >
-                    Delete
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(x)}
+                      className="text-xs text-blue-700 underline hover:text-blue-900"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeExpense(x)}
+                      disabled={deletingId === x.id}
+                      className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
+                  </>
                 ) : null}
               </div>
             </li>

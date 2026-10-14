@@ -7,7 +7,7 @@ import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
-import { isAdminRole } from '@/lib/roles';
+import { isSuperAdminRole } from '@/lib/roles';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
@@ -95,11 +95,11 @@ function CollectionsPageContent() {
   const [message, setMessage] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const appliedSearch = useRef('');
 
   useEffect(() => {
-    setIsAdmin(isAdminRole(getSession()?.user.role));
+    setIsSuperAdmin(isSuperAdminRole(getSession()?.user.role));
   }, []);
 
   const selected = useMemo(
@@ -498,7 +498,7 @@ function CollectionsPageContent() {
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Note</th>
                 <th className="px-4 py-3">When</th>
-                {isAdmin ? <th className="px-4 py-3"> </th> : null}
+                {isSuperAdmin ? <th className="px-4 py-3"> </th> : null}
               </tr>
             </thead>
             <tbody>
@@ -535,7 +535,7 @@ function CollectionsPageContent() {
                     <td className="px-4 py-3 text-slate-500">
                       {formatUaeDateTime(row.collectedAt)}
                     </td>
-                    {isAdmin ? (
+                    {isSuperAdmin ? (
                       <td className="px-4 py-3">
                         <DeleteCollectionButton
                           repaymentId={row.id}

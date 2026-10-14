@@ -53,7 +53,7 @@ export class RepaymentsController {
   }
 
   @Delete('repayments/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN)
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     const safeId = assertSafeId(id, 'collection id');
     return this.repayments.deleteRepayment(safeId, user.id);
