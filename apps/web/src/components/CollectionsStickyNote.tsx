@@ -79,6 +79,11 @@ export function CollectionsStickyNote({ embedded }: Props) {
                 `${w.unmatched.length} @ line(s) need a matching person in the app`,
               );
             }
+            if (w.skippedLowAmount?.length) {
+              parts.push(
+                `${w.skippedLowAmount.length} line(s) under 100 AED (not deducted)`,
+              );
+            }
             setWalletNote(parts.join(' · ') || '');
           }
         })

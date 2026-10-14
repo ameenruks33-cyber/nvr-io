@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, UserRole } from '@prisma/client';
+import { Customer, Loan, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { AuditService } from '../audit/audit.service';
@@ -21,8 +21,17 @@ export class CustomersService {
   ) {}
 
   private async nextCustomerCode() {
-    const count = await this.prisma.customer.count();
-    return `JB-CUS-${String(count + 1).padStart(6, '0')}`;
+    const latest = await this.prisma.customer.findFirst({
+      orderBy: { customerCode: 'desc' },
+      select: { customerCode: true },
+    });
+    let seq = 1;
+    const prefix = 'JB-CUS-';
+    if (latest?.customerCode?.startsWith(prefix)) {
+      const n = parseInt(latest.customerCode.slice(prefix.length), 10);
+      if (Number.isFinite(n) && n >= 0) seq = n + 1;
+    }
+    return `${prefix}${String(seq).padStart(6, '0')}`;
   }
 
   async create(dto: CreateCustomerDto, actor: AuthUser, ip?: string) {
@@ -38,43 +47,57 @@ export class CustomersService {
       },
     });
 
-    const customerCode = await this.nextCustomerCode();
+    let result: { customer: Customer; loan: Loan } | null = null;
+    let customerCode = '';
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const customer = await tx.customer.create({
-        data: {
-          customerCode,
-          name: dto.name.trim(),
-          phone: dto.phone.trim(),
-          address: dto.address.trim(),
-          botimNumber: dto.botimNumber?.trim() || null,
-          mobileNumber: dto.mobileNumber?.trim() || null,
-          careOfName: dto.careOfName?.trim() || null,
-          careOfPhone: dto.careOfPhone?.trim() || null,
-          passportEncrypted: this.crypto.encrypt(dto.passportNumber.trim()),
-          aadhaarEncrypted: this.crypto.encrypt(dto.aadhaarNumber.trim()),
-          latitude: dto.latitude,
-          longitude: dto.longitude,
-          locationAccuracy: dto.locationAccuracy,
-          consentVersion: dto.consentVersion || 'v1',
-          registeredById: actor.id,
-        },
-      });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      customerCode = await this.nextCustomerCode();
+      try {
+        result = await this.prisma.$transaction(async (tx) => {
+          const customer = await tx.customer.create({
+            data: {
+              customerCode,
+              name: dto.name.trim(),
+              phone: dto.phone.trim(),
+              address: dto.address.trim(),
+              botimNumber: dto.botimNumber?.trim() || null,
+              mobileNumber: dto.mobileNumber?.trim() || null,
+              careOfName: dto.careOfName?.trim() || null,
+              careOfPhone: dto.careOfPhone?.trim() || null,
+              passportEncrypted: this.crypto.encrypt(dto.passportNumber.trim()),
+              aadhaarEncrypted: this.crypto.encrypt(dto.aadhaarNumber.trim()),
+              latitude: dto.latitude,
+              longitude: dto.longitude,
+              locationAccuracy: dto.locationAccuracy,
+              consentVersion: dto.consentVersion || 'v1',
+              registeredById: actor.id,
+            },
+          });
 
-      const loan = await tx.loan.create({
-        data: {
-          customerId: customer.id,
-          principalAmount: new Prisma.Decimal(principal),
-          dailyPayment: new Prisma.Decimal(daily),
-          totalPayable: new Prisma.Decimal(total),
-          remainingAmount: new Prisma.Decimal(total),
-          amountCollected: new Prisma.Decimal(0),
-          status: 'ACTIVE',
-        },
-      });
+          const loan = await tx.loan.create({
+            data: {
+              customerId: customer.id,
+              principalAmount: new Prisma.Decimal(principal),
+              dailyPayment: new Prisma.Decimal(daily),
+              totalPayable: new Prisma.Decimal(total),
+              remainingAmount: new Prisma.Decimal(total),
+              amountCollected: new Prisma.Decimal(0),
+              status: 'ACTIVE',
+            },
+          });
 
-      return { customer, loan };
-    });
+          return { customer, loan };
+        });
+        break;
+      } catch (e) {
+        const dup =
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002';
+        if (!dup || attempt === 2) throw e;
+      }
+    }
+
+    if (!result) throw new Error('Could not create customer');
 
     await this.audit.log({
       userId: actor.id,

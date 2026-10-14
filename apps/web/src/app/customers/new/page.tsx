@@ -418,15 +418,6 @@ export default function NewCustomerPage() {
         }),
       });
 
-      if (photo) {
-        const fd = new FormData();
-        fd.append('photo', photo);
-        await api(`/customers/${created.id}/photo`, {
-          method: 'POST',
-          body: fd,
-        });
-      }
-
       const personName = String(form.get('name') || '').trim();
       setSavedCustomer({
         id: created.id,
@@ -437,6 +428,24 @@ export default function NewCustomerPage() {
       setTab('cash');
       setCashMessage('');
       setError('');
+
+      if (photo) {
+        try {
+          const fd = new FormData();
+          fd.append('photo', photo);
+          await api(`/customers/${created.id}/photo`, {
+            method: 'POST',
+            body: fd,
+          });
+          setPhotoMsg('Photo saved.');
+        } catch (photoErr) {
+          setPhotoMsg(
+            photoErr instanceof Error
+              ? `Person saved. Photo failed: ${photoErr.message}`
+              : 'Person saved. Photo failed — retry from their profile.',
+          );
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
@@ -472,8 +481,10 @@ export default function NewCustomerPage() {
         method: 'PATCH',
         body: JSON.stringify({ planId, dailyPayment: n }),
       });
-    } catch {
-      /* optional sync */
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not update daily amount',
+      );
     }
   }
 

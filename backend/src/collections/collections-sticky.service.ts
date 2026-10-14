@@ -90,7 +90,13 @@ export class CollectionsStickyService {
         unmatched.push(line);
         continue;
       }
-      byCustomer.set(customer.id, { ...line, customer });
+      const prev = byCustomer.get(customer.id);
+      const amount = prev ? prev.amount + line.amount : line.amount;
+      byCustomer.set(customer.id, {
+        name: line.name,
+        amount,
+        customer,
+      });
     }
 
     for (const { name, amount, customer } of byCustomer.values()) {
