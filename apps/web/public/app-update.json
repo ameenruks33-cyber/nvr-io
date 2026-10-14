@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141325",
-  "releasedAt": "2026-10-14T09:25:12.569Z",
+  "version": "1.1.2610141328",
+  "releasedAt": "2026-10-14T09:28:24.284Z",
   "title": "CrickHerose update available",
-  "message": "Remove Cash tab plan hint on Add person Details",
+  "message": "Remove Cash tab helper messages on Add person",
   "notes": [
+    "Remove Cash tab helper messages on Add person",
     "Remove Cash tab plan hint on Add person Details",
     "Stability fixes: save flow, sticky wallet, customer codes",
     "Restrict Delete person to Super Admin only",
     "Move loan plan selector to Cash tab on Add person",
     "Delete on customer profiles, loan plans, sticky wallet payouts",
     "\\ Reliable indoor location on Add person\\",
-    "\\ Fix Add person gallery unlock and location on mobile\\",
-    "\\ Cash tab on Add person links to Petty Cash pay customer\\"
+    "\\ Fix Add person gallery unlock and location on mobile\\"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141325/favicon.png",
-    "icon192": "/icons/v1.1.2610141325/icon-192.png",
-    "icon512": "/icons/v1.1.2610141325/icon-512.png",
-    "apple": "/icons/v1.1.2610141325/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141325/logo.jpg"
+    "favicon": "/icons/v1.1.2610141328/favicon.png",
+    "icon192": "/icons/v1.1.2610141328/icon-192.png",
+    "icon512": "/icons/v1.1.2610141328/icon-512.png",
+    "apple": "/icons/v1.1.2610141328/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141328/logo.jpg"
   }
 }

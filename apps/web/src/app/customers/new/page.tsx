@@ -601,25 +601,11 @@ export default function NewCustomerPage() {
                 />
               </label>
             </fieldset>
-            <p className="text-sm text-slate-600">
-              Pay cash from the petty cash wallet to this customer. It shows in
-              Petty Cash under{' '}
-              <span className="font-medium text-violet-800">
-                Pay customer (cash)
-              </span>
-              .
-            </p>
-            {!savedCustomer ? (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Choose the plan above, then save the person on the{' '}
-                <strong>Details</strong> tab. After save, record wallet cash
-                here (amount defaults to what the customer receives).
-              </p>
-            ) : (
+            {savedCustomer ? (
               <p className="text-sm font-medium text-slate-900">
                 {savedCustomer.name}
               </p>
-            )}
+            ) : null}
             <label className="block text-sm">
               <span className="text-slate-600">Cash amount (AED)</span>
               <input
