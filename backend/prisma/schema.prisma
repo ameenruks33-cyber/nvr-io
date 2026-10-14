@@ -93,14 +93,17 @@ model PettyCashExpense {
   amount       Decimal
   spentOn      String   @map("spent_on")
   purpose      String
-  /// When set, this row is a payment to that person (separate from general expenses).
+  /// Legacy display label; set from customer when `customerId` is used.
   paidToName   String?  @map("paid_to_name")
+  customerId   String?  @map("customer_id")
   recordedById String   @map("recorded_by")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  recordedBy User @relation(fields: [recordedById], references: [id])
+  recordedBy User      @relation(fields: [recordedById], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
 
   @@index([spentOn])
+  @@index([customerId])
   @@map("petty_cash_expenses")
 }
 
@@ -160,8 +163,9 @@ model Customer {
   loans         Loan[]
   documents     Document[]
   notifications Notification[]
-  galleryItems  GalleryItem[]
-  photo         CustomerPhoto?
+  galleryItems      GalleryItem[]
+  photo             CustomerPhoto?
+  pettyCashExpenses PettyCashExpense[]
 
   @@index([name])
   @@index([phone])

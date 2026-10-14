@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141124",
-  "releasedAt": "2026-10-14T07:24:18.142Z",
+  "version": "1.1.2610141135",
+  "releasedAt": "2026-10-14T07:35:18.391Z",
   "title": "CrickHerose update available",
-  "message": "Edit petty cash expenses in daily log",
+  "message": "\\ Petty cash: customer cash vs general expense forms\\",
   "notes": [
+    "\\ Petty cash: customer cash vs general expense forms\\",
     "Edit petty cash expenses in daily log",
     "Petty cash person payments separate from general expenses",
     "Show total expenses on Petty Cash page",
     "Sync service worker cache for auto-ship",
     "Admin can delete collections from Collection and Receipts",
     "Monthly audit on mobile menu and bottom bar for admins",
-    "Fix mobile app update detection and fresh page loads",
-    "Monthly audit admin page live on production"
+    "Fix mobile app update detection and fresh page loads"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141124/favicon.png",
-    "icon192": "/icons/v1.1.2610141124/icon-192.png",
-    "icon512": "/icons/v1.1.2610141124/icon-512.png",
-    "apple": "/icons/v1.1.2610141124/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141124/logo.jpg"
+    "favicon": "/icons/v1.1.2610141135/favicon.png",
+    "icon192": "/icons/v1.1.2610141135/icon-192.png",
+    "icon512": "/icons/v1.1.2610141135/icon-512.png",
+    "apple": "/icons/v1.1.2610141135/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141135/logo.jpg"
   }
 }

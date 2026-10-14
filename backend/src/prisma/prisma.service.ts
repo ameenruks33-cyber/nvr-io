@@ -110,6 +110,8 @@ export class PrismaService
       );`,
       `CREATE INDEX IF NOT EXISTS "petty_cash_expenses_spent_on_idx" ON "petty_cash_expenses"("spent_on");`,
       `ALTER TABLE "petty_cash_expenses" ADD COLUMN IF NOT EXISTS "paid_to_name" TEXT;`,
+      `ALTER TABLE "petty_cash_expenses" ADD COLUMN IF NOT EXISTS "customer_id" TEXT REFERENCES "customers"("id");`,
+      `CREATE INDEX IF NOT EXISTS "petty_cash_expenses_customer_id_idx" ON "petty_cash_expenses"("customer_id");`,
     ]) {
       try {
         await this.$executeRawUnsafe(sql);

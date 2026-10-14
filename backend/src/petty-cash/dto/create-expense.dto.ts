@@ -19,15 +19,14 @@ export class CreateExpenseDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be YYYY-MM-DD' })
   spentOn!: string;
 
-  @IsString()
-  @MinLength(2)
-  @MaxLength(200)
-  purpose!: string;
-
-  /** Person paid from petty cash — stored as its own expense line. */
+  /** Required for general expenses; optional note for customer cash. */
   @IsOptional()
   @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  paidToName?: string;
+  @MaxLength(200)
+  purpose?: string;
+
+  /** Pay cash to this customer (separate from general expenses). */
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 }

@@ -6,7 +6,13 @@ import { api, getSession, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeCalendarDay, formatUaeTime } from '@/lib/uae-datetime';
 
-type ExpenseKind = 'general' | 'person';
+type ExpenseKind = 'general' | 'customer';
+
+type CustomerOption = {
+  id: string;
+  customerCode: string;
+  name: string;
+};
 
 type Expense = {
   id: string;
@@ -14,6 +20,8 @@ type Expense = {
   spentOn: string;
   purpose: string;
   paidToName?: string | null;
+  customerId?: string | null;
+  customer?: CustomerOption | null;
   recordedBy: { id: string; name: string };
   createdAt: string;
 };
@@ -42,14 +50,25 @@ function dayLabel(date: string, today: string) {
   return formatUaeCalendarDay(date);
 }
 
+function isCustomerPayment(e: Expense) {
+  return Boolean(e.customerId || e.paidToName?.trim());
+}
+
+function customerLabel(e: Expense) {
+  if (e.customer) {
+    return `${e.customer.customerCode} · ${e.customer.name}`;
+  }
+  return e.paidToName || 'Customer';
+}
+
 function splitExpenses(expenses: Expense[]) {
-  const personPayments: Expense[] = [];
+  const customerPayments: Expense[] = [];
   const generalExpenses: Expense[] = [];
   for (const e of expenses) {
-    if (e.paidToName?.trim()) personPayments.push(e);
+    if (isCustomerPayment(e)) customerPayments.push(e);
     else generalExpenses.push(e);
   }
-  return { personPayments, generalExpenses };
+  return { customerPayments, generalExpenses };
 }
 
 const inputClass =
@@ -64,7 +83,8 @@ export default function PettyCashPage() {
   const [spentOn, setSpentOn] = useState('');
   const [purpose, setPurpose] = useState('');
   const [expenseKind, setExpenseKind] = useState<ExpenseKind>('general');
-  const [paidToName, setPaidToName] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -72,7 +92,7 @@ export default function PettyCashPage() {
   const [editSpentOn, setEditSpentOn] = useState('');
   const [editPurpose, setEditPurpose] = useState('');
   const [editKind, setEditKind] = useState<ExpenseKind>('general');
-  const [editPaidToName, setEditPaidToName] = useState('');
+  const [editCustomerId, setEditCustomerId] = useState('');
   const [savingEditId, setSavingEditId] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -91,6 +111,9 @@ export default function PettyCashPage() {
   useEffect(() => {
     setIsSuperAdmin(getSession()?.user.role === 'SUPER_ADMIN');
     void load();
+    api<CustomerOption[]>('/customers')
+      .then(setCustomers)
+      .catch(() => undefined);
   }, [load]);
 
   useLiveRefresh(() => void load());
@@ -102,32 +125,41 @@ export default function PettyCashPage() {
       setError('Enter the amount taken');
       return;
     }
-    const person = paidToName.trim();
-    if (expenseKind === 'person' && person.length < 2) {
-      setError('Enter who was paid');
+    if (expenseKind === 'customer' && !customerId) {
+      setError('Choose a customer');
+      return;
+    }
+    if (expenseKind === 'general' && purpose.trim().length < 2) {
+      setError('Describe what the expense was for');
       return;
     }
     setSaving(true);
     setError('');
     setMessage('');
     try {
-      await api('/petty-cash', {
-        method: 'POST',
-        body: JSON.stringify({
-          amount: Math.round(value * 100) / 100,
-          spentOn,
-          purpose: purpose.trim(),
-          ...(expenseKind === 'person' ? { paidToName: person } : {}),
-        }),
-      });
+      const body =
+        expenseKind === 'customer'
+          ? {
+              amount: Math.round(value * 100) / 100,
+              spentOn,
+              customerId,
+              ...(purpose.trim() ? { purpose: purpose.trim() } : {}),
+            }
+          : {
+              amount: Math.round(value * 100) / 100,
+              spentOn,
+              purpose: purpose.trim(),
+            };
+      await api('/petty-cash', { method: 'POST', body: JSON.stringify(body) });
+      const picked = customers.find((c) => c.id === customerId);
       setMessage(
-        expenseKind === 'person'
-          ? `Recorded ${money(value)} paid to ${person}.`
+        expenseKind === 'customer'
+          ? `Recorded ${money(value)} cash to ${picked?.name ?? 'customer'}.`
           : `Recorded ${money(value)} for ${purpose.trim()}.`,
       );
       setAmount('');
       setPurpose('');
-      setPaidToName('');
+      setCustomerId('');
       setExpenseKind('general');
       await load();
     } catch (err) {
@@ -142,8 +174,8 @@ export default function PettyCashPage() {
     setEditAmount(String(expense.amount));
     setEditSpentOn(expense.spentOn || data?.today || '');
     setEditPurpose(expense.purpose);
-    setEditPaidToName(expense.paidToName?.trim() || '');
-    setEditKind(expense.paidToName?.trim() ? 'person' : 'general');
+    setEditCustomerId(expense.customerId || '');
+    setEditKind(isCustomerPayment(expense) ? 'customer' : 'general');
     setError('');
   }
 
@@ -158,12 +190,11 @@ export default function PettyCashPage() {
       setError('Enter a valid amount');
       return;
     }
-    const person = editPaidToName.trim();
-    if (editKind === 'person' && person.length < 2) {
-      setError('Enter who was paid');
+    if (editKind === 'customer' && !editCustomerId) {
+      setError('Choose a customer');
       return;
     }
-    if (editPurpose.trim().length < 2) {
+    if (editKind === 'general' && editPurpose.trim().length < 2) {
       setError('Enter a description');
       return;
     }
@@ -171,14 +202,22 @@ export default function PettyCashPage() {
     setError('');
     setMessage('');
     try {
+      const body =
+        editKind === 'customer'
+          ? {
+              amount: Math.round(value * 100) / 100,
+              spentOn: editSpentOn,
+              customerId: editCustomerId,
+              ...(editPurpose.trim() ? { purpose: editPurpose.trim() } : {}),
+            }
+          : {
+              amount: Math.round(value * 100) / 100,
+              spentOn: editSpentOn,
+              purpose: editPurpose.trim(),
+            };
       await api(`/petty-cash/${expenseId}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          amount: Math.round(value * 100) / 100,
-          spentOn: editSpentOn,
-          purpose: editPurpose.trim(),
-          ...(editKind === 'person' ? { paidToName: person } : {}),
-        }),
+        body: JSON.stringify(body),
       });
       setMessage('Expense updated.');
       cancelEdit();
@@ -217,7 +256,7 @@ export default function PettyCashPage() {
 
   const negative = (data?.balance ?? 0) < 0;
 
-  function renderExpenseList(items: Expense[], variant: 'person' | 'general') {
+  function renderExpenseList(items: Expense[], variant: 'customer' | 'general') {
     if (!items.length) return null;
     return (
       <ul className="mt-2 divide-y divide-slate-100 text-sm">
@@ -238,14 +277,14 @@ export default function PettyCashPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setEditKind('person')}
+                  onClick={() => setEditKind('customer')}
                   className={`rounded border px-2 py-1 text-xs ${
-                    editKind === 'person'
+                    editKind === 'customer'
                       ? 'border-blue-600 bg-blue-50 text-blue-900'
                       : 'border-slate-200 text-slate-600'
                   }`}
                 >
-                  Pay to person
+                  Customer cash
                 </button>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -271,26 +310,45 @@ export default function PettyCashPage() {
                   />
                 </label>
               </div>
-              {editKind === 'person' ? (
+              {editKind === 'customer' ? (
                 <label className="block text-xs text-slate-600">
-                  Person paid
+                  Customer
+                  <select
+                    className={inputClassCompact}
+                    value={editCustomerId}
+                    onChange={(e) => setEditCustomerId(e.target.value)}
+                  >
+                    <option value="">Select customer…</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.customerCode} · {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label className="block text-xs text-slate-600">
+                  Description
                   <input
                     className={inputClassCompact}
-                    value={editPaidToName}
-                    onChange={(e) => setEditPaidToName(e.target.value)}
-                    maxLength={120}
+                    value={editPurpose}
+                    onChange={(e) => setEditPurpose(e.target.value)}
+                    maxLength={200}
+                  />
+                </label>
+              )}
+              {editKind === 'customer' ? (
+                <label className="block text-xs text-slate-600">
+                  Note (optional)
+                  <input
+                    className={inputClassCompact}
+                    value={editPurpose}
+                    onChange={(e) => setEditPurpose(e.target.value)}
+                    maxLength={200}
+                    placeholder="e.g. Advance, refund"
                   />
                 </label>
               ) : null}
-              <label className="block text-xs text-slate-600">
-                {editKind === 'person' ? 'Reason / note' : 'Description'}
-                <input
-                  className={inputClassCompact}
-                  value={editPurpose}
-                  onChange={(e) => setEditPurpose(e.target.value)}
-                  maxLength={200}
-                />
-              </label>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -315,9 +373,9 @@ export default function PettyCashPage() {
               className="flex flex-wrap items-center justify-between gap-2 py-2"
             >
               <div>
-                {variant === 'person' ? (
+                {variant === 'customer' ? (
                   <>
-                    <p className="font-medium text-slate-900">{x.paidToName}</p>
+                    <p className="font-medium text-slate-900">{customerLabel(x)}</p>
                     <p className="text-xs text-slate-600">{x.purpose}</p>
                   </>
                 ) : (
@@ -358,8 +416,8 @@ export default function PettyCashPage() {
     <AppShell>
       <h1 className="font-display text-3xl text-slate-900">Petty Cash</h1>
       <p className="mt-1 max-w-xl text-sm text-slate-500">
-        Money taken from collections for expenses. Paying a person creates a
-        separate line from general expenses (fuel, tea, etc.).
+        General expenses (fuel, tea, etc.) are separate from cash paid to
+        customers from the wallet.
       </p>
 
       <section className="mt-6 grid max-w-3xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -398,7 +456,7 @@ export default function PettyCashPage() {
             {data ? money(data.totalSpent) : '…'}
           </p>
           <p className="mt-1 text-xs text-red-600/80">
-            General {data ? money(data.totalGeneralSpent) : '…'} · People{' '}
+            General {data ? money(data.totalGeneralSpent) : '…'} · Customers{' '}
             {data ? money(data.totalPersonPaid) : '…'}
           </p>
         </div>
@@ -443,76 +501,116 @@ export default function PettyCashPage() {
             </button>
             <button
               type="button"
-              onClick={() => setExpenseKind('person')}
+              onClick={() => setExpenseKind('customer')}
               className={`rounded-lg border px-3 py-2 text-sm ${
-                expenseKind === 'person'
+                expenseKind === 'customer'
                   ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
                   : 'border-slate-200 text-slate-600'
               }`}
             >
-              Pay to a person
+              Pay customer (cash)
             </button>
           </div>
         </fieldset>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="text-slate-600">Amount (AED)</span>
-            <input
-              className={inputClass}
-              type="number"
-              inputMode="decimal"
-              min={1}
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="e.g. 50"
-              required
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-600">Date taken</span>
-            <input
-              className={inputClass}
-              type="date"
-              value={spentOn}
-              max={data?.today}
-              onChange={(e) => setSpentOn(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        {expenseKind === 'person' ? (
-          <label className="block text-sm">
-            <span className="text-slate-600">Person paid</span>
-            <input
-              className={inputClass}
-              value={paidToName}
-              onChange={(e) => setPaidToName(e.target.value)}
-              placeholder="e.g. Rajesh, driver Ahmed"
-              minLength={2}
-              maxLength={120}
-              required
-            />
-          </label>
-        ) : null}
-        <label className="block text-sm">
-          <span className="text-slate-600">
-            {expenseKind === 'person' ? 'Reason / note' : 'What was it for?'}
-          </span>
-          <input
-            className={inputClass}
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            placeholder={
-              expenseKind === 'person'
-                ? 'e.g. Advance, commission, refund'
-                : 'e.g. Fuel, tea, printing'
-            }
-            minLength={2}
-            maxLength={200}
-            required
-          />
-        </label>
+        {expenseKind === 'general' ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="text-slate-600">Amount (AED)</span>
+                <input
+                  className={inputClass}
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g. 50"
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-slate-600">Date taken</span>
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={spentOn}
+                  max={data?.today}
+                  onChange={(e) => setSpentOn(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <label className="block text-sm">
+              <span className="text-slate-600">What was it for?</span>
+              <input
+                className={inputClass}
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder="e.g. Fuel, tea, printing"
+                minLength={2}
+                maxLength={200}
+                required
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <label className="block text-sm">
+              <span className="text-slate-600">Customer</span>
+              <select
+                className={inputClass}
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                required
+              >
+                <option value="">Select customer…</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.customerCode} · {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="text-slate-600">Cash amount (AED)</span>
+                <input
+                  className={inputClass}
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g. 500"
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-slate-600">Date given</span>
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={spentOn}
+                  max={data?.today}
+                  onChange={(e) => setSpentOn(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <label className="block text-sm">
+              <span className="text-slate-600">Note (optional)</span>
+              <input
+                className={inputClass}
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder="e.g. Advance, refund"
+                maxLength={200}
+              />
+            </label>
+          </>
+        )}
         {error ? (
           <p className="text-sm text-red-600" role="alert">
             {error}
@@ -530,8 +628,8 @@ export default function PettyCashPage() {
         >
           {saving
             ? 'Saving…'
-            : expenseKind === 'person'
-              ? 'Record payment to person'
+            : expenseKind === 'customer'
+              ? 'Record cash to customer'
               : 'Record expense'}
         </button>
       </form>
@@ -540,7 +638,7 @@ export default function PettyCashPage() {
         <h2 className="mb-3 text-lg font-medium text-slate-900">Daily log</h2>
         <div className="space-y-3">
           {(data?.days || []).map((day) => {
-            const { personPayments, generalExpenses } = splitExpenses(day.expenses);
+            const { customerPayments, generalExpenses } = splitExpenses(day.expenses);
             return (
               <div
                 key={day.date}
@@ -560,12 +658,12 @@ export default function PettyCashPage() {
                 </div>
                 {day.expenses.length ? (
                   <div className="mt-3 space-y-4">
-                    {personPayments.length ? (
+                    {customerPayments.length ? (
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-violet-700">
-                          Payments to people
+                          Cash paid to customers
                         </p>
-                        {renderExpenseList(personPayments, 'person')}
+                        {renderExpenseList(customerPayments, 'customer')}
                       </div>
                     ) : null}
                     {generalExpenses.length ? (

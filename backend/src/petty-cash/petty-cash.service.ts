@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { assertSafeId } from '../common/safe-input';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 
 const TIME_ZONE = 'Asia/Dubai';
@@ -27,7 +28,9 @@ export class PettyCashService {
       this.prisma.repayment.aggregate({ _sum: { amount: true } }),
       this.prisma.pettyCashExpense.aggregate({ _sum: { amount: true } }),
       this.prisma.pettyCashExpense.aggregate({
-        where: { paidToName: { not: null } },
+        where: {
+          OR: [{ customerId: { not: null } }, { paidToName: { not: null } }],
+        },
         _sum: { amount: true },
       }),
       // collected_at is stored in UTC; group by the UAE calendar day.
@@ -44,7 +47,10 @@ export class PettyCashService {
       this.prisma.pettyCashExpense.findMany({
         where: { spentOn: { gte: since } },
         orderBy: [{ spentOn: 'desc' }, { createdAt: 'desc' }],
-        include: { recordedBy: { select: { id: true, name: true } } },
+        include: {
+          recordedBy: { select: { id: true, name: true } },
+          customer: { select: { id: true, name: true, customerCode: true } },
+        },
       }),
     ]);
 
@@ -60,6 +66,12 @@ export class PettyCashService {
           spentOn: string;
           purpose: string;
           paidToName: string | null;
+          customerId: string | null;
+          customer: {
+            id: string;
+            name: string;
+            customerCode: string;
+          } | null;
           recordedBy: { id: string; name: string };
           createdAt: Date;
         }>;
@@ -87,6 +99,8 @@ export class PettyCashService {
         spentOn: e.spentOn,
         purpose: e.purpose,
         paidToName: e.paidToName?.trim() || null,
+        customerId: e.customerId,
+        customer: e.customer,
         recordedBy: e.recordedBy,
         createdAt: e.createdAt,
       });
@@ -120,18 +134,46 @@ export class PettyCashService {
     }
   }
 
+  private async resolveExpenseFields(dto: CreateExpenseDto) {
+    const purposeRaw = dto.purpose?.trim() ?? '';
+
+    if (dto.customerId) {
+      const customerId = assertSafeId(dto.customerId, 'customer');
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true, name: true, customerCode: true },
+      });
+      if (!customer) throw new NotFoundException('Customer not found');
+      return {
+        customerId: customer.id,
+        paidToName: `${customer.customerCode} · ${customer.name}`,
+        purpose: purposeRaw || 'Cash paid to customer',
+      };
+    }
+
+    if (!purposeRaw || purposeRaw.length < 2) {
+      throw new BadRequestException('Describe what the expense was for');
+    }
+
+    return {
+      customerId: null as string | null,
+      paidToName: null as string | null,
+      purpose: purposeRaw,
+    };
+  }
+
   async create(dto: CreateExpenseDto, userId: string) {
     const spentOn = dto.spentOn;
     this.assertSpentOn(spentOn);
-
-    const paidToName = dto.paidToName?.trim() || null;
+    const fields = await this.resolveExpenseFields(dto);
 
     const expense = await this.prisma.pettyCashExpense.create({
       data: {
         amount: new Prisma.Decimal(dto.amount),
         spentOn,
-        purpose: dto.purpose.trim(),
-        paidToName,
+        purpose: fields.purpose,
+        paidToName: fields.paidToName,
+        customerId: fields.customerId,
         recordedById: String(userId),
       },
     });
@@ -141,7 +183,12 @@ export class PettyCashService {
       action: 'PETTY_CASH_EXPENSE',
       recordType: 'petty_cash',
       recordId: expense.id,
-      metadata: { amount: dto.amount, spentOn, paidToName },
+      metadata: {
+        amount: dto.amount,
+        spentOn,
+        customerId: fields.customerId,
+        paidToName: fields.paidToName,
+      },
     });
 
     return { id: expense.id };
@@ -154,15 +201,16 @@ export class PettyCashService {
     if (!expense) throw new NotFoundException('Expense not found');
 
     this.assertSpentOn(dto.spentOn);
-    const paidToName = dto.paidToName?.trim() || null;
+    const fields = await this.resolveExpenseFields(dto);
 
     const updated = await this.prisma.pettyCashExpense.update({
       where: { id: expense.id },
       data: {
         amount: new Prisma.Decimal(dto.amount),
         spentOn: dto.spentOn,
-        purpose: dto.purpose.trim(),
-        paidToName,
+        purpose: fields.purpose,
+        paidToName: fields.paidToName,
+        customerId: fields.customerId,
       },
     });
 
@@ -174,8 +222,9 @@ export class PettyCashService {
       metadata: {
         amount: dto.amount,
         spentOn: dto.spentOn,
-        paidToName,
-        purpose: dto.purpose.trim(),
+        customerId: fields.customerId,
+        paidToName: fields.paidToName,
+        purpose: fields.purpose,
       },
     });
 
