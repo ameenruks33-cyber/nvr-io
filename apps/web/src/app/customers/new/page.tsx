@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { api, money } from '@/lib/api';
+import { api, GALLERY_UNLOCK_KEY, money } from '@/lib/api';
 import { shrinkImage } from '@/lib/image';
 
 type PendingPhoto = { file: File; url: string };
@@ -43,6 +43,11 @@ export default function NewCustomerPage() {
   const [cashNote, setCashNote] = useState('');
   const [cashSaving, setCashSaving] = useState(false);
   const [cashMessage, setCashMessage] = useState('');
+  const [galleryPinSet, setGalleryPinSet] = useState(false);
+  const [galleryUnlocked, setGalleryUnlocked] = useState(false);
+  const [galleryPin, setGalleryPin] = useState('');
+  const [galleryUnlockMsg, setGalleryUnlockMsg] = useState('');
+  const [galleryUnlocking, setGalleryUnlocking] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -95,6 +100,22 @@ export default function NewCustomerPage() {
     api<{ today: string }>('/petty-cash')
       .then((s) => setCashSpentOn((prev) => prev || s.today))
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    api<{ pinSet: boolean }>('/gallery/pin-status')
+      .then(({ pinSet }) => {
+        setGalleryPinSet(pinSet);
+        const ok =
+          !pinSet || Boolean(sessionStorage.getItem(GALLERY_UNLOCK_KEY));
+        setGalleryUnlocked(ok);
+      })
+      .catch(() => setGalleryUnlocked(true));
+  }, []);
+
+  useEffect(() => {
+    requestLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on open
   }, []);
 
   useEffect(
@@ -163,6 +184,10 @@ export default function NewCustomerPage() {
   }
 
   async function saveToCloud() {
+    if (galleryPinSet && !sessionStorage.getItem(GALLERY_UNLOCK_KEY)) {
+      setError('Cloud gallery is locked — enter the gallery PIN below, then tap Save Cloud.');
+      return;
+    }
     setUploading(true);
     setError('');
     setPhotoStatus('');
@@ -170,19 +195,25 @@ export default function NewCustomerPage() {
       if (pending.length) {
         const failed: PendingPhoto[] = [];
         let saved = 0;
+        let lastUploadError = '';
         for (const p of pending) {
           try {
             await uploadToGallery(p.file);
             saved += 1;
-          } catch {
+          } catch (e) {
             failed.push(p);
+            lastUploadError =
+              e instanceof Error ? e.message : 'Upload failed';
           }
         }
-        if (saved) setPersonPhoto(pending.find((p) => !failed.includes(p))!.file);
+        const firstOk = pending.find((p) => !failed.includes(p));
+        if (saved && firstOk) setPersonPhoto(firstOk.file);
         pending.filter((p) => !failed.includes(p)).forEach((p) => URL.revokeObjectURL(p.url));
         setPending(failed);
         if (failed.length) {
-          setError(`${failed.length} photo(s) failed to upload. Tap Save Cloud to retry.`);
+          setError(
+            `${failed.length} photo(s) failed to upload${lastUploadError ? `: ${lastUploadError}` : ''}. Tap Save Cloud to retry.`,
+          );
         }
         if (saved) {
           setPhotoStatus(
@@ -215,24 +246,76 @@ export default function NewCustomerPage() {
     setPhotoStatus('');
   }
 
+  function locationHint(code: number) {
+    if (code === 1) {
+      return 'Location permission denied. On your phone: Settings → Apps → your browser or CrickHerose → Permissions → Location → Allow, then tap Try location again.';
+    }
+    if (code === 2) return 'Location unavailable — check GPS / mobile data and try again.';
+    if (code === 3) return 'Location timed out — move near a window or outdoors and try again.';
+    return 'Could not get location — tap Try location again.';
+  }
+
+  function applyLocation(pos: GeolocationPosition) {
+    setCoords({
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+    });
+    setLocationStatus('Location permission granted');
+    setError((prev) =>
+      prev.includes('Location permission') || prev.includes('location')
+        ? ''
+        : prev,
+    );
+  }
+
   function requestLocation() {
     if (!navigator.geolocation) {
-      setLocationStatus('Geolocation not supported');
+      setLocationStatus('Geolocation not supported on this device');
       return;
     }
     setLocationStatus('Requesting permission…');
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        });
-        setLocationStatus('Location permission granted');
+      applyLocation,
+      (err) => {
+        if (err.code === 3 || err.code === 2) {
+          navigator.geolocation.getCurrentPosition(
+            applyLocation,
+            (err2) => setLocationStatus(locationHint(err2.code)),
+            {
+              enableHighAccuracy: false,
+              timeout: 25000,
+              maximumAge: 120_000,
+            },
+          );
+          return;
+        }
+        setLocationStatus(locationHint(err.code));
       },
-      () => setLocationStatus('Location permission denied'),
-      { enableHighAccuracy: true, timeout: 15000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
+  }
+
+  async function unlockCloudGallery() {
+    setGalleryUnlockMsg('');
+    setGalleryUnlocking(true);
+    try {
+      const res = await api<{ unlockToken: string }>('/gallery/unlock', {
+        method: 'POST',
+        body: JSON.stringify({ pin: galleryPin }),
+      });
+      sessionStorage.setItem(GALLERY_UNLOCK_KEY, res.unlockToken);
+      setGalleryUnlocked(true);
+      setGalleryPin('');
+      setGalleryUnlockMsg('Cloud gallery unlocked — tap Save Cloud again.');
+      setError('');
+    } catch (e) {
+      setGalleryUnlockMsg(
+        e instanceof Error ? e.message : 'Could not unlock gallery',
+      );
+    } finally {
+      setGalleryUnlocking(false);
+    }
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -619,6 +702,38 @@ export default function NewCustomerPage() {
             onChange={(e) => void onPickFiles(e.target.files)}
           />
 
+          {galleryPinSet && !galleryUnlocked ? (
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
+              <p className="font-medium text-indigo-950">Cloud gallery PIN</p>
+              <p className="mt-1 text-xs text-indigo-900/80">
+                Save Cloud needs the same PIN as the File gallery on this device.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={galleryPin}
+                  onChange={(e) => setGalleryPin(e.target.value.replace(/\D/g, ''))}
+                  maxLength={8}
+                  placeholder="Gallery PIN"
+                  className="min-w-0 flex-1 rounded-lg border border-indigo-200 bg-white px-3 py-2"
+                />
+                <button
+                  type="button"
+                  disabled={galleryUnlocking || galleryPin.length < 4}
+                  onClick={() => void unlockCloudGallery()}
+                  className="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500 disabled:opacity-60"
+                >
+                  {galleryUnlocking ? '…' : 'Unlock'}
+                </button>
+              </div>
+              {galleryUnlockMsg ? (
+                <p className="mt-2 text-xs text-indigo-900">{galleryUnlockMsg}</p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -642,7 +757,12 @@ export default function NewCustomerPage() {
             </button>
             <button
               type="button"
-              disabled={(!cameraOn && !pending.length) || uploading || loading}
+              disabled={
+                (!cameraOn && !pending.length) ||
+                uploading ||
+                loading ||
+                (galleryPinSet && !galleryUnlocked)
+              }
               onClick={() => void saveToCloud()}
               className="rounded-xl bg-teal-600 px-4 py-3.5 font-medium text-white hover:bg-teal-500 disabled:opacity-60"
             >
@@ -689,10 +809,28 @@ export default function NewCustomerPage() {
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-          <p className="text-slate-600">{locationStatus}</p>
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            coords
+              ? 'border-teal-200 bg-teal-50'
+              : locationStatus.toLowerCase().includes('denied')
+                ? 'border-amber-300 bg-amber-50'
+                : 'border-slate-200 bg-slate-50'
+          }`}
+        >
+          <p
+            className={
+              coords
+                ? 'text-teal-800'
+                : locationStatus.toLowerCase().includes('denied')
+                  ? 'text-amber-900'
+                  : 'text-slate-600'
+            }
+          >
+            {locationStatus}
+          </p>
           {coords ? (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-teal-700/80">
               {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
               {coords.accuracy
                 ? ` · ±${coords.accuracy.toFixed(1)}m`
@@ -702,15 +840,15 @@ export default function NewCustomerPage() {
           <button
             type="button"
             onClick={requestLocation}
-            className="mt-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs hover:bg-slate-200"
+            className="mt-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-800 ring-1 ring-slate-200 hover:bg-slate-50"
           >
-            Request location permission
+            Try location again
           </button>
         </div>
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !coords}
           className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white disabled:opacity-60"
         >
           {loading
