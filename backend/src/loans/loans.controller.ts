@@ -18,7 +18,7 @@ export class LoansController {
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   getOne(@Param('id') id: string) {
-    return this.loans.findOne(id);
+    return this.loans.findOne(assertSafeId(String(id)));
   }
 
   @Patch(':id/plan')
