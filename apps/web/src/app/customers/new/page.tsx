@@ -1,9 +1,10 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { api } from '@/lib/api';
+import { api, money } from '@/lib/api';
 import { shrinkImage } from '@/lib/image';
 
 type PendingPhoto = { file: File; url: string };
@@ -32,6 +33,16 @@ export default function NewCustomerPage() {
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [photoStatus, setPhotoStatus] = useState('');
+  const [tab, setTab] = useState<'details' | 'cash'>('details');
+  const [savedCustomer, setSavedCustomer] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [cashAmount, setCashAmount] = useState('');
+  const [cashSpentOn, setCashSpentOn] = useState('');
+  const [cashNote, setCashNote] = useState('');
+  const [cashSaving, setCashSaving] = useState(false);
+  const [cashMessage, setCashMessage] = useState('');
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -79,6 +90,12 @@ export default function NewCustomerPage() {
   );
 
   useEffect(() => () => stopCamera(), [stopCamera]);
+
+  useEffect(() => {
+    api<{ today: string }>('/petty-cash')
+      .then((s) => setCashSpentOn((prev) => prev || s.today))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(
     () => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.url)),
@@ -220,6 +237,10 @@ export default function NewCustomerPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (savedCustomer) {
+      router.push(`/customers/${savedCustomer.id}`);
+      return;
+    }
     if (!coords) {
       setError('Location permission is required before saving.');
       return;
@@ -256,11 +277,55 @@ export default function NewCustomerPage() {
         });
       }
 
-      router.push(`/customers/${created.id}`);
+      const personName = String(form.get('name') || '').trim();
+      setSavedCustomer({ id: created.id, name: personName });
+      setTab('cash');
+      setCashMessage('');
+      setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function recordCustomerCash() {
+    if (!savedCustomer) {
+      setError('Save the person on the Details tab first.');
+      setTab('details');
+      return;
+    }
+    const value = Number(cashAmount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError('Enter a valid cash amount');
+      return;
+    }
+    if (!cashSpentOn) {
+      setError('Choose the date cash was given');
+      return;
+    }
+    setCashSaving(true);
+    setError('');
+    setCashMessage('');
+    try {
+      await api('/petty-cash', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: Math.round(value * 100) / 100,
+          spentOn: cashSpentOn,
+          customerId: savedCustomer.id,
+          ...(cashNote.trim() ? { purpose: cashNote.trim() } : {}),
+        }),
+      });
+      setCashMessage(
+        `Recorded ${money(value)} cash to ${savedCustomer.name}. It appears under Pay customer (cash) on Petty Cash.`,
+      );
+      setCashAmount('');
+      setCashNote('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not record cash');
+    } finally {
+      setCashSaving(false);
     }
   }
 
@@ -272,10 +337,128 @@ export default function NewCustomerPage() {
         after you allow it.
       </p>
 
-      <form
-        onSubmit={onSubmit}
-        className="mt-8 max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
-      >
+      <div className="mt-8 max-w-xl rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="mb-4 flex gap-2 border-b border-slate-100 pb-3">
+          <button
+            type="button"
+            onClick={() => setTab('details')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              tab === 'details'
+                ? 'bg-blue-50 text-blue-900 ring-1 ring-blue-200'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('cash')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              tab === 'cash'
+                ? 'bg-violet-50 text-violet-900 ring-1 ring-violet-200'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Cash
+          </button>
+        </div>
+
+        {tab === 'cash' ? (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Pay cash from the petty cash wallet to this customer. It shows in
+              Petty Cash under{' '}
+              <span className="font-medium text-violet-800">
+                Pay customer (cash)
+              </span>
+              .
+            </p>
+            {!savedCustomer ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Save the person on the <strong>Details</strong> tab first, then
+                record cash here.
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-slate-900">
+                {savedCustomer.name}
+              </p>
+            )}
+            <label className="block text-sm">
+              <span className="text-slate-600">Cash amount (AED)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={1}
+                step="0.01"
+                value={cashAmount}
+                onChange={(e) => setCashAmount(e.target.value)}
+                disabled={!savedCustomer || cashSaving}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                placeholder="e.g. 500"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-600">Date given</span>
+              <input
+                type="date"
+                value={cashSpentOn}
+                onChange={(e) => setCashSpentOn(e.target.value)}
+                disabled={!savedCustomer || cashSaving}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-600">Note (optional)</span>
+              <input
+                value={cashNote}
+                onChange={(e) => setCashNote(e.target.value)}
+                maxLength={200}
+                disabled={!savedCustomer || cashSaving}
+                placeholder="e.g. Advance, refund"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+              />
+            </label>
+            {cashMessage ? (
+              <p className="text-sm text-teal-700" role="status">
+                {cashMessage}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={!savedCustomer || cashSaving}
+              onClick={() => void recordCustomerCash()}
+              className="w-full rounded-lg bg-violet-600 px-4 py-3 font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+            >
+              {cashSaving ? 'Saving…' : 'Record cash to customer'}
+            </button>
+            {savedCustomer ? (
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Link
+                  href="/petty-cash"
+                  className="text-violet-700 underline hover:text-violet-900"
+                >
+                  Open Petty Cash
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/customers/${savedCustomer.id}`)}
+                  className="text-teal-700 underline hover:text-teal-900"
+                >
+                  Open customer profile
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {tab === 'details' ? (
+      <form onSubmit={onSubmit} className="space-y-4">
+        {savedCustomer ? (
+          <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
+            Person saved. Switch to the <strong>Cash</strong> tab to pay from
+            the wallet, or update details below.
+          </p>
+        ) : null}
         {(
           [
             ['name', 'Full Name', 'text'],
@@ -525,16 +708,26 @@ export default function NewCustomerPage() {
           </button>
         </div>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white disabled:opacity-60"
         >
-          {loading ? 'Saving…' : 'Save'}
+          {loading
+            ? 'Saving…'
+            : savedCustomer
+              ? 'Open customer profile'
+              : 'Save'}
         </button>
       </form>
+        ) : null}
+
+        {error ? (
+          <p className="mt-4 text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </AppShell>
   );
 }

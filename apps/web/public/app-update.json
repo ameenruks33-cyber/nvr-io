@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141206",
-  "releasedAt": "2026-10-14T08:06:10.438Z",
+  "version": "1.1.2610141221",
+  "releasedAt": "2026-10-14T08:21:08.862Z",
   "title": "CrickHerose update available",
-  "message": "\\ Move Collections sticky note into Record collection panel\\",
+  "message": "\\ Cash tab on Add person links to Petty Cash pay customer\\",
   "notes": [
+    "\\ Cash tab on Add person links to Petty Cash pay customer\\",
     "\\ Move Collections sticky note into Record collection panel\\",
     "\\ Shared sticky note on Collections page\\",
     "\\ Super Admin only for petty cash edit/delete and collection delete\\",
     "\\ Add quick calculator on Petty Cash page\\",
     "\\ Separate petty cash totals: general vs loan expense cards\\",
     "\\ Petty cash: customer cash vs general expense forms\\",
-    "Edit petty cash expenses in daily log",
-    "Petty cash person payments separate from general expenses"
+    "Edit petty cash expenses in daily log"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141206/favicon.png",
-    "icon192": "/icons/v1.1.2610141206/icon-192.png",
-    "icon512": "/icons/v1.1.2610141206/icon-512.png",
-    "apple": "/icons/v1.1.2610141206/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141206/logo.jpg"
+    "favicon": "/icons/v1.1.2610141221/favicon.png",
+    "icon192": "/icons/v1.1.2610141221/icon-192.png",
+    "icon512": "/icons/v1.1.2610141221/icon-512.png",
+    "apple": "/icons/v1.1.2610141221/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141221/logo.jpg"
   }
 }
