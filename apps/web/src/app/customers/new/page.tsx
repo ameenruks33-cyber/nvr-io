@@ -17,6 +17,8 @@ export default function NewCustomerPage() {
   const pendingRef = useRef<PendingPhoto[]>([]);
   pendingRef.current = pending;
   const streamRef = useRef<MediaStream | null>(null);
+  const coordsRef = useRef<typeof coords>(null);
+  const locatingRef = useRef(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Location not requested');
@@ -114,8 +116,12 @@ export default function NewCustomerPage() {
   }, []);
 
   useEffect(() => {
-    requestLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on open
+    void requestLocation();
+    const retry = setInterval(() => {
+      if (!coordsRef.current) void requestLocation({ quiet: true });
+    }, 25_000);
+    return () => clearInterval(retry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + background retry
   }, []);
 
   useEffect(
@@ -250,50 +256,99 @@ export default function NewCustomerPage() {
     if (code === 1) {
       return 'Location permission denied. On your phone: Settings → Apps → your browser or CrickHerose → Permissions → Location → Allow, then tap Try location again.';
     }
-    if (code === 2) return 'Location unavailable — check GPS / mobile data and try again.';
-    if (code === 3) return 'Location timed out — move near a window or outdoors and try again.';
+    if (code === 2) {
+      return 'Location unavailable — turn on Location and mobile data, then tap Try location again.';
+    }
+    if (code === 3) {
+      return 'GPS is slow indoors — we keep trying in the background. Tap Try location again or wait a moment near a window.';
+    }
     return 'Could not get location — tap Try location again.';
   }
 
   function applyLocation(pos: GeolocationPosition) {
-    setCoords({
+    const next = {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude,
       accuracy: pos.coords.accuracy,
-    });
-    setLocationStatus('Location permission granted');
-    setError((prev) =>
-      prev.includes('Location permission') || prev.includes('location')
-        ? ''
-        : prev,
+    };
+    coordsRef.current = next;
+    setCoords(next);
+    const acc = pos.coords.accuracy;
+    setLocationStatus(
+      Number.isFinite(acc) && acc > 400
+        ? `Location ready (approximate ±${Math.round(acc)} m)`
+        : 'Location ready',
     );
   }
 
-  function requestLocation() {
+  function getPosition(options: PositionOptions) {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
+  function watchOnce(options: PositionOptions, maxMs: number) {
+    return new Promise<GeolocationPosition | null>((resolve) => {
+      let settled = false;
+      let watchId: number | undefined;
+      const finish = (pos: GeolocationPosition | null) => {
+        if (settled) return;
+        settled = true;
+        if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+        clearTimeout(timer);
+        resolve(pos);
+      };
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => finish(pos),
+        () => finish(null),
+        options,
+      );
+      const timer = setTimeout(() => finish(null), maxMs);
+    });
+  }
+
+  async function requestLocation(opts?: { quiet?: boolean }) {
     if (!navigator.geolocation) {
       setLocationStatus('Geolocation not supported on this device');
       return;
     }
-    setLocationStatus('Requesting permission…');
-    navigator.geolocation.getCurrentPosition(
-      applyLocation,
-      (err) => {
-        if (err.code === 3 || err.code === 2) {
-          navigator.geolocation.getCurrentPosition(
-            applyLocation,
-            (err2) => setLocationStatus(locationHint(err2.code)),
-            {
-              enableHighAccuracy: false,
-              timeout: 25000,
-              maximumAge: 120_000,
-            },
-          );
+    if (locatingRef.current) return;
+    locatingRef.current = true;
+    if (!opts?.quiet) {
+      setLocationStatus('Getting location…');
+    }
+
+    const attempts: PositionOptions[] = [
+      { enableHighAccuracy: false, timeout: 12_000, maximumAge: 86_400_000 },
+      { enableHighAccuracy: false, timeout: 30_000, maximumAge: 3_600_000 },
+      { enableHighAccuracy: true, timeout: 45_000, maximumAge: 300_000 },
+    ];
+
+    try {
+      for (const options of attempts) {
+        try {
+          applyLocation(await getPosition(options));
           return;
+        } catch {
+          // try next strategy
         }
-        setLocationStatus(locationHint(err.code));
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    );
+      }
+
+      const watched = await watchOnce(
+        { enableHighAccuracy: false, maximumAge: 86_400_000 },
+        22_000,
+      );
+      if (watched) {
+        applyLocation(watched);
+        return;
+      }
+
+      if (!coordsRef.current && !opts?.quiet) {
+        setLocationStatus(locationHint(3));
+      }
+    } finally {
+      locatingRef.current = false;
+    }
   }
 
   async function unlockCloudGallery() {
@@ -813,9 +868,13 @@ export default function NewCustomerPage() {
           className={`rounded-lg border p-3 text-sm ${
             coords
               ? 'border-teal-200 bg-teal-50'
-              : locationStatus.toLowerCase().includes('denied')
+              : locationStatus.toLowerCase().includes('denied') ||
+                  locationStatus.toLowerCase().includes('unavailable')
                 ? 'border-amber-300 bg-amber-50'
-                : 'border-slate-200 bg-slate-50'
+                : locationStatus.toLowerCase().includes('slow') ||
+                    locationStatus.toLowerCase().includes('getting')
+                  ? 'border-slate-200 bg-slate-50'
+                  : 'border-amber-300 bg-amber-50'
           }`}
         >
           <p
@@ -839,7 +898,7 @@ export default function NewCustomerPage() {
           ) : null}
           <button
             type="button"
-            onClick={requestLocation}
+            onClick={() => void requestLocation()}
             className="mt-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-800 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             Try location again
