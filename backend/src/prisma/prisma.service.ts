@@ -109,6 +109,7 @@ export class PrismaService
         "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );`,
       `CREATE INDEX IF NOT EXISTS "petty_cash_expenses_spent_on_idx" ON "petty_cash_expenses"("spent_on");`,
+      `ALTER TABLE "petty_cash_expenses" ADD COLUMN IF NOT EXISTS "paid_to_name" TEXT;`,
     ]) {
       try {
         await this.$executeRawUnsafe(sql);

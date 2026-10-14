@@ -28,6 +28,7 @@ type AuditReport = {
     spentOn: string;
     amount: number;
     purpose: string;
+    paidToName?: string | null;
     recordedBy: string;
   }>;
   collectionsByDay: Array<{ date: string; total: number; count: number }>;
@@ -210,7 +211,15 @@ export default function MonthlyAuditPage() {
                           className="flex flex-wrap justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
                         >
                           <span>
-                            {e.spentOn} · {e.purpose}
+                            {e.spentOn}
+                            {e.paidToName ? (
+                              <>
+                                {' '}
+                                · <span className="text-violet-800">Paid to {e.paidToName}</span>
+                              </>
+                            ) : null}
+                            {' · '}
+                            {e.purpose}
                             <span className="text-slate-500"> · {e.recordedBy}</span>
                           </span>
                           <span className="font-medium">{money(e.amount)}</span>

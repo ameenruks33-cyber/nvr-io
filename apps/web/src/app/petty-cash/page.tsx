@@ -6,10 +6,13 @@ import { api, getSession, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeCalendarDay, formatUaeTime } from '@/lib/uae-datetime';
 
+type ExpenseKind = 'general' | 'person';
+
 type Expense = {
   id: string;
   amount: number;
   purpose: string;
+  paidToName?: string | null;
   recordedBy: { id: string; name: string };
   createdAt: string;
 };
@@ -25,6 +28,8 @@ type Summary = {
   today: string;
   totalCollected: number;
   totalSpent: number;
+  totalPersonPaid: number;
+  totalGeneralSpent: number;
   balance: number;
   todayCollected: number;
   todaySpent: number;
@@ -36,6 +41,16 @@ function dayLabel(date: string, today: string) {
   return formatUaeCalendarDay(date);
 }
 
+function splitExpenses(expenses: Expense[]) {
+  const personPayments: Expense[] = [];
+  const generalExpenses: Expense[] = [];
+  for (const e of expenses) {
+    if (e.paidToName?.trim()) personPayments.push(e);
+    else generalExpenses.push(e);
+  }
+  return { personPayments, generalExpenses };
+}
+
 const inputClass =
   'mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2';
 
@@ -44,6 +59,8 @@ export default function PettyCashPage() {
   const [amount, setAmount] = useState('');
   const [spentOn, setSpentOn] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [expenseKind, setExpenseKind] = useState<ExpenseKind>('general');
+  const [paidToName, setPaidToName] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [message, setMessage] = useState('');
@@ -74,6 +91,11 @@ export default function PettyCashPage() {
       setError('Enter the amount taken');
       return;
     }
+    const person = paidToName.trim();
+    if (expenseKind === 'person' && person.length < 2) {
+      setError('Enter who was paid');
+      return;
+    }
     setSaving(true);
     setError('');
     setMessage('');
@@ -84,11 +106,18 @@ export default function PettyCashPage() {
           amount: Math.round(value * 100) / 100,
           spentOn,
           purpose: purpose.trim(),
+          ...(expenseKind === 'person' ? { paidToName: person } : {}),
         }),
       });
-      setMessage(`Recorded ${money(value)} for ${purpose.trim()}.`);
+      setMessage(
+        expenseKind === 'person'
+          ? `Recorded ${money(value)} paid to ${person}.`
+          : `Recorded ${money(value)} for ${purpose.trim()}.`,
+      );
       setAmount('');
       setPurpose('');
+      setPaidToName('');
+      setExpenseKind('general');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save expense');
@@ -98,9 +127,12 @@ export default function PettyCashPage() {
   }
 
   async function removeExpense(expense: Expense) {
+    const label = expense.paidToName
+      ? `${money(expense.amount)} to ${expense.paidToName}`
+      : `${money(expense.amount)} — ${expense.purpose}`;
     if (
       !window.confirm(
-        `Delete ${money(expense.amount)} — ${expense.purpose}? The amount goes back into the wallet.`,
+        `Delete ${label}? The amount goes back into the wallet.`,
       )
     ) {
       return;
@@ -121,12 +153,53 @@ export default function PettyCashPage() {
 
   const negative = (data?.balance ?? 0) < 0;
 
+  function renderExpenseList(items: Expense[], variant: 'person' | 'general') {
+    if (!items.length) return null;
+    return (
+      <ul className="mt-2 divide-y divide-slate-100 text-sm">
+        {items.map((x) => (
+          <li
+            key={x.id}
+            className="flex flex-wrap items-center justify-between gap-2 py-2"
+          >
+            <div>
+              {variant === 'person' ? (
+                <>
+                  <p className="font-medium text-slate-900">{x.paidToName}</p>
+                  <p className="text-xs text-slate-600">{x.purpose}</p>
+                </>
+              ) : (
+                <p className="text-slate-900">{x.purpose}</p>
+              )}
+              <p className="text-xs text-slate-500">
+                by {x.recordedBy.name} · {formatUaeTime(x.createdAt)}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-medium text-red-600">−{money(x.amount)}</span>
+              {isSuperAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => void removeExpense(x)}
+                  disabled={deletingId === x.id}
+                  className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <AppShell>
       <h1 className="font-display text-3xl text-slate-900">Petty Cash</h1>
       <p className="mt-1 max-w-xl text-sm text-slate-500">
-        Money taken from collections for expenses. Each expense is taken off the
-        wallet and logged on the day it was spent.
+        Money taken from collections for expenses. Paying a person creates a
+        separate line from general expenses (fuel, tea, etc.).
       </p>
 
       <section className="mt-6 grid max-w-3xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -164,7 +237,10 @@ export default function PettyCashPage() {
           <p className="mt-1 text-lg font-semibold text-red-700">
             {data ? money(data.totalSpent) : '…'}
           </p>
-          <p className="mt-1 text-xs text-red-600/80">All petty cash taken out</p>
+          <p className="mt-1 text-xs text-red-600/80">
+            General {data ? money(data.totalGeneralSpent) : '…'} · People{' '}
+            {data ? money(data.totalPersonPaid) : '…'}
+          </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-xs text-slate-500">Collected today</p>
@@ -190,7 +266,34 @@ export default function PettyCashPage() {
         onSubmit={onSubmit}
         className="mt-6 max-w-3xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5"
       >
-        <h2 className="text-lg font-medium text-slate-900">Take money for an expense</h2>
+        <h2 className="text-lg font-medium text-slate-900">Record an expense</h2>
+        <fieldset className="space-y-2">
+          <legend className="text-sm text-slate-600">Type</legend>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setExpenseKind('general')}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                expenseKind === 'general'
+                  ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
+                  : 'border-slate-200 text-slate-600'
+              }`}
+            >
+              General expense
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpenseKind('person')}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                expenseKind === 'person'
+                  ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
+                  : 'border-slate-200 text-slate-600'
+              }`}
+            >
+              Pay to a person
+            </button>
+          </div>
+        </fieldset>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="text-slate-600">Amount (AED)</span>
@@ -218,13 +321,33 @@ export default function PettyCashPage() {
             />
           </label>
         </div>
+        {expenseKind === 'person' ? (
+          <label className="block text-sm">
+            <span className="text-slate-600">Person paid</span>
+            <input
+              className={inputClass}
+              value={paidToName}
+              onChange={(e) => setPaidToName(e.target.value)}
+              placeholder="e.g. Rajesh, driver Ahmed"
+              minLength={2}
+              maxLength={120}
+              required
+            />
+          </label>
+        ) : null}
         <label className="block text-sm">
-          <span className="text-slate-600">What was it for?</span>
+          <span className="text-slate-600">
+            {expenseKind === 'person' ? 'Reason / note' : 'What was it for?'}
+          </span>
           <input
             className={inputClass}
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
-            placeholder="e.g. Fuel, tea, printing"
+            placeholder={
+              expenseKind === 'person'
+                ? 'e.g. Advance, commission, refund'
+                : 'e.g. Fuel, tea, printing'
+            }
             minLength={2}
             maxLength={200}
             required
@@ -245,67 +368,61 @@ export default function PettyCashPage() {
           disabled={saving}
           className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-500 disabled:opacity-60"
         >
-          {saving ? 'Saving…' : 'Record expense'}
+          {saving
+            ? 'Saving…'
+            : expenseKind === 'person'
+              ? 'Record payment to person'
+              : 'Record expense'}
         </button>
       </form>
 
       <section className="mt-8 max-w-3xl">
         <h2 className="mb-3 text-lg font-medium text-slate-900">Daily log</h2>
         <div className="space-y-3">
-          {(data?.days || []).map((day) => (
-            <div
-              key={day.date}
-              className="rounded-2xl border border-slate-200 bg-white p-4"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-medium text-slate-900">
-                  {dayLabel(day.date, data?.today || '')}
-                </p>
-                <p className="text-xs text-slate-500">
-                  <span className="text-teal-700">+{money(day.collected)}</span>
-                  {' · '}
-                  <span className="text-red-600">−{money(day.spent)}</span>
-                  {' · '}
-                  Net {money(day.collected - day.spent)}
-                </p>
-              </div>
-              {day.expenses.length ? (
-                <ul className="mt-3 divide-y divide-slate-100 text-sm">
-                  {day.expenses.map((x) => (
-                    <li
-                      key={x.id}
-                      className="flex flex-wrap items-center justify-between gap-2 py-2"
-                    >
+          {(data?.days || []).map((day) => {
+            const { personPayments, generalExpenses } = splitExpenses(day.expenses);
+            return (
+              <div
+                key={day.date}
+                className="rounded-2xl border border-slate-200 bg-white p-4"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-medium text-slate-900">
+                    {dayLabel(day.date, data?.today || '')}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    <span className="text-teal-700">+{money(day.collected)}</span>
+                    {' · '}
+                    <span className="text-red-600">−{money(day.spent)}</span>
+                    {' · '}
+                    Net {money(day.collected - day.spent)}
+                  </p>
+                </div>
+                {day.expenses.length ? (
+                  <div className="mt-3 space-y-4">
+                    {personPayments.length ? (
                       <div>
-                        <p className="text-slate-900">{x.purpose}</p>
-                        <p className="text-xs text-slate-500">
-                          by {x.recordedBy.name} ·{' '}
-                          {formatUaeTime(x.createdAt)}
+                        <p className="text-xs font-medium uppercase tracking-wide text-violet-700">
+                          Payments to people
                         </p>
+                        {renderExpenseList(personPayments, 'person')}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-red-600">
-                          −{money(x.amount)}
-                        </span>
-                        {isSuperAdmin ? (
-                          <button
-                            type="button"
-                            onClick={() => void removeExpense(x)}
-                            disabled={deletingId === x.id}
-                            className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
-                          >
-                            Delete
-                          </button>
-                        ) : null}
+                    ) : null}
+                    {generalExpenses.length ? (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Other expenses
+                        </p>
+                        {renderExpenseList(generalExpenses, 'general')}
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-xs text-slate-500">No expenses this day.</p>
-              )}
-            </div>
-          ))}
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">No expenses this day.</p>
+                )}
+              </div>
+            );
+          })}
           {data && !data.days.length ? (
             <p className="text-sm text-slate-500">Nothing recorded yet.</p>
           ) : null}

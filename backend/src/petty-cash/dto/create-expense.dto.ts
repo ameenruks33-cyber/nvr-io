@@ -1,4 +1,13 @@
-import { IsNumber, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateExpenseDto {
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -14,4 +23,11 @@ export class CreateExpenseDto {
   @MinLength(2)
   @MaxLength(200)
   purpose!: string;
+
+  /** Person paid from petty cash — stored as its own expense line. */
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  paidToName?: string;
 }

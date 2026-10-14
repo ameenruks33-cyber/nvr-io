@@ -31,6 +31,7 @@ export type MonthlyAuditPayload = {
     spentOn: string;
     amount: number;
     purpose: string;
+    paidToName: string | null;
     recordedBy: string;
   }>;
   collectionsByDay: Array<{
@@ -283,6 +284,7 @@ export class MonthlyAuditService {
         spentOn: e.spentOn,
         amount: Number(e.amount),
         purpose: e.purpose,
+        paidToName: e.paidToName?.trim() || null,
         recordedBy: e.recordedBy.name,
       })),
       collectionsByDay,

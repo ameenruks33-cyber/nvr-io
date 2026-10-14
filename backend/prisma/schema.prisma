@@ -93,6 +93,8 @@ model PettyCashExpense {
   amount       Decimal
   spentOn      String   @map("spent_on")
   purpose      String
+  /// When set, this row is a payment to that person (separate from general expenses).
+  paidToName   String?  @map("paid_to_name")
   recordedById String   @map("recorded_by")
   createdAt    DateTime @default(now()) @map("created_at")
 

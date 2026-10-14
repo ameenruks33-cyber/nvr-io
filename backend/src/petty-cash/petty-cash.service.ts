@@ -22,9 +22,14 @@ export class PettyCashService {
     const today = uaeDate(new Date());
     const since = uaeDate(new Date(Date.now() - HISTORY_DAYS * 86_400_000));
 
-    const [collectedAgg, spentAgg, collectedByDay, expenses] = await Promise.all([
+    const [collectedAgg, spentAgg, personSpentAgg, collectedByDay, expenses] =
+      await Promise.all([
       this.prisma.repayment.aggregate({ _sum: { amount: true } }),
       this.prisma.pettyCashExpense.aggregate({ _sum: { amount: true } }),
+      this.prisma.pettyCashExpense.aggregate({
+        where: { paidToName: { not: null } },
+        _sum: { amount: true },
+      }),
       // collected_at is stored in UTC; group by the UAE calendar day.
       this.prisma.$queryRaw<Array<{ day: string; total: Prisma.Decimal }>>`
         SELECT t.day, SUM(t.amount) AS total
@@ -53,6 +58,7 @@ export class PettyCashService {
           id: string;
           amount: number;
           purpose: string;
+          paidToName: string | null;
           recordedBy: { id: string; name: string };
           createdAt: Date;
         }>;
@@ -78,6 +84,7 @@ export class PettyCashService {
         id: e.id,
         amount,
         purpose: e.purpose,
+        paidToName: e.paidToName?.trim() || null,
         recordedBy: e.recordedBy,
         createdAt: e.createdAt,
       });
@@ -85,12 +92,15 @@ export class PettyCashService {
 
     const totalCollected = Number(collectedAgg._sum.amount ?? 0);
     const totalSpent = Number(spentAgg._sum.amount ?? 0);
+    const totalPersonPaid = Number(personSpentAgg._sum.amount ?? 0);
     const todayRow = days.get(today);
 
     return {
       today,
       totalCollected,
       totalSpent,
+      totalPersonPaid,
+      totalGeneralSpent: Math.max(totalSpent - totalPersonPaid, 0),
       balance: totalCollected - totalSpent,
       todayCollected: todayRow?.collected ?? 0,
       todaySpent: todayRow?.spent ?? 0,
@@ -108,11 +118,14 @@ export class PettyCashService {
       throw new BadRequestException('Date cannot be in the future');
     }
 
+    const paidToName = dto.paidToName?.trim() || null;
+
     const expense = await this.prisma.pettyCashExpense.create({
       data: {
         amount: new Prisma.Decimal(dto.amount),
         spentOn,
         purpose: dto.purpose.trim(),
+        paidToName,
         recordedById: String(userId),
       },
     });
@@ -122,7 +135,7 @@ export class PettyCashService {
       action: 'PETTY_CASH_EXPENSE',
       recordType: 'petty_cash',
       recordId: expense.id,
-      metadata: { amount: dto.amount, spentOn },
+      metadata: { amount: dto.amount, spentOn, paidToName },
     });
 
     return { id: expense.id };
