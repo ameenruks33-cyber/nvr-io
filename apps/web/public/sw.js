@@ -1,5 +1,5 @@
 /* NVR.io service worker — shell cache + auto update notifications to installed devices */
-const CACHE = 'crickherose-shell-v1-1-2610141109';
+const CACHE = 'crickherose-shell-v1-1-2610141111';
 // '/' only redirects to /app — never precache redirect responses
 const PRECACHE = ['/login', '/app', '/manifest.webmanifest'];
 const UPDATE_URL = '/app-update.json';
