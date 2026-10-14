@@ -28,6 +28,15 @@ describe('RepaymentsService.computeBalance', () => {
     });
   });
 
+  it('closes the 1000 AED plan when total collected reaches 1000', () => {
+    const result = RepaymentsService.computeBalance(1000, 900, 100);
+    expect(result).toEqual({
+      collected: 1000,
+      remaining: 0,
+      status: 'COMPLETED',
+    });
+  });
+
   it('rejects payments beyond the total', () => {
     expect(() => RepaymentsService.computeBalance(2000, 1900, 200)).toThrow(
       'Payment exceeds outstanding amount',

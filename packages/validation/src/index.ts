@@ -15,7 +15,9 @@ export const createCustomerSchema = z.object({
   longitude: z.number().min(-180).max(180),
   locationAccuracy: z.number().min(0).optional(),
   consentVersion: z.string().min(1).default('v1'),
+  planId: z.enum(['AED_2000', 'AED_1000']).optional(),
   principalAmount: z.number().positive().optional(),
+  totalPayable: z.number().positive().optional(),
   dailyPayment: z.number().positive().optional(),
 });
 

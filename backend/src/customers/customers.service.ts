@@ -8,6 +8,7 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { StorageService } from '../storage/storage.service';
 import { assertImageBuffer } from '../common/image-bytes';
+import { resolveLoanAmounts } from '../loans/loan-plans';
 
 @Injectable()
 export class CustomersService {
@@ -25,19 +26,17 @@ export class CustomersService {
   }
 
   async create(dto: CreateCustomerDto, actor: AuthUser, ip?: string) {
-    const principal = Number(
-      dto.principalAmount ??
-        this.config.get('DEFAULT_LOAN_AMOUNT') ??
-        1800,
-    );
-    const daily = Number(
-      dto.dailyPayment ?? this.config.get('DEFAULT_DAILY_PAYMENT') ?? 100,
-    );
-    // `principal` is given; the account closes once the full `total` is repaid.
-    const total = Math.max(
-      Number(this.config.get('DEFAULT_TOTAL_AMOUNT') ?? 2000),
-      principal,
-    );
+    const { principal, totalPayable: total, daily } = resolveLoanAmounts({
+      planId: dto.planId,
+      principalAmount: dto.principalAmount,
+      totalPayable: dto.totalPayable,
+      dailyPayment: dto.dailyPayment,
+      defaults: {
+        principal: Number(this.config.get('DEFAULT_LOAN_AMOUNT') ?? 1800),
+        total: Number(this.config.get('DEFAULT_TOTAL_AMOUNT') ?? 2000),
+        daily: Number(this.config.get('DEFAULT_DAILY_PAYMENT') ?? 100),
+      },
+    });
 
     const customerCode = await this.nextCustomerCode();
 

@@ -7,6 +7,7 @@ import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
+import { loanTotals } from '@/lib/loan-plans';
 
 type Row = {
   id: string;
@@ -16,6 +17,8 @@ type Row = {
   notes?: string | null;
   collectedBy: { name: string };
   loan: {
+    totalPayable?: string | number;
+    principalAmount?: string | number;
     customer: { name: string; customerCode: string };
   };
 };
@@ -53,7 +56,7 @@ export default function RepaymentsPage() {
           <tbody>
             {rows.map((row) => {
               const a = Number(row.amount);
-              const ok = a >= 100 && a <= 2000;
+              const ok = a >= 100 && a <= loanTotals(row.loan).total;
               return (
                 <tr key={row.id} className="border-t border-slate-100">
                   <td className="px-4 py-3 font-mono text-xs">

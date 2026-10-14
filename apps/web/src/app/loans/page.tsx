@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { loanTotals } from '@/lib/loan-plans';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type LoanRow = {
@@ -60,12 +61,7 @@ export default function LoansPage() {
                 </td>
                 <td className="px-4 py-3">
                   {money(Number(row.amountCollected))} /{' '}
-                  {money(
-                    Math.max(
-                      Number(row.totalPayable || 2000),
-                      Number(row.principalAmount),
-                    ),
-                  )}
+                  {money(loanTotals(row).total)}
                 </td>
                 <td className="px-4 py-3">
                   {row.status === 'ACTIVE' ? (

@@ -13,9 +13,9 @@ import { useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 
+import { loanTotals } from '@/lib/loan-plans';
+
 const MIN_AED = 100;
-const MAX_AED = 1800;
-const TOTAL_AED = 2000;
 
 type CustomerRow = {
   id: string;
@@ -41,6 +41,8 @@ type RecentRow = {
   notes?: string | null;
   collectedBy: { name: string };
   loan: {
+    totalPayable?: string | number;
+    principalAmount?: string | number;
     customer: { name: string; customerCode: string };
   };
 };
@@ -109,11 +111,7 @@ function CollectionsPageContent() {
   );
 
   const collected = Number(selected?.loan?.amountCollected || 0);
-  const principal = Number(selected?.loan?.principalAmount || MAX_AED);
-  const total = Math.max(
-    Number(selected?.loan?.totalPayable || TOTAL_AED),
-    principal,
-  );
+  const { principal, total } = loanTotals(selected?.loan);
   const remaining = Number(
     selected?.loan?.remainingAmount ?? Math.max(total - collected, 0),
   );
@@ -208,7 +206,8 @@ function CollectionsPageContent() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      const target = Number(result.total || result.principal) || TOTAL_AED;
+      const target =
+        Number(result.total || result.principal) || total || 2000;
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
@@ -274,10 +273,7 @@ function CollectionsPageContent() {
             <tbody>
               {rows.map((row) => {
                 const rowCollected = Number(row.loan?.amountCollected || 0);
-                const rowTotal = Math.max(
-                  Number(row.loan?.totalPayable || TOTAL_AED),
-                  Number(row.loan?.principalAmount || MAX_AED),
-                );
+                const { total: rowTotal } = loanTotals(row.loan);
                 const rowRemaining = Number(
                   row.loan?.remainingAmount ??
                     Math.max(rowTotal - rowCollected, 0),
@@ -507,7 +503,8 @@ function CollectionsPageContent() {
             <tbody>
               {recent.map((row) => {
                 const a = Number(row.amount);
-                const ok = a >= MIN_AED && a <= TOTAL_AED;
+                const payTotal = loanTotals(row.loan).total;
+                const ok = a >= MIN_AED && a <= payTotal;
                 return (
                   <tr key={row.id} className="border-t border-slate-100">
                     <td className="px-4 py-3 font-mono text-xs">

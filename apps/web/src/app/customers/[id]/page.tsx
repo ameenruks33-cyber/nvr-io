@@ -12,6 +12,7 @@ import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
+import { loanTotals } from '@/lib/loan-plans';
 
 type CustomerDetail = {
   id: string;
@@ -107,13 +108,8 @@ export default function CustomerDetailPage() {
   });
 
   const activeLoan = customer?.loans?.[0];
-  const maxPay = Math.max(
-    Math.max(
-      Number(activeLoan?.totalPayable || 2000),
-      Number(activeLoan?.principalAmount || 1800),
-    ) - Number(activeLoan?.amountCollected || 0),
-    0,
-  );
+  const { total: loanTotal } = loanTotals(activeLoan);
+  const maxPay = Math.max(loanTotal - Number(activeLoan?.amountCollected || 0), 0);
   const amountNum = Number(amount);
   const amountOk =
     Number.isFinite(amountNum) &&
@@ -150,7 +146,7 @@ export default function CustomerDetailPage() {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      const target = Number(result.total || result.principal) || 2000;
+      const target = Number(result.total || result.principal) || loanTotal;
       const wa = result.whatsapp;
       let waNote = '';
       if (wa?.sent) {
@@ -188,8 +184,7 @@ export default function CustomerDetailPage() {
 
   const loan = customer.loans?.[0];
   const collected = Number(loan?.amountCollected || 0);
-  const principal = Number(loan?.principalAmount || 1800);
-  const total = Math.max(Number(loan?.totalPayable || 2000), principal);
+  const { principal, total } = loanTotals(loan);
   const remaining = Number(loan?.remainingAmount || 0);
   const open = loan?.status === 'ACTIVE';
   const closed = Boolean(loan) && !open;
@@ -412,7 +407,7 @@ export default function CustomerDetailPage() {
             <ul className="mt-4 space-y-2 text-sm">
               {(loan?.repayments || []).map((r, idx) => {
                 const a = Number(r.amount);
-                const ok = a >= 100 && a <= 2000;
+                const ok = a >= 100 && a <= loanTotals(loan).total;
                 return (
                   <li
                     key={r.id}

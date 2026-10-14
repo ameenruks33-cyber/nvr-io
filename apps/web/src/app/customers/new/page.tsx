@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { api, GALLERY_UNLOCK_KEY, money } from '@/lib/api';
+import { LOAN_PLAN_IDS, LOAN_PLANS, type LoanPlanId } from '@/lib/loan-plans';
 import { shrinkImage } from '@/lib/image';
 
 type PendingPhoto = { file: File; url: string };
@@ -50,6 +51,8 @@ export default function NewCustomerPage() {
   const [galleryPin, setGalleryPin] = useState('');
   const [galleryUnlockMsg, setGalleryUnlockMsg] = useState('');
   const [galleryUnlocking, setGalleryUnlocking] = useState(false);
+  const [planId, setPlanId] = useState<LoanPlanId>('AED_2000');
+  const [dailyPayment, setDailyPayment] = useState('100');
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -403,6 +406,11 @@ export default function NewCustomerPage() {
           longitude: coords.longitude,
           locationAccuracy: coords.accuracy,
           consentVersion: 'v1',
+          planId,
+          principalAmount: LOAN_PLANS[planId].principal,
+          totalPayable: LOAN_PLANS[planId].totalPayable,
+          dailyPayment:
+            Number(dailyPayment) || LOAN_PLANS[planId].defaultDaily,
         }),
       });
 
@@ -597,6 +605,43 @@ export default function NewCustomerPage() {
             the wallet, or update details below.
           </p>
         ) : null}
+        <fieldset className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-medium text-slate-900">Plan</legend>
+          <div className="flex flex-wrap gap-2">
+            {LOAN_PLAN_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setPlanId(id);
+                  setDailyPayment(String(LOAN_PLANS[id].defaultDaily));
+                }}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  planId === id
+                    ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
+                    : 'border-slate-200 bg-white text-slate-600'
+                }`}
+              >
+                {LOAN_PLANS[id].label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-600">
+            Customer receives {money(LOAN_PLANS[planId].principal)}. Account
+            closes when collections reach {money(LOAN_PLANS[planId].totalPayable)}.
+          </p>
+          <label className="block text-sm">
+            <span className="text-slate-600">Daily collection amount (AED)</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={dailyPayment}
+              onChange={(e) => setDailyPayment(e.target.value)}
+              className="mt-1 w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2"
+            />
+          </label>
+        </fieldset>
         {(
           [
             ['name', 'Full Name', 'text'],

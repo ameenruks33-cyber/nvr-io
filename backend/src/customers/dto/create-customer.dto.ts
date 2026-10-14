@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -7,6 +8,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { LOAN_PLAN_IDS, type LoanPlanId } from '../../loans/loan-plans';
 import { Type } from 'class-transformer';
 
 export class CreateCustomerDto {
@@ -78,10 +80,20 @@ export class CreateCustomerDto {
   consentVersion?: string;
 
   @IsOptional()
+  @IsIn(LOAN_PLAN_IDS)
+  planId?: LoanPlanId;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
   principalAmount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  totalPayable?: number;
 
   @IsOptional()
   @Type(() => Number)

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { loanTotals } from '@/lib/loan-plans';
 import { useLiveRefresh } from '@/lib/live-sync';
 
 type CustomerRow = {
@@ -89,10 +90,7 @@ export default function CustomersPage() {
           <tbody>
             {rows.map((row) => {
               const collected = Number(row.loan?.amountCollected || 0);
-              const total = Math.max(
-                Number(row.loan?.totalPayable || 2000),
-                Number(row.loan?.principalAmount || 1800),
-              );
+              const { total } = loanTotals(row.loan);
               const closed = Boolean(row.loan) && row.loan?.status !== 'ACTIVE';
               return (
                 <tr
