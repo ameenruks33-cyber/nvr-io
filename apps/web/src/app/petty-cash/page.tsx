@@ -451,14 +451,18 @@ export default function PettyCashPage() {
           </p>
         </div>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-          <p className="text-xs text-red-700">Total expenses</p>
+          <p className="text-xs text-red-700">Total general expense</p>
           <p className="mt-1 text-lg font-semibold text-red-700">
-            {data ? money(data.totalSpent) : '…'}
+            {data ? money(data.totalGeneralSpent) : '…'}
           </p>
-          <p className="mt-1 text-xs text-red-600/80">
-            General {data ? money(data.totalGeneralSpent) : '…'} · Customers{' '}
+          <p className="mt-1 text-xs text-red-600/80">Fuel, tea, printing, etc.</p>
+        </div>
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <p className="text-xs text-violet-800">Total loan expense</p>
+          <p className="mt-1 text-lg font-semibold text-violet-900">
             {data ? money(data.totalPersonPaid) : '…'}
           </p>
+          <p className="mt-1 text-xs text-violet-700/80">Cash paid to customers</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-xs text-slate-500">Collected today</p>
@@ -472,7 +476,7 @@ export default function PettyCashPage() {
             {data ? money(data.todaySpent) : '…'}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2 lg:col-span-1">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-xs text-slate-500">Net today</p>
           <p className="mt-1 text-lg font-medium text-slate-900">
             {data ? money(data.todayCollected - data.todaySpent) : '…'}
