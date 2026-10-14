@@ -57,6 +57,7 @@ export class PettyCashService {
         expenses: Array<{
           id: string;
           amount: number;
+          spentOn: string;
           purpose: string;
           paidToName: string | null;
           recordedBy: { id: string; name: string };
@@ -83,6 +84,7 @@ export class PettyCashService {
       d.expenses.push({
         id: e.id,
         amount,
+        spentOn: e.spentOn,
         purpose: e.purpose,
         paidToName: e.paidToName?.trim() || null,
         recordedBy: e.recordedBy,
@@ -108,8 +110,7 @@ export class PettyCashService {
     };
   }
 
-  async create(dto: CreateExpenseDto, userId: string) {
-    const spentOn = dto.spentOn;
+  private assertSpentOn(spentOn: string) {
     const parsed = new Date(`${spentOn}T00:00:00Z`);
     if (Number.isNaN(parsed.getTime()) || uaeDate(parsed) !== spentOn) {
       throw new BadRequestException('Invalid date');
@@ -117,6 +118,11 @@ export class PettyCashService {
     if (spentOn > uaeDate(new Date())) {
       throw new BadRequestException('Date cannot be in the future');
     }
+  }
+
+  async create(dto: CreateExpenseDto, userId: string) {
+    const spentOn = dto.spentOn;
+    this.assertSpentOn(spentOn);
 
     const paidToName = dto.paidToName?.trim() || null;
 
@@ -139,6 +145,41 @@ export class PettyCashService {
     });
 
     return { id: expense.id };
+  }
+
+  async update(id: string, dto: CreateExpenseDto, userId: string) {
+    const expense = await this.prisma.pettyCashExpense.findUnique({
+      where: { id: String(id) },
+    });
+    if (!expense) throw new NotFoundException('Expense not found');
+
+    this.assertSpentOn(dto.spentOn);
+    const paidToName = dto.paidToName?.trim() || null;
+
+    const updated = await this.prisma.pettyCashExpense.update({
+      where: { id: expense.id },
+      data: {
+        amount: new Prisma.Decimal(dto.amount),
+        spentOn: dto.spentOn,
+        purpose: dto.purpose.trim(),
+        paidToName,
+      },
+    });
+
+    await this.audit.log({
+      userId,
+      action: 'PETTY_CASH_EXPENSE_UPDATE',
+      recordType: 'petty_cash',
+      recordId: updated.id,
+      metadata: {
+        amount: dto.amount,
+        spentOn: dto.spentOn,
+        paidToName,
+        purpose: dto.purpose.trim(),
+      },
+    });
+
+    return { id: updated.id };
   }
 
   async remove(id: string, userId: string) {

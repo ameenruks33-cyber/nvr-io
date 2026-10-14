@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141118",
-  "releasedAt": "2026-10-14T07:18:48.978Z",
+  "version": "1.1.2610141124",
+  "releasedAt": "2026-10-14T07:24:18.142Z",
   "title": "CrickHerose update available",
-  "message": "Petty cash person payments separate from general expenses",
+  "message": "Edit petty cash expenses in daily log",
   "notes": [
+    "Edit petty cash expenses in daily log",
     "Petty cash person payments separate from general expenses",
     "Show total expenses on Petty Cash page",
     "Sync service worker cache for auto-ship",
     "Admin can delete collections from Collection and Receipts",
     "Monthly audit on mobile menu and bottom bar for admins",
     "Fix mobile app update detection and fresh page loads",
-    "Monthly audit admin page live on production",
-    "Fix Vercel monorepo deploy; new Home calendar live"
+    "Monthly audit admin page live on production"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141118/favicon.png",
-    "icon192": "/icons/v1.1.2610141118/icon-192.png",
-    "icon512": "/icons/v1.1.2610141118/icon-512.png",
-    "apple": "/icons/v1.1.2610141118/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141118/logo.jpg"
+    "favicon": "/icons/v1.1.2610141124/favicon.png",
+    "icon192": "/icons/v1.1.2610141124/icon-192.png",
+    "icon512": "/icons/v1.1.2610141124/icon-512.png",
+    "apple": "/icons/v1.1.2610141124/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141124/logo.jpg"
   }
 }

@@ -11,6 +11,7 @@ type ExpenseKind = 'general' | 'person';
 type Expense = {
   id: string;
   amount: number;
+  spentOn: string;
   purpose: string;
   paidToName?: string | null;
   recordedBy: { id: string; name: string };
@@ -54,6 +55,9 @@ function splitExpenses(expenses: Expense[]) {
 const inputClass =
   'mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none ring-blue-500 focus:ring-2';
 
+const inputClassCompact =
+  'w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2';
+
 export default function PettyCashPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [amount, setAmount] = useState('');
@@ -63,6 +67,13 @@ export default function PettyCashPage() {
   const [paidToName, setPaidToName] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editSpentOn, setEditSpentOn] = useState('');
+  const [editPurpose, setEditPurpose] = useState('');
+  const [editKind, setEditKind] = useState<ExpenseKind>('general');
+  const [editPaidToName, setEditPaidToName] = useState('');
+  const [savingEditId, setSavingEditId] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -126,6 +137,59 @@ export default function PettyCashPage() {
     }
   }
 
+  function startEdit(expense: Expense) {
+    setEditingId(expense.id);
+    setEditAmount(String(expense.amount));
+    setEditSpentOn(expense.spentOn || data?.today || '');
+    setEditPurpose(expense.purpose);
+    setEditPaidToName(expense.paidToName?.trim() || '');
+    setEditKind(expense.paidToName?.trim() ? 'person' : 'general');
+    setError('');
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setSavingEditId('');
+  }
+
+  async function saveEdit(expenseId: string) {
+    const value = Number(editAmount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError('Enter a valid amount');
+      return;
+    }
+    const person = editPaidToName.trim();
+    if (editKind === 'person' && person.length < 2) {
+      setError('Enter who was paid');
+      return;
+    }
+    if (editPurpose.trim().length < 2) {
+      setError('Enter a description');
+      return;
+    }
+    setSavingEditId(expenseId);
+    setError('');
+    setMessage('');
+    try {
+      await api(`/petty-cash/${expenseId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          amount: Math.round(value * 100) / 100,
+          spentOn: editSpentOn,
+          purpose: editPurpose.trim(),
+          ...(editKind === 'person' ? { paidToName: person } : {}),
+        }),
+      });
+      setMessage('Expense updated.');
+      cancelEdit();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update expense');
+    } finally {
+      setSavingEditId('');
+    }
+  }
+
   async function removeExpense(expense: Expense) {
     const label = expense.paidToName
       ? `${money(expense.amount)} to ${expense.paidToName}`
@@ -157,39 +221,135 @@ export default function PettyCashPage() {
     if (!items.length) return null;
     return (
       <ul className="mt-2 divide-y divide-slate-100 text-sm">
-        {items.map((x) => (
-          <li
-            key={x.id}
-            className="flex flex-wrap items-center justify-between gap-2 py-2"
-          >
-            <div>
-              {variant === 'person' ? (
-                <>
-                  <p className="font-medium text-slate-900">{x.paidToName}</p>
-                  <p className="text-xs text-slate-600">{x.purpose}</p>
-                </>
-              ) : (
-                <p className="text-slate-900">{x.purpose}</p>
-              )}
-              <p className="text-xs text-slate-500">
-                by {x.recordedBy.name} · {formatUaeTime(x.createdAt)}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-medium text-red-600">−{money(x.amount)}</span>
-              {isSuperAdmin ? (
+        {items.map((x) =>
+          editingId === x.id ? (
+            <li key={x.id} className="space-y-2 py-3">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void removeExpense(x)}
-                  disabled={deletingId === x.id}
-                  className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
+                  onClick={() => setEditKind('general')}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    editKind === 'general'
+                      ? 'border-blue-600 bg-blue-50 text-blue-900'
+                      : 'border-slate-200 text-slate-600'
+                  }`}
                 >
-                  Delete
+                  General
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setEditKind('person')}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    editKind === 'person'
+                      ? 'border-blue-600 bg-blue-50 text-blue-900'
+                      : 'border-slate-200 text-slate-600'
+                  }`}
+                >
+                  Pay to person
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="block text-xs text-slate-600">
+                  Amount (AED)
+                  <input
+                    className={inputClassCompact}
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                  />
+                </label>
+                <label className="block text-xs text-slate-600">
+                  Date
+                  <input
+                    className={inputClassCompact}
+                    type="date"
+                    max={data?.today}
+                    value={editSpentOn}
+                    onChange={(e) => setEditSpentOn(e.target.value)}
+                  />
+                </label>
+              </div>
+              {editKind === 'person' ? (
+                <label className="block text-xs text-slate-600">
+                  Person paid
+                  <input
+                    className={inputClassCompact}
+                    value={editPaidToName}
+                    onChange={(e) => setEditPaidToName(e.target.value)}
+                    maxLength={120}
+                  />
+                </label>
               ) : null}
-            </div>
-          </li>
-        ))}
+              <label className="block text-xs text-slate-600">
+                {editKind === 'person' ? 'Reason / note' : 'Description'}
+                <input
+                  className={inputClassCompact}
+                  value={editPurpose}
+                  onChange={(e) => setEditPurpose(e.target.value)}
+                  maxLength={200}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={savingEditId === x.id}
+                  onClick={() => void saveEdit(x.id)}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                >
+                  {savingEditId === x.id ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ) : (
+            <li
+              key={x.id}
+              className="flex flex-wrap items-center justify-between gap-2 py-2"
+            >
+              <div>
+                {variant === 'person' ? (
+                  <>
+                    <p className="font-medium text-slate-900">{x.paidToName}</p>
+                    <p className="text-xs text-slate-600">{x.purpose}</p>
+                  </>
+                ) : (
+                  <p className="text-slate-900">{x.purpose}</p>
+                )}
+                <p className="text-xs text-slate-500">
+                  by {x.recordedBy.name} · {formatUaeTime(x.createdAt)}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-red-600">−{money(x.amount)}</span>
+                <button
+                  type="button"
+                  onClick={() => startEdit(x)}
+                  className="text-xs text-blue-700 underline hover:text-blue-900"
+                >
+                  Edit
+                </button>
+                {isSuperAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => void removeExpense(x)}
+                    disabled={deletingId === x.id}
+                    className="text-xs text-slate-500 underline hover:text-red-600 disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          ),
+        )}
       </ul>
     );
   }
