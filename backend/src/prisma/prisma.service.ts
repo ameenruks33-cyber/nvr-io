@@ -62,6 +62,13 @@ export class PrismaService
         // ignore if table not ready yet
       }
     }
+    try {
+      await this.$executeRawUnsafe(
+        `ALTER TABLE "app_settings" ADD COLUMN IF NOT EXISTS "collections_sticky_note" TEXT;`,
+      );
+    } catch {
+      // ignore if table not ready yet
+    }
     // WhatsApp login OTP
     for (const sql of [
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "otp_enabled" BOOLEAN NOT NULL DEFAULT false;`,

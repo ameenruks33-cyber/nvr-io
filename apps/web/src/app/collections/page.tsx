@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
+import { CollectionsStickyNote } from '@/components/CollectionsStickyNote';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
@@ -257,6 +258,10 @@ function CollectionsPageContent() {
           Search
         </button>
       </form>
+
+      <div className="mb-6">
+        <CollectionsStickyNote />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="overflow-x-auto rounded-2xl border border-slate-200">

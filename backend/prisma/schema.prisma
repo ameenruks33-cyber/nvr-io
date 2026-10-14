@@ -305,6 +305,8 @@ model AppSetting {
   whatsappApiUrl          String?  @map("whatsapp_api_url")
   whatsappTemplateName    String?  @map("whatsapp_template_name")
   whatsappTemplateLang    String?  @map("whatsapp_template_lang")
+  /// Shared post-it on the Collections screen (team-visible).
+  collectionsStickyNote   String?  @map("collections_sticky_note")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
