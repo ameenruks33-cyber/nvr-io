@@ -1,5 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveLoanAmounts } from './loan-plans';
+import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 
 @Injectable()
 export class LoansService {
@@ -47,5 +54,33 @@ export class LoansService {
     });
     if (!loan) throw new NotFoundException('Loan not found');
     return loan;
+  }
+
+  async updatePlan(loanId: string, dto: UpdateLoanPlanDto) {
+    const loan = await this.prisma.loan.findUnique({ where: { id: loanId } });
+    if (!loan) throw new NotFoundException('Loan not found');
+    if (loan.status !== 'ACTIVE') {
+      throw new BadRequestException('Cannot change plan on a closed record');
+    }
+    if (Number(loan.amountCollected) > 0) {
+      throw new BadRequestException(
+        'Cannot change plan after collections have started',
+      );
+    }
+
+    const { principal, totalPayable, daily } = resolveLoanAmounts({
+      planId: dto.planId,
+      dailyPayment: dto.dailyPayment,
+    });
+
+    return this.prisma.loan.update({
+      where: { id: loanId },
+      data: {
+        principalAmount: new Prisma.Decimal(principal),
+        totalPayable: new Prisma.Decimal(totalPayable),
+        remainingAmount: new Prisma.Decimal(totalPayable),
+        dailyPayment: new Prisma.Decimal(daily),
+      },
+    });
   }
 }

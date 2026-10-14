@@ -40,6 +40,7 @@ export default function NewCustomerPage() {
   const [savedCustomer, setSavedCustomer] = useState<{
     id: string;
     name: string;
+    loanId?: string;
   } | null>(null);
   const [cashAmount, setCashAmount] = useState('');
   const [cashSpentOn, setCashSpentOn] = useState('');
@@ -390,7 +391,10 @@ export default function NewCustomerPage() {
     setError('');
     const form = new FormData(e.currentTarget);
     try {
-      const created = await api<{ id: string }>('/customers', {
+      const created = await api<{
+        id: string;
+        loan?: { id: string };
+      }>('/customers', {
         method: 'POST',
         body: JSON.stringify({
           name: form.get('name'),
@@ -424,7 +428,12 @@ export default function NewCustomerPage() {
       }
 
       const personName = String(form.get('name') || '').trim();
-      setSavedCustomer({ id: created.id, name: personName });
+      setSavedCustomer({
+        id: created.id,
+        name: personName,
+        loanId: created.loan?.id,
+      });
+      setCashAmount(String(LOAN_PLANS[planId].principal));
       setTab('cash');
       setCashMessage('');
       setError('');
@@ -432,6 +441,39 @@ export default function NewCustomerPage() {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function selectPlan(id: LoanPlanId) {
+    setPlanId(id);
+    setDailyPayment(String(LOAN_PLANS[id].defaultDaily));
+    setCashAmount(String(LOAN_PLANS[id].principal));
+    if (!savedCustomer?.loanId) return;
+    try {
+      await api(`/loans/${savedCustomer.loanId}/plan`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          planId: id,
+          dailyPayment: LOAN_PLANS[id].defaultDaily,
+        }),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update plan');
+    }
+  }
+
+  async function syncDailyPayment(value: string) {
+    setDailyPayment(value);
+    if (!savedCustomer?.loanId) return;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return;
+    try {
+      await api(`/loans/${savedCustomer.loanId}/plan`, {
+        method: 'PATCH',
+        body: JSON.stringify({ planId, dailyPayment: n }),
+      });
+    } catch {
+      /* optional sync */
     }
   }
 
@@ -511,6 +553,43 @@ export default function NewCustomerPage() {
 
         {tab === 'cash' ? (
           <div className="space-y-4">
+            <fieldset className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <legend className="px-1 text-sm font-medium text-slate-900">
+                Plan
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {LOAN_PLAN_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => void selectPlan(id)}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      planId === id
+                        ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    {LOAN_PLANS[id].label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-600">
+                Customer receives {money(LOAN_PLANS[planId].principal)}. Account
+                closes when collections reach{' '}
+                {money(LOAN_PLANS[planId].totalPayable)}.
+              </p>
+              <label className="block text-sm">
+                <span className="text-slate-600">Daily collection amount (AED)</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={dailyPayment}
+                  onChange={(e) => void syncDailyPayment(e.target.value)}
+                  className="mt-1 w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2"
+                />
+              </label>
+            </fieldset>
             <p className="text-sm text-slate-600">
               Pay cash from the petty cash wallet to this customer. It shows in
               Petty Cash under{' '}
@@ -521,8 +600,9 @@ export default function NewCustomerPage() {
             </p>
             {!savedCustomer ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Save the person on the <strong>Details</strong> tab first, then
-                record cash here.
+                Choose the plan above, then save the person on the{' '}
+                <strong>Details</strong> tab. After save, record wallet cash
+                here (amount defaults to what the customer receives).
               </p>
             ) : (
               <p className="text-sm font-medium text-slate-900">
@@ -601,47 +681,14 @@ export default function NewCustomerPage() {
       <form onSubmit={onSubmit} className="space-y-4">
         {savedCustomer ? (
           <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
-            Person saved. Switch to the <strong>Cash</strong> tab to pay from
-            the wallet, or update details below.
+            Person saved. Use the <strong>Cash</strong> tab for plan and wallet
+            payout, or update details below.
           </p>
-        ) : null}
-        <fieldset className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <legend className="px-1 text-sm font-medium text-slate-900">Plan</legend>
-          <div className="flex flex-wrap gap-2">
-            {LOAN_PLAN_IDS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  setPlanId(id);
-                  setDailyPayment(String(LOAN_PLANS[id].defaultDaily));
-                }}
-                className={`rounded-lg border px-3 py-2 text-sm ${
-                  planId === id
-                    ? 'border-blue-600 bg-blue-50 font-medium text-blue-900'
-                    : 'border-slate-200 bg-white text-slate-600'
-                }`}
-              >
-                {LOAN_PLANS[id].label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-slate-600">
-            Customer receives {money(LOAN_PLANS[planId].principal)}. Account
-            closes when collections reach {money(LOAN_PLANS[planId].totalPayable)}.
+        ) : (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Set the loan plan on the <strong>Cash</strong> tab before saving.
           </p>
-          <label className="block text-sm">
-            <span className="text-slate-600">Daily collection amount (AED)</span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={dailyPayment}
-              onChange={(e) => setDailyPayment(e.target.value)}
-              className="mt-1 w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2"
-            />
-          </label>
-        </fieldset>
+        )}
         {(
           [
             ['name', 'Full Name', 'text'],
