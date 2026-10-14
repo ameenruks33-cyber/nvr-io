@@ -248,6 +248,74 @@ export class RepaymentsService {
     }));
   }
 
+  async deleteRepayment(repaymentId: string, actorId: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const repayment = await tx.repayment.findUnique({
+        where: { id: repaymentId },
+        include: { loan: true },
+      });
+      if (!repayment) throw new NotFoundException('Collection not found');
+
+      const loan = repayment.loan;
+      const payment = Number(repayment.amount);
+      const collected = Number(loan.amountCollected);
+      const total = Math.max(
+        Number(loan.totalPayable),
+        Number(loan.principalAmount),
+      );
+
+      let balance: ReturnType<typeof RepaymentsService.computeBalanceAfterDelete>;
+      try {
+        balance = RepaymentsService.computeBalanceAfterDelete(
+          total,
+          collected,
+          payment,
+        );
+      } catch (e) {
+        throw new BadRequestException(
+          e instanceof Error ? e.message : 'Cannot delete this collection',
+        );
+      }
+
+      await tx.repayment.delete({ where: { id: repaymentId } });
+
+      const updatedLoan = await tx.loan.update({
+        where: { id: loan.id },
+        data: {
+          amountCollected: new Prisma.Decimal(balance.collected),
+          remainingAmount: new Prisma.Decimal(balance.remaining),
+          status: balance.status as 'ACTIVE' | 'COMPLETED',
+          completedAt: balance.status === 'COMPLETED' ? loan.completedAt ?? new Date() : null,
+          closedAt: balance.status === 'COMPLETED' ? loan.closedAt ?? new Date() : null,
+        },
+      });
+
+      return { repayment, loan: updatedLoan };
+    });
+
+    await this.audit.log({
+      userId: actorId,
+      action: 'REPAYMENT_DELETE',
+      recordType: 'repayment',
+      recordId: result.repayment.id,
+      metadata: {
+        loanId: result.repayment.loanId,
+        amount: Number(result.repayment.amount),
+        receiptNumber: result.repayment.receiptNumber,
+      },
+    });
+
+    return {
+      ok: true,
+      repaymentId: result.repayment.id,
+      receiptNumber: result.repayment.receiptNumber,
+      loanId: result.loan.id,
+      collected: Number(result.loan.amountCollected),
+      remaining: Number(result.loan.remainingAmount),
+      status: result.loan.status,
+    };
+  }
+
   async listRecent(limit = 20) {
     const rows = await this.prisma.repayment.findMany({
       take: limit,
@@ -278,6 +346,26 @@ export class RepaymentsService {
     return {
       collected: newTotal,
       remaining: completed ? 0 : total - newTotal,
+      status: completed ? 'COMPLETED' : 'ACTIVE',
+    };
+  }
+
+  /** Reverse one collection and restore loan balances. */
+  static computeBalanceAfterDelete(
+    total: number,
+    collected: number,
+    removePayment: number,
+  ) {
+    if (removePayment <= 0) throw new Error('Amount must be positive');
+    const newCollected = collected - removePayment;
+    if (newCollected < -0.001) {
+      throw new Error('Delete would make collected amount negative');
+    }
+    const safeCollected = Math.max(newCollected, 0);
+    const completed = safeCollected >= total - 0.001;
+    return {
+      collected: safeCollected,
+      remaining: completed ? 0 : Math.max(total - safeCollected, 0),
       status: completed ? 'COMPLETED' : 'ACTIVE',
     };
   }

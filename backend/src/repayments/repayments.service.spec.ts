@@ -40,3 +40,21 @@ describe('RepaymentsService.computeBalance', () => {
     );
   });
 });
+
+describe('RepaymentsService.computeBalanceAfterDelete', () => {
+  it('restores balance when a collection is removed', () => {
+    expect(RepaymentsService.computeBalanceAfterDelete(2000, 1000, 300)).toEqual({
+      collected: 700,
+      remaining: 1300,
+      status: 'ACTIVE',
+    });
+  });
+
+  it('reopens account when deleting the closing payment', () => {
+    expect(RepaymentsService.computeBalanceAfterDelete(2000, 2000, 200)).toEqual({
+      collected: 1800,
+      remaining: 200,
+      status: 'ACTIVE',
+    });
+  });
+});

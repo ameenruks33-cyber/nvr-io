@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { CustomerPhoto } from '@/components/CustomerPhoto';
 import { ClosedBadge } from '@/components/ClosedBadge';
-import { api, money } from '@/lib/api';
+import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
+import { api, getSession, money } from '@/lib/api';
+import { isAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
@@ -58,11 +60,16 @@ export default function CustomerDetailPage() {
   const [waLink, setWaLink] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
     setCustomer(data);
   }
+
+  useEffect(() => {
+    setIsAdmin(isAdminRole(getSession()?.user.role));
+  }, []);
 
   async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget;
@@ -430,6 +437,14 @@ export default function CustomerDetailPage() {
                       <span className="text-slate-500">
                         {formatUaeDateTime(r.collectedAt)}
                       </span>
+                      {isAdmin ? (
+                        <DeleteCollectionButton
+                          repaymentId={r.id}
+                          receiptNumber={r.receiptNumber}
+                          compact
+                          onDeleted={load}
+                        />
+                      ) : null}
                     </div>
                     {r.notes?.trim() ? (
                       <p className="mt-1 text-xs text-slate-500">

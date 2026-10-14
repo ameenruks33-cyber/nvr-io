@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { api, money } from '@/lib/api';
+import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
+import { api, getSession, money } from '@/lib/api';
+import { isAdminRole } from '@/lib/roles';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 
@@ -20,12 +22,16 @@ type Row = {
 
 export default function RepaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const load = () => {
     api<Row[]>('/repayments?limit=50').then(setRows).catch(() => undefined);
   };
 
   useEffect(load, []);
+  useEffect(() => {
+    setIsAdmin(isAdminRole(getSession()?.user.role));
+  }, []);
   useLiveRefresh(load);
 
   return (
@@ -41,6 +47,7 @@ export default function RepaymentsPage() {
               <th className="px-4 py-3">Note</th>
               <th className="px-4 py-3">Collector</th>
               <th className="px-4 py-3">When</th>
+              {isAdmin ? <th className="px-4 py-3"> </th> : null}
             </tr>
           </thead>
           <tbody>
@@ -76,6 +83,16 @@ export default function RepaymentsPage() {
                   <td className="px-4 py-3 text-slate-500">
                     {formatUaeDateTime(row.collectedAt)}
                   </td>
+                  {isAdmin ? (
+                    <td className="px-4 py-3">
+                      <DeleteCollectionButton
+                        repaymentId={row.id}
+                        receiptNumber={row.receiptNumber}
+                        compact
+                        onDeleted={load}
+                      />
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}

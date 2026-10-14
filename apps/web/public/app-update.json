@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610132051",
-  "releasedAt": "2026-10-13T16:51:34.436Z",
+  "version": "1.1.2610141106",
+  "releasedAt": "2026-10-14T07:06:56.775Z",
   "title": "CrickHerose update available",
-  "message": "Monthly audit on mobile menu and bottom bar for admins",
+  "message": "Admin can delete collections from Collection and Receipts",
   "notes": [
+    "Admin can delete collections from Collection and Receipts",
     "Monthly audit on mobile menu and bottom bar for admins",
     "Fix mobile app update detection and fresh page loads",
     "Monthly audit admin page live on production",
     "Fix Vercel monorepo deploy; new Home calendar live",
     "Replace carousel calendar with mobile app-icon calendar on Home",
     "Home calendar icon + Clear alert; fix Vercel web deploy checks",
-    "Petty Cash wallet + live sync between website and mobile app",
-    "Fix home page failing to open (service worker redirect)"
+    "Petty Cash wallet + live sync between website and mobile app"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610132051/favicon.png",
-    "icon192": "/icons/v1.1.2610132051/icon-192.png",
-    "icon512": "/icons/v1.1.2610132051/icon-512.png",
-    "apple": "/icons/v1.1.2610132051/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610132051/logo.jpg"
+    "favicon": "/icons/v1.1.2610141106/favicon.png",
+    "icon192": "/icons/v1.1.2610141106/icon-192.png",
+    "icon512": "/icons/v1.1.2610141106/icon-512.png",
+    "apple": "/icons/v1.1.2610141106/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141106/logo.jpg"
   }
 }

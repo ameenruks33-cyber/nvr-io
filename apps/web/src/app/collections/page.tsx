@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
-import { api, money } from '@/lib/api';
+import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
+import { api, getSession, money } from '@/lib/api';
+import { isAdminRole } from '@/lib/roles';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
@@ -93,7 +95,12 @@ function CollectionsPageContent() {
   const [message, setMessage] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const appliedSearch = useRef('');
+
+  useEffect(() => {
+    setIsAdmin(isAdminRole(getSession()?.user.role));
+  }, []);
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) || null,
@@ -491,6 +498,7 @@ function CollectionsPageContent() {
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Note</th>
                 <th className="px-4 py-3">When</th>
+                {isAdmin ? <th className="px-4 py-3"> </th> : null}
               </tr>
             </thead>
             <tbody>
@@ -527,6 +535,20 @@ function CollectionsPageContent() {
                     <td className="px-4 py-3 text-slate-500">
                       {formatUaeDateTime(row.collectedAt)}
                     </td>
+                    {isAdmin ? (
+                      <td className="px-4 py-3">
+                        <DeleteCollectionButton
+                          repaymentId={row.id}
+                          receiptNumber={row.receiptNumber}
+                          compact
+                          onDeleted={async () => {
+                            await loadRecent();
+                            await loadCustomers(q);
+                            setMessage('Collection deleted.');
+                          }}
+                        />
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}
