@@ -695,11 +695,7 @@ export default function NewCustomerPage() {
             Person saved. Use the <strong>Cash</strong> tab for plan and wallet
             payout, or update details below.
           </p>
-        ) : (
-          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Set the loan plan on the <strong>Cash</strong> tab before saving.
-          </p>
-        )}
+        ) : null}
         {(
           [
             ['name', 'Full Name', 'text'],
