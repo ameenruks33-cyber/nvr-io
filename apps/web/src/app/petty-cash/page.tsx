@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { PettyCashCalculator } from '@/components/PettyCashCalculator';
 import { api, getSession, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeCalendarDay, formatUaeTime } from '@/lib/uae-datetime';
@@ -484,9 +485,10 @@ export default function PettyCashPage() {
         </div>
       </section>
 
+      <div className="mt-6 grid max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
       <form
         onSubmit={onSubmit}
-        className="mt-6 max-w-3xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5"
+        className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5"
       >
         <h2 className="text-lg font-medium text-slate-900">Record an expense</h2>
         <fieldset className="space-y-2">
@@ -637,6 +639,14 @@ export default function PettyCashPage() {
               : 'Record expense'}
         </button>
       </form>
+      <PettyCashCalculator
+        onUseAmount={(value) => {
+          setAmount(String(value));
+          setMessage('Calculator amount applied to the form.');
+          setError('');
+        }}
+      />
+      </div>
 
       <section className="mt-8 max-w-3xl">
         <h2 className="mb-3 text-lg font-medium text-slate-900">Daily log</h2>
