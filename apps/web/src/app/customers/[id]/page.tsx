@@ -62,21 +62,10 @@ export default function CustomerDetailPage() {
   const [waLink, setWaLink] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [canDeletePerson, setCanDeletePerson] = useState(false);
-
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
     setCustomer(data);
   }
-
-  useEffect(() => {
-    const role = getSession()?.user.role;
-    setIsSuperAdmin(isSuperAdminRole(role));
-    setCanDeletePerson(
-      role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'COLLECTOR',
-    );
-  }, []);
 
   async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget;
@@ -195,9 +184,24 @@ export default function CustomerDetailPage() {
   const open = loan?.status === 'ACTIVE';
   const closed = Boolean(loan) && !open;
   const repaymentCount = loan?.repayments?.length ?? 0;
-  const showDeletePerson =
-    canDeletePerson &&
-    (isSuperAdmin || (collected === 0 && repaymentCount === 0));
+  const isSuperAdmin = isSuperAdminRole(getSession()?.user.role);
+  const hasCollectionHistory = collected > 0 || repaymentCount > 0;
+  const deleteAllowed =
+    isSuperAdmin || (collected === 0 && repaymentCount === 0);
+  const deleteBlockedReason = hasCollectionHistory
+    ? 'This person has collections on record. Only Super Admin can delete them.'
+    : undefined;
+
+  const deleteButton = (
+    <DeleteCustomerButton
+      customerId={customer.id}
+      customerCode={customer.customerCode}
+      name={customer.name}
+      hasCollections={isSuperAdmin && hasCollectionHistory}
+      disabled={!deleteAllowed}
+      disabledReason={deleteBlockedReason}
+    />
+  );
 
   return (
     <AppShell>
@@ -210,14 +214,7 @@ export default function CustomerDetailPage() {
               {closed ? <ClosedBadge /> : null}
             </h1>
           </div>
-          {showDeletePerson ? (
-            <DeleteCustomerButton
-              customerId={customer.id}
-              customerCode={customer.customerCode}
-              name={customer.name}
-              hasCollections={isSuperAdmin && repaymentCount > 0}
-            />
-          ) : null}
+          {deleteButton}
         </div>
         <p className="mt-1 text-slate-600">
           {[
@@ -228,11 +225,8 @@ export default function CustomerDetailPage() {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        {canDeletePerson && !showDeletePerson && repaymentCount > 0 ? (
-          <p className="mt-2 text-xs text-slate-500">
-            Collections are on record for this person. Only Super Admin can
-            remove them.
-          </p>
+        {!deleteAllowed && hasCollectionHistory ? (
+          <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
         ) : null}
       </div>
 
@@ -322,6 +316,26 @@ export default function CustomerDetailPage() {
             >
               Open map
             </a>
+          </div>
+          <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4">
+            <p className="text-sm font-medium text-slate-900">Delete person</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Permanently remove {customer.name} and their record from the app.
+            </p>
+            <div className="mt-3">
+              <DeleteCustomerButton
+                customerId={customer.id}
+                customerCode={customer.customerCode}
+                name={customer.name}
+                hasCollections={isSuperAdmin && hasCollectionHistory}
+                disabled={!deleteAllowed}
+                disabledReason={deleteBlockedReason}
+                compact
+              />
+            </div>
+            {!deleteAllowed && hasCollectionHistory ? (
+              <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
+            ) : null}
           </div>
         </div>
 
