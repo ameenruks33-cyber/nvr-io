@@ -62,8 +62,8 @@ export function DeleteCustomerButton({
       onClick={() => void remove()}
       className={
         compact
-          ? 'w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50'
-          : 'rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50'
+          ? 'w-full rounded-lg border-2 border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-400'
+          : 'rounded-lg border-2 border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-400'
       }
     >
       {busy ? 'Deleting…' : 'Delete'}

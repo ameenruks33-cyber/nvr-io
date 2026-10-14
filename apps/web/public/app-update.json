@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610141303",
-  "releasedAt": "2026-10-14T09:03:04.275Z",
+  "version": "1.1.2610141306",
+  "releasedAt": "2026-10-14T09:06:23.832Z",
   "title": "CrickHerose update available",
-  "message": "\\ Reliable indoor location on Add person\\",
+  "message": "Delete on customer profiles, loan plans, sticky wallet payouts",
   "notes": [
+    "Delete on customer profiles, loan plans, sticky wallet payouts",
     "\\ Reliable indoor location on Add person\\",
     "\\ Fix Add person gallery unlock and location on mobile\\",
     "\\ Cash tab on Add person links to Petty Cash pay customer\\",
     "\\ Move Collections sticky note into Record collection panel\\",
     "\\ Shared sticky note on Collections page\\",
     "\\ Super Admin only for petty cash edit/delete and collection delete\\",
-    "\\ Add quick calculator on Petty Cash page\\",
-    "\\ Separate petty cash totals: general vs loan expense cards\\"
+    "\\ Add quick calculator on Petty Cash page\\"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610141303/favicon.png",
-    "icon192": "/icons/v1.1.2610141303/icon-192.png",
-    "icon512": "/icons/v1.1.2610141303/icon-512.png",
-    "apple": "/icons/v1.1.2610141303/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610141303/logo.jpg"
+    "favicon": "/icons/v1.1.2610141306/favicon.png",
+    "icon192": "/icons/v1.1.2610141306/icon-192.png",
+    "icon512": "/icons/v1.1.2610141306/icon-512.png",
+    "apple": "/icons/v1.1.2610141306/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610141306/logo.jpg"
   }
 }

@@ -62,6 +62,8 @@ export default function CustomerDetailPage() {
   const [waLink, setWaLink] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
+  const [staffRole, setStaffRole] = useState<string | null>(null);
+
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
     setCustomer(data);
@@ -96,6 +98,10 @@ export default function CustomerDetailPage() {
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
+  }, [params.id]);
+
+  useEffect(() => {
+    setStaffRole(getSession()?.user.role ?? null);
   }, [params.id]);
 
   useLiveRefresh(() => {
@@ -184,24 +190,24 @@ export default function CustomerDetailPage() {
   const open = loan?.status === 'ACTIVE';
   const closed = Boolean(loan) && !open;
   const repaymentCount = loan?.repayments?.length ?? 0;
-  const isSuperAdmin = isSuperAdminRole(getSession()?.user.role);
+  const isSuperAdmin = isSuperAdminRole(staffRole ?? undefined);
   const hasCollectionHistory = collected > 0 || repaymentCount > 0;
   const deleteAllowed =
-    isSuperAdmin || (collected === 0 && repaymentCount === 0);
+    staffRole === null ||
+    isSuperAdmin ||
+    (collected === 0 && repaymentCount === 0);
   const deleteBlockedReason = hasCollectionHistory
     ? 'This person has collections on record. Only Super Admin can delete them.'
     : undefined;
 
-  const deleteButton = (
-    <DeleteCustomerButton
-      customerId={customer.id}
-      customerCode={customer.customerCode}
-      name={customer.name}
-      hasCollections={isSuperAdmin && hasCollectionHistory}
-      disabled={!deleteAllowed}
-      disabledReason={deleteBlockedReason}
-    />
-  );
+  const deleteProps = {
+    customerId: customer.id,
+    customerCode: customer.customerCode,
+    name: customer.name,
+    hasCollections: isSuperAdmin && hasCollectionHistory,
+    disabled: staffRole !== null && !deleteAllowed,
+    disabledReason: deleteBlockedReason,
+  };
 
   return (
     <AppShell>
@@ -214,7 +220,7 @@ export default function CustomerDetailPage() {
               {closed ? <ClosedBadge /> : null}
             </h1>
           </div>
-          {deleteButton}
+          <DeleteCustomerButton {...deleteProps} />
         </div>
         <p className="mt-1 text-slate-600">
           {[
@@ -225,7 +231,7 @@ export default function CustomerDetailPage() {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        {!deleteAllowed && hasCollectionHistory ? (
+        {staffRole !== null && !deleteAllowed && hasCollectionHistory ? (
           <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
         ) : null}
       </div>
@@ -323,17 +329,9 @@ export default function CustomerDetailPage() {
               Permanently remove {customer.name} and their record from the app.
             </p>
             <div className="mt-3">
-              <DeleteCustomerButton
-                customerId={customer.id}
-                customerCode={customer.customerCode}
-                name={customer.name}
-                hasCollections={isSuperAdmin && hasCollectionHistory}
-                disabled={!deleteAllowed}
-                disabledReason={deleteBlockedReason}
-                compact
-              />
+              <DeleteCustomerButton {...deleteProps} compact />
             </div>
-            {!deleteAllowed && hasCollectionHistory ? (
+            {staffRole !== null && !deleteAllowed && hasCollectionHistory ? (
               <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
             ) : null}
           </div>
