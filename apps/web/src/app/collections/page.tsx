@@ -259,10 +259,6 @@ function CollectionsPageContent() {
         </button>
       </form>
 
-      <div className="mb-6">
-        <CollectionsStickyNote />
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full text-left text-sm">
@@ -342,6 +338,12 @@ function CollectionsPageContent() {
 
         <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-lg font-medium text-slate-900">Record collection</h2>
+          <CollectionsStickyNote embedded />
+          {!selected ? (
+            <p className="text-sm text-slate-500">
+              Select a registered customer from the list.
+            </p>
+          ) : null}
           {selected ? (
             <>
               <div>
@@ -461,11 +463,7 @@ function CollectionsPageContent() {
                 </div>
               )}
             </>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Select a registered customer from the list.
-            </p>
-          )}
+          ) : null}
 
           {message ? (
             <p className="text-sm text-teal-700" role="status">

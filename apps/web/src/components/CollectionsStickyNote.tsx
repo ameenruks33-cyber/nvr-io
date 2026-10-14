@@ -10,7 +10,12 @@ type StickyPayload = {
   updatedAt: string | null;
 };
 
-export function CollectionsStickyNote() {
+type Props = {
+  /** Fits the Record collection sidebar column */
+  embedded?: boolean;
+};
+
+export function CollectionsStickyNote({ embedded }: Props) {
   const [text, setText] = useState('');
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'saved' | 'error'>(
@@ -62,7 +67,9 @@ export function CollectionsStickyNote() {
 
   return (
     <div
-      className="relative max-w-2xl rotate-[0.35deg] rounded-sm border border-amber-200/80 bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-50 p-4 shadow-md shadow-amber-900/10"
+      className={`relative rounded-sm border border-amber-200/80 bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-50 p-3 shadow-md shadow-amber-900/10 ${
+        embedded ? 'w-full rotate-0' : 'max-w-2xl rotate-[0.35deg] p-4'
+      }`}
       style={{
         boxShadow:
           '2px 3px 12px rgba(120, 53, 15, 0.12), inset 0 -2px 0 rgba(251, 191, 36, 0.35)',
@@ -94,9 +101,13 @@ export function CollectionsStickyNote() {
           setStatus('idle');
           setText(e.target.value);
         }}
-        rows={4}
+        rows={embedded ? 5 : 4}
         maxLength={1000}
-        placeholder="Write reminders for today’s collections — visible to everyone on this screen."
+        placeholder={
+          embedded
+            ? 'Team reminders for collections…'
+            : 'Write reminders for today’s collections — visible to everyone on this screen.'
+        }
         className="mt-2 w-full resize-y border-0 bg-transparent text-sm leading-relaxed text-amber-950 placeholder:text-amber-800/45 outline-none focus:ring-0"
         aria-label="Collections sticky note"
       />
