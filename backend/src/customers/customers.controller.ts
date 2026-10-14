@@ -47,7 +47,7 @@ export class CustomersController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  @Roles(UserRole.SUPER_ADMIN)
   remove(
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,

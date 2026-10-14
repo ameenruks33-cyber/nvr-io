@@ -141,13 +141,6 @@ export class CustomersService {
       (sum, loan) => sum + loan._count.repayments,
       0,
     );
-    const role = actor.role as UserRole;
-
-    if (repaymentCount > 0 && role !== UserRole.SUPER_ADMIN) {
-      throw new BadRequestException(
-        'This person has collections on record. Only Super Admin can delete them.',
-      );
-    }
 
     const loanIds = customer.loans.map((l) => l.id);
 

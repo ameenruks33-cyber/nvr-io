@@ -191,22 +191,14 @@ export default function CustomerDetailPage() {
   const closed = Boolean(loan) && !open;
   const repaymentCount = loan?.repayments?.length ?? 0;
   const isSuperAdmin = isSuperAdminRole(staffRole ?? undefined);
+  const showDeletePerson = staffRole !== null && isSuperAdmin;
   const hasCollectionHistory = collected > 0 || repaymentCount > 0;
-  const deleteAllowed =
-    staffRole === null ||
-    isSuperAdmin ||
-    (collected === 0 && repaymentCount === 0);
-  const deleteBlockedReason = hasCollectionHistory
-    ? 'This person has collections on record. Only Super Admin can delete them.'
-    : undefined;
 
   const deleteProps = {
     customerId: customer.id,
     customerCode: customer.customerCode,
     name: customer.name,
-    hasCollections: isSuperAdmin && hasCollectionHistory,
-    disabled: staffRole !== null && !deleteAllowed,
-    disabledReason: deleteBlockedReason,
+    hasCollections: hasCollectionHistory,
   };
 
   return (
@@ -220,7 +212,7 @@ export default function CustomerDetailPage() {
               {closed ? <ClosedBadge /> : null}
             </h1>
           </div>
-          <DeleteCustomerButton {...deleteProps} />
+          {showDeletePerson ? <DeleteCustomerButton {...deleteProps} /> : null}
         </div>
         <p className="mt-1 text-slate-600">
           {[
@@ -231,9 +223,6 @@ export default function CustomerDetailPage() {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        {staffRole !== null && !deleteAllowed && hasCollectionHistory ? (
-          <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
-        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -323,18 +312,18 @@ export default function CustomerDetailPage() {
               Open map
             </a>
           </div>
-          <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4">
-            <p className="text-sm font-medium text-slate-900">Delete person</p>
-            <p className="mt-1 text-xs text-slate-600">
-              Permanently remove {customer.name} and their record from the app.
-            </p>
-            <div className="mt-3">
-              <DeleteCustomerButton {...deleteProps} compact />
+          {showDeletePerson ? (
+            <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4">
+              <p className="text-sm font-medium text-slate-900">Delete person</p>
+              <p className="mt-1 text-xs text-slate-600">
+                Super Admin only. Permanently remove {customer.name} and their
+                record from the app.
+              </p>
+              <div className="mt-3">
+                <DeleteCustomerButton {...deleteProps} compact />
+              </div>
             </div>
-            {staffRole !== null && !deleteAllowed && hasCollectionHistory ? (
-              <p className="mt-2 text-xs text-slate-500">{deleteBlockedReason}</p>
-            ) : null}
-          </div>
+          ) : null}
         </div>
 
         <div className="space-y-6">
