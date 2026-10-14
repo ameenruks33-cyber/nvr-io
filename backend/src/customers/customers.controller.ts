@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -43,6 +44,16 @@ export class CustomersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   list(@Query('q') q: string | undefined, @CurrentUser() user: AuthUser) {
     return this.customers.findAll(q, user);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+  ) {
+    return this.customers.remove(assertSafeId(String(id)), user, req.ip);
   }
 
   @Get(':id')

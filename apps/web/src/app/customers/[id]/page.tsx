@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { CustomerPhoto } from '@/components/CustomerPhoto';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
+import { DeleteCustomerButton } from '@/components/DeleteCustomerButton';
 import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
@@ -62,6 +63,7 @@ export default function CustomerDetailPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [canDeletePerson, setCanDeletePerson] = useState(false);
 
   async function load() {
     const data = await api<CustomerDetail>(`/customers/${params.id}`);
@@ -69,7 +71,11 @@ export default function CustomerDetailPage() {
   }
 
   useEffect(() => {
-    setIsSuperAdmin(isSuperAdminRole(getSession()?.user.role));
+    const role = getSession()?.user.role;
+    setIsSuperAdmin(isSuperAdminRole(role));
+    setCanDeletePerson(
+      role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'COLLECTOR',
+    );
   }, []);
 
   async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
@@ -188,15 +194,31 @@ export default function CustomerDetailPage() {
   const remaining = Number(loan?.remainingAmount || 0);
   const open = loan?.status === 'ACTIVE';
   const closed = Boolean(loan) && !open;
+  const repaymentCount = loan?.repayments?.length ?? 0;
+  const showDeletePerson =
+    canDeletePerson &&
+    (isSuperAdmin || (collected === 0 && repaymentCount === 0));
 
   return (
     <AppShell>
       <div className="mb-6">
-        <p className="text-sm text-slate-500">{customer.customerCode}</p>
-        <h1 className="flex flex-wrap items-center gap-3 font-display text-3xl text-slate-900">
-          {customer.name}
-          {closed ? <ClosedBadge /> : null}
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm text-slate-500">{customer.customerCode}</p>
+            <h1 className="flex flex-wrap items-center gap-3 font-display text-3xl text-slate-900">
+              {customer.name}
+              {closed ? <ClosedBadge /> : null}
+            </h1>
+          </div>
+          {showDeletePerson ? (
+            <DeleteCustomerButton
+              customerId={customer.id}
+              customerCode={customer.customerCode}
+              name={customer.name}
+              hasCollections={isSuperAdmin && repaymentCount > 0}
+            />
+          ) : null}
+        </div>
         <p className="mt-1 text-slate-600">
           {[
             `WhatsApp: ${customer.phone}`,
@@ -206,6 +228,12 @@ export default function CustomerDetailPage() {
             .filter(Boolean)
             .join(' · ')}
         </p>
+        {canDeletePerson && !showDeletePerson && repaymentCount > 0 ? (
+          <p className="mt-2 text-xs text-slate-500">
+            Collections are on record for this person. Only Super Admin can
+            remove them.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">

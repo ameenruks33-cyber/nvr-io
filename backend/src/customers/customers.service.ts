@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -119,6 +123,71 @@ export class CustomersService {
         loan: c.loans[0],
       }),
     );
+  }
+
+  async remove(id: string, actor: AuthUser, ip?: string) {
+    const safeId = String(id);
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: safeId },
+      include: {
+        loans: {
+          include: { _count: { select: { repayments: true } } },
+        },
+      },
+    });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    const repaymentCount = customer.loans.reduce(
+      (sum, loan) => sum + loan._count.repayments,
+      0,
+    );
+    const role = actor.role as UserRole;
+
+    if (repaymentCount > 0 && role !== UserRole.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'This person has collections on record. Only Super Admin can delete them.',
+      );
+    }
+
+    const loanIds = customer.loans.map((l) => l.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (loanIds.length) {
+        await tx.repayment.deleteMany({ where: { loanId: { in: loanIds } } });
+        await tx.notification.deleteMany({
+          where: {
+            OR: [{ customerId: safeId }, { loanId: { in: loanIds } }],
+          },
+        });
+        await tx.loan.deleteMany({ where: { customerId: safeId } });
+      }
+      await tx.notification.deleteMany({ where: { customerId: safeId } });
+      await tx.document.deleteMany({ where: { customerId: safeId } });
+      await tx.pettyCashExpense.updateMany({
+        where: { customerId: safeId },
+        data: { customerId: null, paidToName: customer.name },
+      });
+      await tx.galleryItem.updateMany({
+        where: { customerId: safeId },
+        data: { customerId: null },
+      });
+      await tx.customer.delete({ where: { id: safeId } });
+    });
+
+    await this.audit.log({
+      userId: actor.id,
+      action: 'CUSTOMER_DELETE',
+      recordType: 'customer',
+      recordId: safeId,
+      ipAddress: ip,
+      metadata: {
+        customerCode: customer.customerCode,
+        name: customer.name,
+        repaymentCount,
+      },
+    });
+
+    return { ok: true, customerCode: customer.customerCode };
   }
 
   async findOne(id: string, actor: AuthUser, ip?: string) {
