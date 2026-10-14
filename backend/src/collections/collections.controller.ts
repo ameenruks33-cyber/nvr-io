@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Put } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { PendingCollectionsService } from './pending-collections.service';
 import { CollectionsStickyService } from './collections-sticky.service';
 import { CollectionsStickyDto } from './dto/collections-sticky.dto';
@@ -26,7 +27,10 @@ export class CollectionsController {
 
   @Put('sticky-note')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  saveStickyNote(@Body() dto: CollectionsStickyDto) {
-    return this.sticky.save(dto.text);
+  saveStickyNote(
+    @Body() dto: CollectionsStickyDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.sticky.save(dto.text, user.id);
   }
 }

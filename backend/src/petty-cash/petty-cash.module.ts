@@ -5,5 +5,6 @@ import { PettyCashController } from './petty-cash.controller';
 @Module({
   providers: [PettyCashService],
   controllers: [PettyCashController],
+  exports: [PettyCashService],
 })
 export class PettyCashModule {}

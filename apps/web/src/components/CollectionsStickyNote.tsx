@@ -4,10 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
+import { money } from '@/lib/api';
+import type { StickyWalletResult } from '@/lib/sticky-wallet';
 
 type StickyPayload = {
   text: string;
   updatedAt: string | null;
+  wallet?: StickyWalletResult;
 };
 
 type Props = {
@@ -21,6 +24,7 @@ export function CollectionsStickyNote({ embedded }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'saved' | 'error'>(
     'loading',
   );
+  const [walletNote, setWalletNote] = useState('');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextSave = useRef(true);
 
@@ -57,6 +61,26 @@ export function CollectionsStickyNote({ embedded }: Props) {
         .then((data) => {
           setUpdatedAt(data.updatedAt);
           setStatus('saved');
+          const w = data.wallet;
+          if (w) {
+            const parts: string[] = [];
+            for (const row of w.applied) {
+              parts.push(
+                `Wallet −${money(row.amount)} for ${row.customerName}`,
+              );
+            }
+            for (const row of w.updated) {
+              parts.push(
+                `Wallet updated to ${money(row.amount)} for ${row.customerName}`,
+              );
+            }
+            if (w.unmatched.length) {
+              parts.push(
+                `${w.unmatched.length} @ line(s) need a matching person in the app`,
+              );
+            }
+            setWalletNote(parts.join(' · ') || '');
+          }
         })
         .catch(() => setStatus('error'));
     }, 700);
@@ -105,14 +129,19 @@ export function CollectionsStickyNote({ embedded }: Props) {
         maxLength={1000}
         placeholder={
           embedded
-            ? 'Team reminders for collections…'
-            : 'Write reminders for today’s collections — visible to everyone on this screen.'
+            ? 'Reminders… Use @ Name 800 to pay from wallet (min 100 AED).'
+            : 'Team reminders. @ Customer name 800 deducts wallet after save (100+ AED).'
         }
         className="mt-2 w-full resize-y border-0 bg-transparent text-sm leading-relaxed text-amber-950 placeholder:text-amber-800/45 outline-none focus:ring-0"
         aria-label="Collections sticky note"
       />
+      {walletNote ? (
+        <p className="mt-2 text-xs text-teal-900" role="status">
+          {walletNote}
+        </p>
+      ) : null}
       <p className="mt-1 text-right text-[10px] text-amber-900/50">
-        {text.length}/1000 · auto-saves
+        {text.length}/1000 · auto-saves · @ name + amount → wallet
       </p>
     </div>
   );
