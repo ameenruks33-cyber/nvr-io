@@ -25,8 +25,20 @@ type CustomerRow = {
 export default function CustomersPage() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<CustomerRow[]>([]);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const appliedSearch = useRef('');
+
+  async function loadPending() {
+    try {
+      const data = await api<{ items: { customerId: string }[] }>(
+        '/collections/pending-today',
+      );
+      setPendingIds(new Set(data.items.map((i) => i.customerId)));
+    } catch {
+      setPendingIds(new Set());
+    }
+  }
 
   async function load(search = '') {
     appliedSearch.current = search;
@@ -42,10 +54,14 @@ export default function CustomersPage() {
   }
 
   useEffect(() => {
-    load();
+    void load();
+    void loadPending();
   }, []);
 
-  useLiveRefresh(() => void load(appliedSearch.current));
+  useLiveRefresh(() => {
+    void load(appliedSearch.current);
+    void loadPending();
+  });
 
   function onSearch(e: FormEvent) {
     e.preventDefault();
@@ -113,9 +129,14 @@ export default function CustomersPage() {
                     {closed ? (
                       <ClosedBadge label="Closed" />
                     ) : (
-                      <>
+                      <span className="inline-flex flex-wrap items-center gap-2">
                         {money(collected)} / {money(total)}
-                      </>
+                        {pendingIds.has(row.id) ? (
+                          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+                            Pending
+                          </span>
+                        ) : null}
+                      </span>
                     )}
                   </td>
                 </tr>

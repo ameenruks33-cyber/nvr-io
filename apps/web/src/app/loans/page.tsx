@@ -26,9 +26,15 @@ type LoanRow = {
 
 export default function LoansPage() {
   const [rows, setRows] = useState<LoanRow[]>([]);
+  const [pendingLoanIds, setPendingLoanIds] = useState<Set<string>>(new Set());
 
   const load = () => {
     api<LoanRow[]>('/loans').then(setRows).catch(() => undefined);
+    api<{ items: { loanId: string }[] }>('/collections/pending-today')
+      .then((data) =>
+        setPendingLoanIds(new Set(data.items.map((i) => i.loanId))),
+      )
+      .catch(() => setPendingLoanIds(new Set()));
   };
 
   useEffect(load, []);
@@ -67,7 +73,14 @@ export default function LoansPage() {
                 </td>
                 <td className="px-4 py-3">
                   {row.status === 'ACTIVE' ? (
-                    money(Number(row.remainingAmount))
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {money(Number(row.remainingAmount))}
+                      {pendingLoanIds.has(row.id) ? (
+                        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+                          Pending
+                        </span>
+                      ) : null}
+                    </span>
                   ) : (
                     <ClosedBadge label="Closed" />
                   )}
