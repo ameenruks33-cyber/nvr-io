@@ -1,6 +1,14 @@
 import { wipeLocalTraces } from './privacy';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+function defaultApiUrl() {
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://nvr-io-api.vercel.app/api';
+  }
+  return 'http://localhost:4000/api';
+}
+
+/** Live app talks only to Vercel. Cursor is never used at runtime. */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || defaultApiUrl();
 
 /** Production website must never call a cleartext API. */
 function assertSecureTransport() {
