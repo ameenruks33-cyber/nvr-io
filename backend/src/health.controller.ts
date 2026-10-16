@@ -1,17 +1,28 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Public } from './auth/decorators/public.decorator';
+import { PrismaService } from './prisma/prisma.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Public()
   @Get()
-  check() {
+  async check() {
+    let database: 'ok' | 'down' = 'ok';
+    try {
+      await this.prisma.ping();
+    } catch {
+      database = 'down';
+    }
     return {
-      status: 'ok',
+      status: database === 'ok' ? 'ok' : 'degraded',
       service: 'nvr-io-api',
+      database,
       timestamp: new Date().toISOString(),
     };
   }

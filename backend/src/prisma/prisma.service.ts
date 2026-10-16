@@ -7,7 +7,28 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   async onModuleInit() {
-    await this.$connect();
+    await this.connectWithRetry();
+    // Schema patches must not block the first HTTP request (Neon wake + DDL
+    // was timing out Vercel and looking like “server down”).
+    void this.ensureSchema();
+  }
+
+  private async connectWithRetry() {
+    let last: unknown;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        await this.$connect();
+        return;
+      } catch (err) {
+        last = err;
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+    console.error('Database connect failed after retries', last);
+  }
+
+  /** Idempotent DDL / one-time data fixes. Safe to run in the background. */
+  private async ensureSchema() {
     // Ensure gallery number-password table exists on Neon (idempotent)
     try {
       await this.$executeRawUnsafe(`
@@ -235,6 +256,10 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+  }
+
+  async ping() {
+    await this.$queryRaw`SELECT 1`;
   }
 
   async onModuleDestroy() {

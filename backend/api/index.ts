@@ -19,7 +19,12 @@ async function bootstrap(): Promise<Express> {
     { logger: ['error', 'warn'] },
   );
 
-  app.use(helmet({ referrerPolicy: { policy: 'no-referrer' } }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      referrerPolicy: { policy: 'no-referrer' },
+    }),
+  );
   app.use(noTraceHeaders);
   app.setGlobalPrefix('api');
   app.enableCors({
@@ -55,6 +60,8 @@ async function bootstrap(): Promise<Express> {
   cached = expressApp;
   return expressApp;
 }
+
+export const config = { maxDuration: 30 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const server = await bootstrap();

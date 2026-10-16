@@ -77,13 +77,20 @@ export async function api<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await authFetch(path, options, headers);
+  let res = await authFetch(path, options, headers);
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    await new Promise((r) => setTimeout(r, 900));
+    res = await authFetch(path, options, headers);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     const message = Array.isArray(err.message)
       ? err.message.join(', ')
-      : err.message || 'Request failed';
+      : err.message ||
+        (res.status >= 500
+          ? 'Can’t reach the server. Check internet and try again.'
+          : 'Request failed');
     throw new Error(message);
   }
 
@@ -121,16 +128,25 @@ async function authFetch(
   }
   attachGalleryUnlockHeader(path, headers);
 
-  let res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new Error('Can’t reach the server. Check internet and try again.');
+  }
 
   if (res.status === 401 && options.auth !== false && usedToken) {
     const refreshed = await refreshOnce(usedToken);
     if (refreshed) {
       headers.set('Authorization', `Bearer ${refreshed.accessToken}`);
-      res = await fetch(`${API_URL}${path}`, { ...options, headers });
+      try {
+        res = await fetch(`${API_URL}${path}`, { ...options, headers });
+      } catch {
+        throw new Error('Can’t reach the server. Check internet and try again.');
+      }
     } else if (
       typeof window !== 'undefined' &&
       !getSession() &&

@@ -112,6 +112,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
+                if (!request.isForMainFrame() || errorResponse == null) return;
+                int code = errorResponse.getStatusCode();
+                if (code >= 500) showOffline();
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
             }
@@ -193,7 +200,8 @@ public class MainActivity extends AppCompatActivity {
         String html = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>"
                 + "<body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;"
                 + "height:90vh;margin:0;color:#334155;text-align:center'><div>"
-                + "<p style='font-size:18px'>No internet connection</p>"
+                + "<p style='font-size:18px'>Can’t reach the server</p>"
+                + "<p style='font-size:14px;color:#64748b'>Check internet, wait a few seconds, then try again.</p>"
                 + "<a href='" + START_URL + "' style='display:inline-block;margin-top:12px;padding:10px 20px;"
                 + "background:#0f766e;color:#fff;border-radius:10px;text-decoration:none'>Try again</a>"
                 + "</div></body></html>";
