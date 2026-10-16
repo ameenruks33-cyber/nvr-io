@@ -11,7 +11,7 @@ import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
-import { useLiveRefresh } from '@/lib/live-sync';
+import { notifyDataChanged, useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 
@@ -236,6 +236,23 @@ function CollectionsPageContent() {
       setAmount('100');
       setNotes('');
       idempotencyKey.current = newIdempotencyKey();
+      const savedId = selected.id;
+      setRows((prev) =>
+        prev.map((row) =>
+          row.id === savedId && row.loan
+            ? {
+                ...row,
+                loan: {
+                  ...row.loan,
+                  amountCollected: result.collected,
+                  remainingAmount: result.remaining,
+                  status: result.status || row.loan.status,
+                },
+              }
+            : row,
+        ),
+      );
+      notifyDataChanged();
       await Promise.all([loadCustomers(q), loadRecent()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Collection failed');

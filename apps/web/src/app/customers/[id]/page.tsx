@@ -11,10 +11,10 @@ import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
-import { useLiveRefresh } from '@/lib/live-sync';
+import { notifyDataChanged, useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 import { ArrearsBadge } from '@/components/ArrearsBadge';
-import { loanDaysInArrears } from '@/lib/arrears';
+import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 
 type CustomerDetail = {
@@ -148,7 +148,7 @@ export default function CustomerDetailPage() {
         body: JSON.stringify({
           amount: Number(amount),
           notes: notes.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey: newIdempotencyKey(),
         }),
       });
       const target = Number(result.total || result.principal) || loanTotal;
@@ -173,6 +173,23 @@ export default function CustomerDetailPage() {
       );
       setNotes('');
       setAmount('100');
+      setCustomer((prev) => {
+        if (!prev?.loans?.[0]) return prev;
+        const [loan, ...rest] = prev.loans;
+        return {
+          ...prev,
+          loans: [
+            {
+              ...loan,
+              amountCollected: result.collected,
+              remainingAmount: result.remaining,
+              status: result.status || loan.status,
+            },
+            ...rest,
+          ],
+        };
+      });
+      notifyDataChanged();
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save payment');

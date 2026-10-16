@@ -39,6 +39,13 @@ export function startLiveSync() {
   });
 }
 
+/** Tell every open page (Home, People, Records, Collection) to reload. */
+export function notifyDataChanged() {
+  if (typeof window === 'undefined') return;
+  lastStamp = null;
+  window.dispatchEvent(new Event(EVENT));
+}
+
 /** Re-runs `reload` whenever data changes on another device. */
 export function useLiveRefresh(reload: () => void) {
   const ref = useRef(reload);

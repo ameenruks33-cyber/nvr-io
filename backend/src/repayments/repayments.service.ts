@@ -16,6 +16,7 @@ import {
   prismaErrorCode,
   retryPrisma,
 } from '../common/prisma-retry';
+import { loanBalanceFromCollected } from '../loans/loan-balance';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -74,21 +75,17 @@ export class RepaymentsService {
             throw new ConflictException('Loan already completed');
           }
 
-          const collected = Number(loan.amountCollected);
+          const alreadyCollected = Number(loan.amountCollected);
           const total = Math.max(
             Number(loan.totalPayable),
             Number(loan.principalAmount),
           );
-          const newTotal = collected + input.amount;
-
-          if (newTotal > total + 0.001) {
+          if (alreadyCollected + input.amount > total + 0.001) {
             throw new BadRequestException(
-              `Only AED ${(total - collected).toFixed(2)} is needed to close this account`,
+              `Only AED ${(total - alreadyCollected).toFixed(2)} is needed to close this account`,
             );
           }
 
-          const completed = newTotal >= total - 0.001;
-          const remaining = completed ? 0 : Math.max(total - newTotal, 0);
           const receiptNumber = await this.nextReceiptNumber(tx);
 
           const repayment = await tx.repayment.create({
@@ -104,11 +101,22 @@ export class RepaymentsService {
             },
           });
 
+          const paidAgg = await tx.repayment.aggregate({
+            where: { loanId: input.loanId },
+            _sum: { amount: true },
+          });
+          const balance = loanBalanceFromCollected(
+            Number(loan.totalPayable),
+            Number(loan.principalAmount),
+            Number(paidAgg._sum.amount || 0),
+          );
+          const completed = balance.status === 'COMPLETED';
+
           const updatedLoan = await tx.loan.update({
             where: { id: input.loanId },
             data: {
-              amountCollected: new Prisma.Decimal(newTotal),
-              remainingAmount: new Prisma.Decimal(remaining),
+              amountCollected: new Prisma.Decimal(balance.collected),
+              remainingAmount: new Prisma.Decimal(balance.remaining),
               status: completed ? 'COMPLETED' : 'ACTIVE',
               completedAt: completed ? new Date() : null,
               closedAt: completed ? new Date() : null,
@@ -298,36 +306,29 @@ export class RepaymentsService {
       if (!repayment) throw new NotFoundException('Collection not found');
 
       const loan = repayment.loan;
-      const payment = Number(repayment.amount);
-      const collected = Number(loan.amountCollected);
-      const total = Math.max(
-        Number(loan.totalPayable),
-        Number(loan.principalAmount),
-      );
-
-      let balance: ReturnType<typeof RepaymentsService.computeBalanceAfterDelete>;
-      try {
-        balance = RepaymentsService.computeBalanceAfterDelete(
-          total,
-          collected,
-          payment,
-        );
-      } catch (e) {
-        throw new BadRequestException(
-          e instanceof Error ? e.message : 'Cannot delete this collection',
-        );
-      }
 
       await tx.repayment.delete({ where: { id: repaymentId } });
+
+      const paidAgg = await tx.repayment.aggregate({
+        where: { loanId: loan.id },
+        _sum: { amount: true },
+      });
+      const balance = loanBalanceFromCollected(
+        Number(loan.totalPayable),
+        Number(loan.principalAmount),
+        Number(paidAgg._sum.amount || 0),
+      );
 
       const updatedLoan = await tx.loan.update({
         where: { id: loan.id },
         data: {
           amountCollected: new Prisma.Decimal(balance.collected),
           remainingAmount: new Prisma.Decimal(balance.remaining),
-          status: balance.status as 'ACTIVE' | 'COMPLETED',
-          completedAt: balance.status === 'COMPLETED' ? loan.completedAt ?? new Date() : null,
-          closedAt: balance.status === 'COMPLETED' ? loan.closedAt ?? new Date() : null,
+          status: balance.status,
+          completedAt:
+            balance.status === 'COMPLETED' ? loan.completedAt ?? new Date() : null,
+          closedAt:
+            balance.status === 'COMPLETED' ? loan.closedAt ?? new Date() : null,
         },
       });
 

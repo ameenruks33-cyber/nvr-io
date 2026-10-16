@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { RECONCILE_LOAN_BALANCES_SQL } from '../loans/loan-balance';
 
 @Injectable()
 export class PrismaService
@@ -208,23 +209,8 @@ export class PrismaService
       // ignore if table not ready yet
     }
 
-    // Accounts close only when the full total is repaid: reopen any closed early
-    // (e.g. at 1800 of 2000) and restore their true remaining balance.
     try {
-      await this.$executeRawUnsafe(`
-        UPDATE "loans"
-        SET "status" = 'ACTIVE',
-            "remaining_amount" = "total_payable" - "amount_collected",
-            "completed_at" = NULL,
-            "closed_at" = NULL
-        WHERE "status" = 'COMPLETED' AND "amount_collected" < "total_payable";
-      `);
-      await this.$executeRawUnsafe(`
-        UPDATE "loans"
-        SET "remaining_amount" = GREATEST("total_payable" - "amount_collected", 0)
-        WHERE "status" = 'ACTIVE'
-          AND "remaining_amount" <> GREATEST("total_payable" - "amount_collected", 0);
-      `);
+      await this.$executeRawUnsafe(RECONCILE_LOAN_BALANCES_SQL);
     } catch {
       // ignore if table not ready yet
     }

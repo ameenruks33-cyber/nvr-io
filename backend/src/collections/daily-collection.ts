@@ -77,11 +77,26 @@ export function overdueAed(loan: LoanArrearsInput, now: Date = new Date()): numb
 export function attachArrears<T extends LoanArrearsInput>(
   loan: T,
   now: Date = new Date(),
-): T & { daysInArrears: number; overdueAed: number } {
-  const days = daysInArrears(loan, now);
-  return {
+): T & {
+  amountCollected: number;
+  remainingAmount: number;
+  daysInArrears: number;
+  overdueAed: number;
+} {
+  const collected = asAmount(loan.amountCollected);
+  const remaining = asAmount(loan.remainingAmount);
+  const numbered = {
     ...loan,
+    amountCollected: collected,
+    remainingAmount: remaining,
+    principalAmount: asAmount(loan.principalAmount),
+    totalPayable: asAmount(loan.totalPayable),
+    dailyPayment: dailyAmountOf(loan.dailyPayment),
+  };
+  const days = daysInArrears(numbered, now);
+  return {
+    ...numbered,
     daysInArrears: days,
-    overdueAed: overdueAed(loan, now),
+    overdueAed: overdueAed(numbered, now),
   };
 }
