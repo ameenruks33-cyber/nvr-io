@@ -15,6 +15,7 @@ import { useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 
+import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 
 const MIN_AED = 100;
@@ -31,6 +32,7 @@ type CustomerRow = {
     principalAmount: string | number;
     totalPayable?: string | number;
     dailyPayment: string | number;
+    openedAt?: string;
     status: string;
     daysInArrears?: number;
   };
@@ -103,6 +105,7 @@ function CollectionsPageContent() {
   const [saving, setSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const appliedSearch = useRef('');
+  const idempotencyKey = useRef(newIdempotencyKey());
 
   useEffect(() => {
     setIsSuperAdmin(isSuperAdminRole(getSession()?.user.role));
@@ -206,7 +209,7 @@ function CollectionsPageContent() {
         body: JSON.stringify({
           amount: amountNum,
           notes: notes.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey: idempotencyKey.current,
         }),
       });
       const target =
@@ -232,6 +235,7 @@ function CollectionsPageContent() {
       );
       setAmount('100');
       setNotes('');
+      idempotencyKey.current = newIdempotencyKey();
       await Promise.all([loadCustomers(q), loadRecent()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Collection failed');
@@ -315,8 +319,8 @@ function CollectionsPageContent() {
                     <td className="px-4 py-3">
                       {rowClosed ? (
                         <ClosedBadge label="Closed" />
-                      ) : row.loan?.daysInArrears ? (
-                        <ArrearsBadge days={row.loan.daysInArrears} />
+                      ) : loanDaysInArrears(row.loan) ? (
+                        <ArrearsBadge days={loanDaysInArrears(row.loan)} />
                       ) : (
                         <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
                           {row.loan ? 'Open' : '—'}

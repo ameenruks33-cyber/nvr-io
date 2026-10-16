@@ -78,7 +78,19 @@ export async function api<T>(
   }
 
   let res = await authFetch(path, options, headers);
-  if (res.status === 502 || res.status === 503 || res.status === 504) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const bodyText =
+    typeof options.body === 'string' ? options.body : '';
+  const retrySafe =
+    method === 'GET' ||
+    headers.has('idempotency-key') ||
+    bodyText.includes('idempotencyKey');
+  if (
+    res.status === 502 ||
+    res.status === 503 ||
+    res.status === 504 ||
+    (res.status === 500 && retrySafe)
+  ) {
     await new Promise((r) => setTimeout(r, 900));
     res = await authFetch(path, options, headers);
   }

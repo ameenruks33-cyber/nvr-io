@@ -28,7 +28,7 @@ export class RepaymentsController {
     @Headers('idempotency-key') idempotencyHeader?: string,
   ) {
     return this.repayments.recordRepayment({
-      loanId,
+      loanId: assertSafeId(loanId, 'loan id'),
       amount: dto.amount,
       collectorId: user.id,
       latitude: dto.latitude,

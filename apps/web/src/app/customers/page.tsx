@@ -7,6 +7,7 @@ import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { loanDaysInArrears } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 import { useLiveRefresh } from '@/lib/live-sync';
 
@@ -19,6 +20,9 @@ type CustomerRow = {
     amountCollected: string | number;
     principalAmount: string | number;
     totalPayable?: string | number;
+    dailyPayment?: string | number;
+    remainingAmount?: string | number;
+    openedAt?: string;
     status: string;
     daysInArrears?: number;
   };
@@ -119,7 +123,7 @@ export default function CustomersPage() {
                     ) : (
                       <span className="inline-flex flex-wrap items-center gap-2">
                         {money(collected)} / {money(total)}
-                        <ArrearsBadge days={row.loan?.daysInArrears} />
+                        <ArrearsBadge days={loanDaysInArrears(row.loan)} />
                       </span>
                     )}
                   </td>

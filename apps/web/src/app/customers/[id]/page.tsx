@@ -14,6 +14,7 @@ import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 import { ArrearsBadge } from '@/components/ArrearsBadge';
+import { loanDaysInArrears } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 
 type CustomerDetail = {
@@ -42,6 +43,7 @@ type CustomerDetail = {
     amountCollected: string | number;
     remainingAmount: string | number;
     dailyPayment: string | number;
+    openedAt?: string;
     status: string;
     daysInArrears?: number;
     repayments: Array<{
@@ -355,9 +357,9 @@ export default function CustomerDetailPage() {
                 {Math.round(collected / Number(loan.dailyPayment || 100))} /{' '}
                 {Math.round(total / Number(loan.dailyPayment || 100))}
               </p>
-              {open && loan.daysInArrears ? (
+              {open && loanDaysInArrears(loan) ? (
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-amber-800">
-                  <ArrearsBadge days={loan.daysInArrears} />
+                  <ArrearsBadge days={loanDaysInArrears(loan)} />
                   <span>Total missed collection days since this account opened.</span>
                 </p>
               ) : null}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Put } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
@@ -9,6 +9,8 @@ import { CollectionsStickyDto } from './dto/collections-sticky.dto';
 
 @Controller('collections')
 export class CollectionsController {
+  private readonly logger = new Logger(CollectionsController.name);
+
   constructor(
     private readonly pending: PendingCollectionsService,
     private readonly reminders: CollectionsRemindersService,
@@ -19,7 +21,13 @@ export class CollectionsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async pendingToday() {
     const data = await this.pending.listPendingToday();
-    await this.reminders.runDailyPendingReminders();
+    try {
+      await this.reminders.runDailyPendingReminders();
+    } catch (e) {
+      this.logger.warn(
+        `Pending reminders skipped: ${e instanceof Error ? e.message : e}`,
+      );
+    }
     return data;
   }
 

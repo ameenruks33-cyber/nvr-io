@@ -7,6 +7,7 @@ import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
+import { loanDaysInArrears } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 import { useLiveRefresh } from '@/lib/live-sync';
 
@@ -17,6 +18,8 @@ type LoanRow = {
   totalPayable?: string | number;
   amountCollected: string | number;
   remainingAmount: string | number;
+  dailyPayment?: string | number;
+  openedAt?: string;
   daysInArrears?: number;
   customer: {
     id: string;
@@ -71,7 +74,7 @@ export default function LoansPage() {
                   {row.status === 'ACTIVE' ? (
                     <span className="inline-flex flex-wrap items-center gap-2">
                       {money(Number(row.remainingAmount))}
-                      <ArrearsBadge days={row.daysInArrears} />
+                      <ArrearsBadge days={loanDaysInArrears(row)} />
                     </span>
                   ) : (
                     <ClosedBadge label="Closed" />

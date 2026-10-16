@@ -11,6 +11,11 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
+import {
+  nextReceiptFromLatest,
+  prismaErrorCode,
+  retryPrisma,
+} from '../common/prisma-retry';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -55,72 +60,102 @@ export class RepaymentsService {
       }
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const loan = await tx.loan.findUnique({
-        where: { id: input.loanId },
-        include: { customer: true },
-      });
-      if (!loan) throw new NotFoundException('Loan not found');
-      if (loan.status === 'COMPLETED' || loan.status === 'CLOSED') {
-        throw new ConflictException('Loan already completed');
+    let result;
+    try {
+    result = await retryPrisma(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const loan = await tx.loan.findUnique({
+            where: { id: input.loanId },
+            include: { customer: true },
+          });
+          if (!loan) throw new NotFoundException('Loan not found');
+          if (loan.status === 'COMPLETED' || loan.status === 'CLOSED') {
+            throw new ConflictException('Loan already completed');
+          }
+
+          const collected = Number(loan.amountCollected);
+          const total = Math.max(
+            Number(loan.totalPayable),
+            Number(loan.principalAmount),
+          );
+          const newTotal = collected + input.amount;
+
+          if (newTotal > total + 0.001) {
+            throw new BadRequestException(
+              `Only AED ${(total - collected).toFixed(2)} is needed to close this account`,
+            );
+          }
+
+          const completed = newTotal >= total - 0.001;
+          const remaining = completed ? 0 : Math.max(total - newTotal, 0);
+          const receiptNumber = await this.nextReceiptNumber(tx);
+
+          const repayment = await tx.repayment.create({
+            data: {
+              loanId: input.loanId,
+              amount: new Prisma.Decimal(input.amount),
+              collectedById: input.collectorId,
+              latitude: input.latitude ?? null,
+              longitude: input.longitude ?? null,
+              notes: this.crypto.encryptOptional(input.notes),
+              receiptNumber,
+              idempotencyKey: input.idempotencyKey || null,
+            },
+          });
+
+          const updatedLoan = await tx.loan.update({
+            where: { id: input.loanId },
+            data: {
+              amountCollected: new Prisma.Decimal(newTotal),
+              remainingAmount: new Prisma.Decimal(remaining),
+              status: completed ? 'COMPLETED' : 'ACTIVE',
+              completedAt: completed ? new Date() : null,
+              closedAt: completed ? new Date() : null,
+            },
+            include: { customer: true },
+          });
+
+          return {
+            loan: updatedLoan,
+            repayment,
+            completed,
+            customer: loan.customer,
+          };
+        },
+        { maxWait: 10_000, timeout: 20_000 },
+      ),
+    );
+    } catch (err) {
+      if (input.idempotencyKey && prismaErrorCode(err) === 'P2002') {
+        const existing = await this.prisma.repayment.findUnique({
+          where: { idempotencyKey: input.idempotencyKey },
+          include: { loan: { include: { customer: true } } },
+        });
+        if (existing) {
+          return this.toResult(existing.loan, existing);
+        }
       }
+      throw err;
+    }
 
-      const collected = Number(loan.amountCollected);
-      const total = Math.max(
-        Number(loan.totalPayable),
-        Number(loan.principalAmount),
-      );
-      const newTotal = collected + input.amount;
-
-      if (newTotal > total + 0.001) {
-        throw new BadRequestException(
-          `Only AED ${(total - collected).toFixed(2)} is needed to close this account`,
-        );
-      }
-
-      const completed = newTotal >= total - 0.001;
-      const remaining = completed ? 0 : Math.max(total - newTotal, 0);
-      const receiptNumber = await this.nextReceiptNumber(tx);
-
-      const repayment = await tx.repayment.create({
-        data: {
+    try {
+      await this.audit.log({
+        userId: input.collectorId,
+        action: 'REPAYMENT_CREATE',
+        recordType: 'repayment',
+        recordId: result.repayment.id,
+        metadata: {
           loanId: input.loanId,
-          amount: new Prisma.Decimal(input.amount),
-          collectedById: input.collectorId,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          notes: this.crypto.encryptOptional(input.notes),
-          receiptNumber,
-          idempotencyKey: input.idempotencyKey,
+          amount: input.amount,
+          receiptNumber: result.repayment.receiptNumber,
         },
       });
-
-      const updatedLoan = await tx.loan.update({
-        where: { id: input.loanId },
-        data: {
-          amountCollected: new Prisma.Decimal(newTotal),
-          remainingAmount: new Prisma.Decimal(remaining),
-          status: completed ? 'COMPLETED' : 'ACTIVE',
-          completedAt: completed ? new Date() : null,
-          closedAt: completed ? new Date() : null,
-        },
-        include: { customer: true },
-      });
-
-      return { loan: updatedLoan, repayment, completed, customer: loan.customer };
-    });
-
-    await this.audit.log({
-      userId: input.collectorId,
-      action: 'REPAYMENT_CREATE',
-      recordType: 'repayment',
-      recordId: result.repayment.id,
-      metadata: {
-        loanId: input.loanId,
-        amount: input.amount,
-        receiptNumber: result.repayment.receiptNumber,
-      },
-    });
+    } catch (e) {
+      this.logger.warn(
+        `Audit log skipped after collection: ${e instanceof Error ? e.message : e}`,
+      );
+    }
 
     const amountPaid = Number(result.repayment.amount);
     const remaining = Number(result.loan.remainingAmount);
@@ -135,31 +170,37 @@ export class RepaymentsService {
     });
     const collectorName = collector?.name || 'Staff';
 
-    if (result.completed) {
-      await this.notifications.createLoanCompleted(
-        result.loan.customerId,
-        result.loan.id,
-        amountPaid,
-        remaining,
-        total,
-        customerName,
-        collectorName,
-      );
-      await this.audit.log({
-        userId: input.collectorId,
-        action: 'LOAN_COMPLETED',
-        recordType: 'loan',
-        recordId: result.loan.id,
-      });
-    } else {
-      await this.notifications.createRepaymentReceived(
-        result.loan.customerId,
-        result.loan.id,
-        amountPaid,
-        remaining,
-        total,
-        customerName,
-        collectorName,
+    try {
+      if (result.completed) {
+        await this.notifications.createLoanCompleted(
+          result.loan.customerId,
+          result.loan.id,
+          amountPaid,
+          remaining,
+          total,
+          customerName,
+          collectorName,
+        );
+        await this.audit.log({
+          userId: input.collectorId,
+          action: 'LOAN_COMPLETED',
+          recordType: 'loan',
+          recordId: result.loan.id,
+        });
+      } else {
+        await this.notifications.createRepaymentReceived(
+          result.loan.customerId,
+          result.loan.id,
+          amountPaid,
+          remaining,
+          total,
+          customerName,
+          collectorName,
+        );
+      }
+    } catch (e) {
+      this.logger.warn(
+        `Collection notice skipped: ${e instanceof Error ? e.message : e}`,
       );
     }
 
@@ -371,8 +412,12 @@ export class RepaymentsService {
   }
 
   private async nextReceiptNumber(tx: Prisma.TransactionClient) {
-    const count = await tx.repayment.count();
-    return `JB-RCP-${String(count + 1).padStart(8, '0')}`;
+    const latest = await tx.repayment.findFirst({
+      where: { receiptNumber: { startsWith: 'JB-RCP-' } },
+      orderBy: { receiptNumber: 'desc' },
+      select: { receiptNumber: true },
+    });
+    return nextReceiptFromLatest(latest?.receiptNumber);
   }
 
   private toResult(
