@@ -6,13 +6,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { unixExpirySec } from '../auth/token-ttl';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SETTINGS_ID = 'default';
-const TOKEN_TTL_SEC = 8 * 60 * 60;
 
 /**
- * When a gallery PIN is set, file/list/upload routes require a short-lived unlock
+ * When a gallery PIN is set, file/list/upload routes require an unlock
  * token so staff cannot bypass the PIN by calling the API directly.
  */
 @Injectable()
@@ -31,7 +31,10 @@ export class GalleryUnlockService implements OnModuleInit {
   }
 
   issueToken(userId: string): string {
-    const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
+    const exp = unixExpirySec(
+      this.config.get('GALLERY_UNLOCK_TTL') ||
+        this.config.get('JWT_ACCESS_TTL'),
+    );
     const payload = `${userId}.${exp}`;
     const sig = createHmac('sha256', this.secret)
       .update(payload)

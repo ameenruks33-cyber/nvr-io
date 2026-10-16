@@ -16,6 +16,7 @@ import { AuditService } from '../audit/audit.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { LoginDto, VerifyOtpDto } from './dto/auth.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { jwtExpiresIn, refreshExpiresAt } from './token-ttl';
 
 type OtpPurpose = 'LOGIN' | 'ENABLE';
 
@@ -500,17 +501,17 @@ export class AuthService {
   }
 
   private async issueTokens(userId: string, email: string, role: string) {
+    const accessTtl = jwtExpiresIn(this.config.get('JWT_ACCESS_TTL'));
     const accessToken = await this.jwt.signAsync(
       { sub: userId, email, role },
       {
         secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
-        expiresIn: this.config.get('JWT_ACCESS_TTL') || '15m',
+        ...(accessTtl ? { expiresIn: accessTtl } : {}),
       },
     );
 
     const refreshToken = randomBytes(48).toString('hex');
-    const days = 7;
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const expiresAt = refreshExpiresAt(this.config.get('JWT_REFRESH_TTL'));
 
     await this.prisma.refreshToken.create({
       data: {

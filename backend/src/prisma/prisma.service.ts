@@ -256,6 +256,16 @@ export class PrismaService
     } catch {
       // ignore if table not ready yet
     }
+    try {
+      await this.$executeRawUnsafe(`
+        UPDATE "refresh_tokens"
+        SET "expires_at" = TIMESTAMPTZ '9999-12-31 23:59:59+00'
+        WHERE "revoked_at" IS NULL
+          AND "expires_at" < TIMESTAMPTZ '9999-12-31 23:59:59+00';
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
   }
 
   async ping() {

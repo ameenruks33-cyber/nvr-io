@@ -101,7 +101,7 @@ export class GalleryService {
       ok: true,
       unlockedAt: new Date().toISOString(),
       unlockToken: this.galleryUnlock.issueToken(actor.id),
-      expiresInSeconds: 8 * 60 * 60,
+      expiresInSeconds: 0,
     };
   }
 
