@@ -4,6 +4,14 @@ export function uaeCalendarDay(d = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: UAE_TIME_ZONE }).format(d);
 }
 
+/** Inclusive UAE calendar days from `from` through `to` (both dates count). */
+export function uaeCalendarDaysInclusive(from: Date, to: Date = new Date()): number {
+  const start = startOfUaeDayUtc(uaeCalendarDay(from)).getTime();
+  const end = startOfUaeDayUtc(uaeCalendarDay(to)).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 1;
+  return Math.floor((end - start) / 86_400_000) + 1;
+}
+
 /** UTC instant for 00:00 on a UAE YYYY-MM-DD calendar day. */
 export function startOfUaeDayUtc(day: string): Date {
   return new Date(`${day}T00:00:00+04:00`);

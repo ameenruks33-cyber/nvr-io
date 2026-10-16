@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { dueTodayAed } from './daily-collection';
+import { daysInArrears, dueTodayAed, overdueAed } from './daily-collection';
 import { uaeDayBounds } from './uae-day';
 
 export type PendingTodayItem = {
@@ -11,6 +11,8 @@ export type PendingTodayItem = {
   dueTodayAed: number;
   collectedTodayAed: number;
   pendingTodayAed: number;
+  daysInArrears: number;
+  overdueAed: number;
   remainingBalance: number;
   totalPayable: number;
 };
@@ -19,7 +21,7 @@ export type PendingTodayItem = {
 export class PendingCollectionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Open accounts where today's daily amount (or remainder) is not fully collected yet. */
+  /** Open accounts with unpaid days (total arrears, not only today). */
   async listPendingToday(): Promise<{
     date: string;
     items: PendingTodayItem[];
@@ -56,7 +58,9 @@ export class PendingCollectionsService {
       );
       const collectedTodayAed = collectedByLoan.get(loan.id) || 0;
       const pendingTodayAed = Math.max(dueToday - collectedTodayAed, 0);
-      if (pendingTodayAed <= 0.001) continue;
+      const missedDays = daysInArrears(loan);
+      const overdue = overdueAed(loan);
+      if (missedDays <= 0 && pendingTodayAed <= 0.001) continue;
 
       items.push({
         customerId: loan.customerId,
@@ -66,6 +70,8 @@ export class PendingCollectionsService {
         dueTodayAed: dueToday,
         collectedTodayAed,
         pendingTodayAed,
+        daysInArrears: Math.max(missedDays, pendingTodayAed > 0.001 ? 1 : 0),
+        overdueAed: overdue,
         remainingBalance,
         totalPayable: Math.max(
           Number(loan.totalPayable),
@@ -74,6 +80,7 @@ export class PendingCollectionsService {
       });
     }
 
+    items.sort((a, b) => b.daysInArrears - a.daysInArrears || a.customerName.localeCompare(b.customerName));
     return { date: day, items };
   }
 }

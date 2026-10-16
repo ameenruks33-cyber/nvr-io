@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
@@ -16,6 +17,7 @@ type LoanRow = {
   totalPayable?: string | number;
   amountCollected: string | number;
   remainingAmount: string | number;
+  daysInArrears?: number;
   customer: {
     id: string;
     customerCode: string;
@@ -26,15 +28,9 @@ type LoanRow = {
 
 export default function LoansPage() {
   const [rows, setRows] = useState<LoanRow[]>([]);
-  const [pendingLoanIds, setPendingLoanIds] = useState<Set<string>>(new Set());
 
   const load = () => {
     api<LoanRow[]>('/loans').then(setRows).catch(() => undefined);
-    api<{ items: { loanId: string }[] }>('/collections/pending-today')
-      .then((data) =>
-        setPendingLoanIds(new Set(data.items.map((i) => i.loanId))),
-      )
-      .catch(() => setPendingLoanIds(new Set()));
   };
 
   useEffect(load, []);
@@ -75,11 +71,7 @@ export default function LoansPage() {
                   {row.status === 'ACTIVE' ? (
                     <span className="inline-flex flex-wrap items-center gap-2">
                       {money(Number(row.remainingAmount))}
-                      {pendingLoanIds.has(row.id) ? (
-                        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
-                          Pending
-                        </span>
-                      ) : null}
+                      <ArrearsBadge days={row.daysInArrears} />
                     </span>
                   ) : (
                     <ClosedBadge label="Closed" />

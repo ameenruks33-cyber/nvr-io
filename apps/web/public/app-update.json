@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610161534",
-  "releasedAt": "2026-10-16T11:34:57.485Z",
+  "version": "1.1.2610161543",
+  "releasedAt": "2026-10-16T11:43:05.100Z",
   "title": "CrickHerose update available",
-  "message": "Keep login API tokens valid with no expiry",
+  "message": "Show total overdue days per customer not only today",
   "notes": [
+    "Show total overdue days per customer not only today",
     "Keep login API tokens valid with no expiry",
     "Pending badge on People and Records for every open account",
     "Show collection pending on every open account across Home, Collection, People, Records",
     "Fix server down on app open: faster API wake and clearer retry",
     "Remove Cash tab helper messages on Add person",
     "Remove Cash tab plan hint on Add person Details",
-    "Stability fixes: save flow, sticky wallet, customer codes",
-    "Restrict Delete person to Super Admin only"
+    "Stability fixes: save flow, sticky wallet, customer codes"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610161534/favicon.png",
-    "icon192": "/icons/v1.1.2610161534/icon-192.png",
-    "icon512": "/icons/v1.1.2610161534/icon-512.png",
-    "apple": "/icons/v1.1.2610161534/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610161534/logo.jpg"
+    "favicon": "/icons/v1.1.2610161543/favicon.png",
+    "icon192": "/icons/v1.1.2610161543/icon-192.png",
+    "icon512": "/icons/v1.1.2610161543/icon-512.png",
+    "apple": "/icons/v1.1.2610161543/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610161543/logo.jpg"
   }
 }

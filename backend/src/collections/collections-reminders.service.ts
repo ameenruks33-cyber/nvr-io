@@ -44,6 +44,8 @@ export class CollectionsRemindersService {
         total: row.totalPayable,
         dueTodayAed: row.dueTodayAed,
         collectedTodayAed: row.collectedTodayAed,
+        daysInArrears: row.daysInArrears,
+        overdueAed: row.overdueAed,
       });
       reminded++;
     }

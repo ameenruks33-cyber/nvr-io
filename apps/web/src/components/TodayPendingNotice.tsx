@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { arrearsText } from '@/components/ArrearsBadge';
 import { money } from '@/lib/api';
 
 export type PendingTodayItem = {
@@ -13,6 +14,8 @@ export type PendingTodayItem = {
   collectedTodayAed: number;
   dueTodayAed: number;
   remainingBalance: number;
+  daysInArrears?: number;
+  overdueAed?: number;
 };
 
 const dismissKey = (date: string) => `nvr_pending_reminder_${date}`;
@@ -34,12 +37,16 @@ export function TodayPendingNotice({
 
   if (!items.length || closed) return null;
 
-  const totalPending = items.reduce((sum, row) => sum + row.pendingTodayAed, 0);
+  const totalDays = items.reduce((sum, row) => sum + (row.daysInArrears || 0), 0);
+  const totalOverdue = items.reduce(
+    (sum, row) => sum + (row.overdueAed ?? row.pendingTodayAed),
+    0,
+  );
   const count = items.length;
   const label =
     count === 1
-      ? `${items[0].customerName} — collection pending today`
-      : `${count} collections pending today`;
+      ? `${items[0].customerName} — ${arrearsText(items[0].daysInArrears || 1)}`
+      : `${count} accounts overdue (${totalDays} ${totalDays === 1 ? 'day' : 'days'} in arrears)`;
 
   function dismiss() {
     sessionStorage.setItem(dismissKey(date), '1');
@@ -62,7 +69,7 @@ export function TodayPendingNotice({
           aria-controls="pending-customers-list"
         >
           <span className="font-medium">{label}</span>
-          <span className="text-amber-900"> ({money(totalPending)})</span>.
+          <span className="text-amber-900"> ({money(totalOverdue)})</span>.
           <span className="mt-0.5 block text-xs font-normal text-amber-800/90">
             {expanded ? 'Tap to hide names' : 'Tap to see names'}
           </span>
@@ -91,13 +98,16 @@ export function TodayPendingNotice({
             >
               <span className="min-w-0 truncate font-medium text-slate-900">
                 {row.customerName}
+                <span className="mt-0.5 block text-xs font-normal text-amber-800/90">
+                  {arrearsText(row.daysInArrears || 1)}
+                </span>
               </span>
               <Link
                 href={`/collections?customer=${encodeURIComponent(row.customerId)}`}
                 className="shrink-0 text-xs font-medium text-teal-800 underline underline-offset-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                {money(row.pendingTodayAed)}
+                {money(row.overdueAed ?? row.pendingTodayAed)}
               </Link>
             </li>
           ))}

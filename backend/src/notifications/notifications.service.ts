@@ -91,6 +91,8 @@ export class NotificationsService {
     total: number;
     dueTodayAed: number;
     collectedTodayAed: number;
+    daysInArrears?: number;
+    overdueAed?: number;
   }) {
     const {
       customerId,
@@ -101,8 +103,15 @@ export class NotificationsService {
       total,
       dueTodayAed,
       collectedTodayAed,
+      daysInArrears = 1,
+      overdueAed,
     } = input;
     const stillDueToday = Math.max(dueTodayAed - collectedTodayAed, 0);
+    const days = Math.max(1, daysInArrears);
+    const daysLabel = days === 1 ? '1 day overdue' : `${days} days overdue`;
+    const arrearsAed = Number.isFinite(overdueAed)
+      ? Number(overdueAed)
+      : days * dueTodayAed;
     const partial =
       collectedTodayAed > 0
         ? ` (AED ${collectedTodayAed.toFixed(0)} received today — AED ${stillDueToday.toFixed(0)} still due today)`
@@ -113,14 +122,14 @@ export class NotificationsService {
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ALL',
-      message: `Today's collection is pending for ${customerName}: collect AED ${dueTodayAed.toFixed(0)} today${partial}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)} (${customerCode}).`,
+      message: `Collection overdue for ${customerName}: ${daysLabel} (AED ${arrearsAed.toFixed(0)})${partial}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)} (${customerCode}).`,
     });
     await this.create({
       customerId,
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ADMIN',
-      message: `Admin: Today's collection is pending for ${customerName}. AED ${stillDueToday.toFixed(0)} of today's AED ${dueTodayAed.toFixed(0)} is still due${partial}. Remaining AED ${remaining.toFixed(2)} (${customerCode}).`,
+      message: `Admin: ${customerName} is ${daysLabel}. AED ${arrearsAed.toFixed(0)} overdue${partial}. Remaining AED ${remaining.toFixed(2)} (${customerCode}).`,
     });
   }
 

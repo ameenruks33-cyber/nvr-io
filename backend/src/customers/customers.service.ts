@@ -9,6 +9,7 @@ import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { StorageService } from '../storage/storage.service';
 import { assertImageBuffer } from '../common/image-bytes';
 import { resolveLoanAmounts } from '../loans/loan-plans';
+import { attachArrears } from '../collections/daily-collection';
 
 @Injectable()
 export class CustomersService {
@@ -110,7 +111,7 @@ export class CustomersService {
 
     return this.toSafeCustomer(result.customer, actor, {
       includeSensitive: this.canViewSensitive(actor.role as UserRole),
-      loan: result.loan,
+      loan: attachArrears(result.loan),
     });
   }
 
@@ -139,7 +140,7 @@ export class CustomersService {
     return customers.map((c) =>
       this.toSafeCustomer(c, actor, {
         includeSensitive: false,
-        loan: c.loans[0],
+        loan: c.loans[0] ? attachArrears(c.loans[0]) : undefined,
       }),
     );
   }
@@ -233,7 +234,7 @@ export class CustomersService {
 
     return this.toSafeCustomer(customer, actor, {
       includeSensitive: this.canViewSensitive(actor.role as UserRole),
-      loans: customer.loans,
+      loans: customer.loans.map((loan) => attachArrears(loan)),
       documents: customer.documents,
     });
   }

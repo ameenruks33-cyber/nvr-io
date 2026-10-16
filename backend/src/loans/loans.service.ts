@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { attachArrears } from '../collections/daily-collection';
 import { resolveLoanAmounts } from './loan-plans';
 import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 
@@ -12,8 +13,8 @@ import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 export class LoansService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(status?: string) {
-    return this.prisma.loan.findMany({
+  async findAll(status?: string) {
+    const rows = await this.prisma.loan.findMany({
       where: status ? { status: status as 'ACTIVE' | 'COMPLETED' | 'CLOSED' } : undefined,
       orderBy: { openedAt: 'desc' },
       include: {
@@ -27,6 +28,7 @@ export class LoansService {
         },
       },
     });
+    return rows.map((row) => attachArrears(row));
   }
 
   async findOne(id: string) {
@@ -53,7 +55,7 @@ export class LoansService {
       },
     });
     if (!loan) throw new NotFoundException('Loan not found');
-    return loan;
+    return attachArrears(loan);
   }
 
   async updatePlan(loanId: string, dto: UpdateLoanPlanDto) {

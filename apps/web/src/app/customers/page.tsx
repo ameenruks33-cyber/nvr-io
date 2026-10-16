@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
@@ -19,26 +20,15 @@ type CustomerRow = {
     principalAmount: string | number;
     totalPayable?: string | number;
     status: string;
+    daysInArrears?: number;
   };
 };
 
 export default function CustomersPage() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<CustomerRow[]>([]);
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const appliedSearch = useRef('');
-
-  async function loadPending() {
-    try {
-      const data = await api<{ items: { customerId: string }[] }>(
-        '/collections/pending-today',
-      );
-      setPendingIds(new Set(data.items.map((i) => i.customerId)));
-    } catch {
-      setPendingIds(new Set());
-    }
-  }
 
   async function load(search = '') {
     appliedSearch.current = search;
@@ -55,12 +45,10 @@ export default function CustomersPage() {
 
   useEffect(() => {
     void load();
-    void loadPending();
   }, []);
 
   useLiveRefresh(() => {
     void load(appliedSearch.current);
-    void loadPending();
   });
 
   function onSearch(e: FormEvent) {
@@ -131,11 +119,7 @@ export default function CustomersPage() {
                     ) : (
                       <span className="inline-flex flex-wrap items-center gap-2">
                         {money(collected)} / {money(total)}
-                        {pendingIds.has(row.id) ? (
-                          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
-                            Pending
-                          </span>
-                        ) : null}
+                        <ArrearsBadge days={row.loan?.daysInArrears} />
                       </span>
                     )}
                   </td>
