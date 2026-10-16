@@ -19,35 +19,42 @@ export type PendingTodayItem = {
 export class PendingCollectionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Open accounts where today's AED 100 (or remainder) is not fully collected yet. */
+  /** Open accounts where today's daily amount (or remainder) is not fully collected yet. */
   async listPendingToday(): Promise<{
     date: string;
     items: PendingTodayItem[];
   }> {
     const { day, start, end } = uaeDayBounds();
-    const activeLoans = await this.prisma.loan.findMany({
-      where: { status: 'ACTIVE', remainingAmount: { gt: 0 } },
-      include: {
-        customer: {
-          select: { id: true, name: true, customerCode: true },
+    const [activeLoans, paidToday] = await Promise.all([
+      this.prisma.loan.findMany({
+        where: { status: 'ACTIVE', remainingAmount: { gt: 0 } },
+        include: {
+          customer: {
+            select: { id: true, name: true, customerCode: true },
+          },
         },
-      },
-      orderBy: { customer: { name: 'asc' } },
-    });
+        orderBy: { customer: { name: 'asc' } },
+      }),
+      this.prisma.repayment.groupBy({
+        by: ['loanId'],
+        where: { collectedAt: { gte: start, lt: end } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const collectedByLoan = new Map(
+      paidToday.map((r) => [r.loanId, Number(r._sum.amount || 0)]),
+    );
 
     const items: PendingTodayItem[] = [];
 
     for (const loan of activeLoans) {
       const remainingBalance = Number(loan.remainingAmount);
-      const dueToday = dueTodayAed(remainingBalance);
-      const paidTodayAgg = await this.prisma.repayment.aggregate({
-        where: {
-          loanId: loan.id,
-          collectedAt: { gte: start, lt: end },
-        },
-        _sum: { amount: true },
-      });
-      const collectedTodayAed = Number(paidTodayAgg._sum.amount || 0);
+      const dueToday = dueTodayAed(
+        remainingBalance,
+        Number(loan.dailyPayment) || 100,
+      );
+      const collectedTodayAed = collectedByLoan.get(loan.id) || 0;
       const pendingTodayAed = Math.max(dueToday - collectedTodayAed, 0);
       if (pendingTodayAed <= 0.001) continue;
 

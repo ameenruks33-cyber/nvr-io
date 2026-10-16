@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { HomeCalendar } from '@/components/HomeCalendar';
-import {
-  TodayPendingNotice,
-  type PendingTodayItem,
-} from '@/components/TodayPendingNotice';
+import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { api, money } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/live-sync';
 
@@ -21,23 +18,14 @@ type Stats = {
   todaysCollections: number;
 };
 
-type PendingToday = {
-  date: string;
-  items: PendingTodayItem[];
-};
-
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [pending, setPending] = useState<PendingToday | null>(null);
   const [error, setError] = useState('');
 
   const load = () => {
     api<Stats>('/dashboard')
       .then(setStats)
       .catch((e) => setError(e.message));
-    api<PendingToday>('/collections/pending-today')
-      .then(setPending)
-      .catch(() => setPending(null));
   };
 
   useEffect(load, []);
@@ -56,9 +44,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      {pending?.items.length ? (
-        <TodayPendingNotice date={pending.date} items={pending.items} />
-      ) : null}
+      <PendingTodayBanner />
 
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>

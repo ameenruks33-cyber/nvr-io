@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { CollectionsStickyNote } from '@/components/CollectionsStickyNote';
+import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
@@ -99,6 +100,7 @@ function CollectionsPageContent() {
   const [waLink, setWaLink] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const appliedSearch = useRef('');
 
   useEffect(() => {
@@ -146,9 +148,21 @@ function CollectionsPageContent() {
     }
   }
 
+  async function loadPending() {
+    try {
+      const data = await api<{ items: Array<{ customerId: string }> }>(
+        '/collections/pending-today',
+      );
+      setPendingIds(new Set(data.items.map((i) => i.customerId)));
+    } catch {
+      setPendingIds(new Set());
+    }
+  }
+
   useEffect(() => {
     void loadCustomers();
     void loadRecent();
+    void loadPending();
     const preselect = searchParams.get('customer');
     if (preselect) setSelectedId(preselect);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,6 +171,7 @@ function CollectionsPageContent() {
   useLiveRefresh(() => {
     void loadCustomers(appliedSearch.current);
     void loadRecent();
+    void loadPending();
   });
 
   function onSearch(e: FormEvent) {
@@ -229,7 +244,7 @@ function CollectionsPageContent() {
       );
       setAmount('100');
       setNotes('');
-      await Promise.all([loadCustomers(q), loadRecent()]);
+      await Promise.all([loadCustomers(q), loadRecent(), loadPending()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Collection failed');
     } finally {
@@ -239,6 +254,7 @@ function CollectionsPageContent() {
 
   return (
     <AppShell>
+      <PendingTodayBanner />
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
       </header>
@@ -280,6 +296,7 @@ function CollectionsPageContent() {
                 );
                 const rowClosed =
                   Boolean(row.loan) && row.loan?.status !== 'ACTIVE';
+                const rowPending = pendingIds.has(row.id);
                 const active = row.id === selectedId;
                 return (
                   <tr
@@ -311,6 +328,10 @@ function CollectionsPageContent() {
                     <td className="px-4 py-3">
                       {rowClosed ? (
                         <ClosedBadge label="Closed" />
+                      ) : rowPending ? (
+                        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+                          Pending
+                        </span>
                       ) : (
                         <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
                           {row.loan ? 'Open' : '—'}

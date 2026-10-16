@@ -14,7 +14,7 @@ export class CollectionsRemindersService {
     private readonly pending: PendingCollectionsService,
   ) {}
 
-  /** Daily job: remind collectors and admins about today's pending AED 100. */
+  /** Daily job / on-open sync: remind staff about pending collections on every open account. */
   async runDailyPendingReminders() {
     const { date, items } = await this.pending.listPendingToday();
     const { start, end } = uaeDayBounds(date);

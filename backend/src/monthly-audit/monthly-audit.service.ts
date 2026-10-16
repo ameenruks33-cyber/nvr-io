@@ -245,7 +245,10 @@ export class MonthlyAuditService {
       [];
     for (const loan of activeLoans) {
       const remainingBalance = num(loan.remainingAmount);
-      const dueToday = dueTodayAed(remainingBalance);
+      const dueToday = dueTodayAed(
+        remainingBalance,
+        Number(loan.dailyPayment) || 100,
+      );
       const paidLastDay = await this.prisma.repayment.aggregate({
         where: {
           loanId: loan.id,

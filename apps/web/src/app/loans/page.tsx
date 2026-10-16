@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { ClosedBadge } from '@/components/ClosedBadge';
 import { api, money } from '@/lib/api';
 import { loanTotals } from '@/lib/loan-plans';
@@ -35,6 +36,7 @@ export default function LoansPage() {
 
   return (
     <AppShell>
+      <PendingTodayBanner />
       <header className="mb-6">
         <h1 className="font-display text-3xl text-slate-900">Records</h1>
         <p className="mt-1 text-sm text-slate-500">Payment tracking</p>

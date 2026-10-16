@@ -9,4 +9,9 @@ describe('daily collection rule', () => {
     expect(dueTodayAed(40)).toBe(40);
     expect(dueTodayAed(200)).toBe(100);
   });
+
+  it('uses the account daily amount for other plans', () => {
+    expect(dueTodayAed(800, 50)).toBe(50);
+    expect(dueTodayAed(30, 100)).toBe(30);
+  });
 });

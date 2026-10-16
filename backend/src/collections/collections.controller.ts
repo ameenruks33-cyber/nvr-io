@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { PendingCollectionsService } from './pending-collections.service';
+import { CollectionsRemindersService } from './collections-reminders.service';
 import { CollectionsStickyService } from './collections-sticky.service';
 import { CollectionsStickyDto } from './dto/collections-sticky.dto';
 
@@ -10,13 +11,16 @@ import { CollectionsStickyDto } from './dto/collections-sticky.dto';
 export class CollectionsController {
   constructor(
     private readonly pending: PendingCollectionsService,
+    private readonly reminders: CollectionsRemindersService,
     private readonly sticky: CollectionsStickyService,
   ) {}
 
   @Get('pending-today')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  pendingToday() {
-    return this.pending.listPendingToday();
+  async pendingToday() {
+    const data = await this.pending.listPendingToday();
+    await this.reminders.runDailyPendingReminders();
+    return data;
   }
 
   @Get('sticky-note')

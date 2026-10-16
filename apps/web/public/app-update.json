@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610161520",
-  "releasedAt": "2026-10-16T11:20:34.471Z",
+  "version": "1.1.2610161527",
+  "releasedAt": "2026-10-16T11:27:16.779Z",
   "title": "CrickHerose update available",
-  "message": "Fix server down on app open: faster API wake and clearer retry",
+  "message": "Show collection pending on every open account across Home, Collection, People, Records",
   "notes": [
+    "Show collection pending on every open account across Home, Collection, People, Records",
     "Fix server down on app open: faster API wake and clearer retry",
     "Remove Cash tab helper messages on Add person",
     "Remove Cash tab plan hint on Add person Details",
     "Stability fixes: save flow, sticky wallet, customer codes",
     "Restrict Delete person to Super Admin only",
     "Move loan plan selector to Cash tab on Add person",
-    "Delete on customer profiles, loan plans, sticky wallet payouts",
-    "\\ Reliable indoor location on Add person\\"
+    "Delete on customer profiles, loan plans, sticky wallet payouts"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610161520/favicon.png",
-    "icon192": "/icons/v1.1.2610161520/icon-192.png",
-    "icon512": "/icons/v1.1.2610161520/icon-512.png",
-    "apple": "/icons/v1.1.2610161520/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610161520/logo.jpg"
+    "favicon": "/icons/v1.1.2610161527/favicon.png",
+    "icon192": "/icons/v1.1.2610161527/icon-192.png",
+    "icon512": "/icons/v1.1.2610161527/icon-512.png",
+    "apple": "/icons/v1.1.2610161527/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610161527/logo.jpg"
   }
 }
