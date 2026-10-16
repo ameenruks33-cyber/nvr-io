@@ -16,6 +16,7 @@ export type PendingTodayItem = {
   remainingBalance: number;
   daysInArrears?: number;
   overdueAed?: number;
+  dailyPayment?: number;
 };
 
 const dismissKey = (date: string) => `nvr_pending_reminder_${date}`;
@@ -35,17 +36,20 @@ export function TodayPendingNotice({
     setClosed(sessionStorage.getItem(dismissKey(date)) === '1');
   }, [date]);
 
-  if (!items.length || closed) return null;
-
-  const totalDays = items.reduce((sum, row) => sum + (row.daysInArrears || 0), 0);
-  const totalOverdue = items.reduce(
+  const visible = items.filter(
+    (row) => (row.overdueAed ?? row.pendingTodayAed) > 0.001,
+  );
+  const totalOverdue = visible.reduce(
     (sum, row) => sum + (row.overdueAed ?? row.pendingTodayAed),
     0,
   );
-  const count = items.length;
+  const totalDays = visible.reduce((sum, row) => sum + (row.daysInArrears || 0), 0);
+
+  if (!visible.length || closed) return null;
+  const count = visible.length;
   const label =
     count === 1
-      ? `${items[0].customerName} — ${arrearsText(items[0].daysInArrears || 1)}`
+      ? `${visible[0].customerName} — ${arrearsText(visible[0].daysInArrears || 1)}`
       : `${count} accounts overdue (${totalDays} ${totalDays === 1 ? 'day' : 'days'} in arrears)`;
 
   function dismiss() {
@@ -91,7 +95,7 @@ export function TodayPendingNotice({
           id="pending-customers-list"
           className="max-h-48 overflow-y-auto border-t border-amber-200/80 bg-white/60 px-3 py-2"
         >
-          {items.map((row) => (
+          {visible.map((row) => (
             <li
               key={row.loanId}
               className="flex items-center justify-between gap-2 border-b border-amber-100/80 py-2 last:border-0"

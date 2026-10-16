@@ -21,13 +21,11 @@ export class CollectionsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   async pendingToday() {
     const data = await this.pending.listPendingToday();
-    try {
-      await this.reminders.runDailyPendingReminders();
-    } catch (e) {
+    void this.reminders.runDailyPendingReminders().catch((e) => {
       this.logger.warn(
         `Pending reminders skipped: ${e instanceof Error ? e.message : e}`,
       );
-    }
+    });
     return data;
   }
 

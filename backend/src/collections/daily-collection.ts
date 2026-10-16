@@ -33,11 +33,8 @@ export type LoanArrearsInput = {
   status?: string | null;
 };
 
-/**
- * Missed collection days since the account opened (UAE calendar),
- * not only whether today is unpaid.
- */
-export function daysInArrears(
+/** Unpaid collection money vs what should have been collected by today. */
+export function arrearsShortfallAed(
   loan: LoanArrearsInput,
   now: Date = new Date(),
 ): number {
@@ -53,25 +50,32 @@ export function daysInArrears(
     collected + remaining,
   );
   const opened = new Date(loan.openedAt || loan.createdAt || now);
-  if (Number.isNaN(opened.getTime())) return remaining > 0.001 ? 1 : 0;
+  if (Number.isNaN(opened.getTime())) return Math.min(daily, remaining);
 
   const elapsedDays = uaeCalendarDaysInclusive(opened, now);
   const planDays = Math.max(1, Math.ceil(total / daily - 1e-9));
   const expectedDays = Math.min(elapsedDays, planDays);
   const expectedCollected = Math.min(expectedDays * daily, total);
   const shortfall = Math.max(0, expectedCollected - collected);
+  return Math.min(shortfall, remaining);
+}
+
+/**
+ * Missed collection days since the account opened (UAE calendar),
+ * not only whether today is unpaid.
+ */
+export function daysInArrears(
+  loan: LoanArrearsInput,
+  now: Date = new Date(),
+): number {
+  const shortfall = arrearsShortfallAed(loan, now);
   if (shortfall <= 0.001) return 0;
-  return Math.min(
-    Math.ceil(shortfall / daily - 1e-9),
-    Math.ceil(remaining / daily - 1e-9),
-  );
+  const daily = dailyAmountOf(loan.dailyPayment);
+  return Math.ceil(shortfall / daily - 1e-9);
 }
 
 export function overdueAed(loan: LoanArrearsInput, now: Date = new Date()): number {
-  const days = daysInArrears(loan, now);
-  if (days <= 0) return 0;
-  const daily = dailyAmountOf(loan.dailyPayment);
-  return Math.min(days * daily, Math.max(asAmount(loan.remainingAmount), 0));
+  return arrearsShortfallAed(loan, now);
 }
 
 export function attachArrears<T extends LoanArrearsInput>(

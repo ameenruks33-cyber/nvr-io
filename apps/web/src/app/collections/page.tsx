@@ -11,7 +11,7 @@ import { PendingTodayBanner } from '@/components/PendingTodayBanner';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
-import { notifyDataChanged, useLiveRefresh } from '@/lib/live-sync';
+import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 
@@ -252,7 +252,10 @@ function CollectionsPageContent() {
             : row,
         ),
       );
-      notifyDataChanged();
+      notifyCollectionSaved({
+        customerId: savedId,
+        amount: result.amount || amountNum,
+      });
       await Promise.all([loadCustomers(q), loadRecent()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Collection failed');

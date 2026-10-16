@@ -11,7 +11,7 @@ import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
-import { notifyDataChanged, useLiveRefresh } from '@/lib/live-sync';
+import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
 import { formatUaeDateTime } from '@/lib/uae-datetime';
 import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
@@ -189,7 +189,10 @@ export default function CustomerDetailPage() {
           ],
         };
       });
-      notifyDataChanged();
+      notifyCollectionSaved({
+        customerId: customer.id,
+        amount: result.amount || Number(amount),
+      });
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save payment');

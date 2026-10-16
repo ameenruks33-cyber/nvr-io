@@ -45,6 +45,27 @@ describe('days in arrears', () => {
     ).toBe(3);
   });
 
+  it('deducts a payment from overdue money', () => {
+    const before = overdueAed(
+      loan({
+        openedAt: '2026-10-14T09:00:00+04:00',
+        amountCollected: 0,
+        remainingAmount: 1000,
+      }),
+      now,
+    );
+    const after = overdueAed(
+      loan({
+        openedAt: '2026-10-14T09:00:00+04:00',
+        amountCollected: 200,
+        remainingAmount: 800,
+      }),
+      now,
+    );
+    expect(before).toBe(300);
+    expect(after).toBe(100);
+  });
+
   it('reduces arrears by paid daily amounts', () => {
     expect(
       daysInArrears(

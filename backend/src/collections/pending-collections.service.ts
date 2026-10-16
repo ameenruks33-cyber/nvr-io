@@ -13,6 +13,7 @@ export type PendingTodayItem = {
   pendingTodayAed: number;
   daysInArrears: number;
   overdueAed: number;
+  dailyPayment: number;
   remainingBalance: number;
   totalPayable: number;
 };
@@ -52,15 +53,16 @@ export class PendingCollectionsService {
 
     for (const loan of activeLoans) {
       const remainingBalance = Number(loan.remainingAmount);
-      const dueToday = dueTodayAed(
-        remainingBalance,
-        Number(loan.dailyPayment) || 100,
-      );
+      const daily = Number(loan.dailyPayment) || 100;
+      const dueToday = dueTodayAed(remainingBalance, daily);
       const collectedTodayAed = collectedByLoan.get(loan.id) || 0;
       const pendingTodayAed = Math.max(dueToday - collectedTodayAed, 0);
       const missedDays = daysInArrears(loan);
-      const overdue = overdueAed(loan);
-      if (missedDays <= 0 && pendingTodayAed <= 0.001) continue;
+      const overdue = Math.min(
+        remainingBalance,
+        Math.max(overdueAed(loan), pendingTodayAed),
+      );
+      if (overdue <= 0.001) continue;
 
       items.push({
         customerId: loan.customerId,
@@ -70,8 +72,12 @@ export class PendingCollectionsService {
         dueTodayAed: dueToday,
         collectedTodayAed,
         pendingTodayAed,
-        daysInArrears: Math.max(missedDays, pendingTodayAed > 0.001 ? 1 : 0),
+        daysInArrears: Math.max(
+          missedDays,
+          Math.ceil(overdue / daily - 1e-9),
+        ),
         overdueAed: overdue,
+        dailyPayment: daily,
         remainingBalance,
         totalPayable: Math.max(
           Number(loan.totalPayable),

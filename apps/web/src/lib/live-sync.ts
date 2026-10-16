@@ -39,11 +39,25 @@ export function startLiveSync() {
   });
 }
 
+export const COLLECTION_SAVED = 'nvr:collection-saved';
+
+export type CollectionSavedDetail = {
+  customerId: string;
+  amount: number;
+};
+
 /** Tell every open page (Home, People, Records, Collection) to reload. */
 export function notifyDataChanged() {
   if (typeof window === 'undefined') return;
   lastStamp = null;
   window.dispatchEvent(new Event(EVENT));
+}
+
+/** Instantly deduct a saved collection from the overdue banner, then refresh. */
+export function notifyCollectionSaved(detail: CollectionSavedDetail) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(COLLECTION_SAVED, { detail }));
+  notifyDataChanged();
 }
 
 /** Re-runs `reload` whenever data changes on another device. */
