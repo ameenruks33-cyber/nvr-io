@@ -43,4 +43,4 @@ Account ID (Wrangler): `5be1df0639fc9310e4a1f27f5da95400`
 After the GitHub repo is linked to Vercel, every `git push` to `main` refreshes production.
 Point Cloudflare DNS at Vercel so the CDN follows those deploys automatically.
 
-See `docs/DEPLOYMENT.md` for the full auto-ship pipeline (Cursor hook + `npm run ship`).
+See `docs/DEPLOYMENT.md`. Production does not depend on Cursor.

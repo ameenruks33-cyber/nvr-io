@@ -3,22 +3,17 @@
 ## How updates ship (automatic)
 
 ```text
-Edit code (Cursor / locally)
-  → git commit + git push origin main
-      → GitHub repo ameenruks33-cyber/nvr-io
-          → Vercel Git Integration auto-builds production
-                • nvr-io-web  → https://nvr-io-web.vercel.app
-                • nvr-io-api  → https://nvr-io-api.vercel.app
-          → Cloudflare (when your domain CNAMEs to Vercel) serves the new CDN edge
+git push origin main
+  → GitHub repo ameenruks33-cyber/nvr-io
+      → Vercel Git Integration auto-builds production
+            • nvr-io-web  → https://nvr-io-web.vercel.app
+            • nvr-io-api  → https://nvr-io-api.vercel.app
 ```
 
-In this workspace:
+The live app does **not** use Cursor. Staff only need the website or the installed phone app. Cursor is optional for developers editing this repo; it is not required for the product to run.
 
-- Cursor rule `.cursor/rules/auto-ship.mdc` — agent pushes after meaningful changes  
-- Cursor stop hook `.cursor/hooks/` — reminds the agent to ship if the tree is dirty  
-- `npm run ship` — commit (if needed) + push in one command  
-
-You do **not** need a manual `vercel deploy` for routine updates once Git is linked.
+- `npm run ship` — commit (if needed) + push in one command
+- You do **not** need a Cursor session, hook, or CLI for collections, login, or updates once Git is linked.
 
 ### If production looks old (no Clear alert / wrong calendar)
 
