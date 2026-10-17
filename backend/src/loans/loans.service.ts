@@ -14,6 +14,7 @@ import { resolveLoanAmounts } from './loan-plans';
 import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 import { RenewPlanDto } from './dto/renew-plan.dto';
 import { renewalSettlement } from './renew-plan';
+import { closeoutWallet } from './closeout-wallet';
 
 @Injectable()
 export class LoansService {
@@ -24,6 +25,7 @@ export class LoansService {
   ) {}
 
   async findAll(status?: string) {
+    await this.purgeEmptyDuplicateActives();
     const rows = await this.prisma.loan.findMany({
       where: status ? { status: status as 'ACTIVE' | 'COMPLETED' | 'CLOSED' } : undefined,
       orderBy: { openedAt: 'desc' },
@@ -39,6 +41,71 @@ export class LoansService {
       },
     });
     return rows.map((row) => attachArrears(row));
+  }
+
+  /** Keep one open plan per person; drop unused extra 0-collection copies. */
+  private async purgeEmptyDuplicateActives() {
+    const actives = await this.prisma.loan.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { openedAt: 'desc' },
+      select: {
+        id: true,
+        customerId: true,
+        amountCollected: true,
+        _count: { select: { repayments: true } },
+      },
+    });
+    const seen = new Set<string>();
+    const extraIds: string[] = [];
+    for (const row of actives) {
+      if (!seen.has(row.customerId)) {
+        seen.add(row.customerId);
+        continue;
+      }
+      if (Number(row.amountCollected) <= 0.001 && row._count.repayments === 0) {
+        extraIds.push(row.id);
+      }
+    }
+    if (!extraIds.length) return;
+    await this.prisma.notification.deleteMany({
+      where: { loanId: { in: extraIds } },
+    });
+    await this.prisma.loan.deleteMany({ where: { id: { in: extraIds } } });
+  }
+
+  async remove(id: string, userId: string) {
+    const loan = await this.prisma.loan.findUnique({
+      where: { id },
+      include: {
+        customer: { select: { id: true, name: true, customerCode: true } },
+        _count: { select: { repayments: true } },
+      },
+    });
+    if (!loan) throw new NotFoundException('Record not found');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.repayment.deleteMany({ where: { loanId: loan.id } });
+      await tx.notification.deleteMany({ where: { loanId: loan.id } });
+      await tx.loan.delete({ where: { id: loan.id } });
+    });
+
+    await this.audit.log({
+      userId,
+      action: 'LOAN_DELETE',
+      recordType: 'loan',
+      recordId: loan.id,
+      metadata: {
+        customerId: loan.customerId,
+        customerCode: loan.customer.customerCode,
+        name: loan.customer.name,
+        status: loan.status,
+        collected: Number(loan.amountCollected),
+        remaining: Number(loan.remainingAmount),
+        repaymentCount: loan._count.repayments,
+      },
+    });
+
+    return { ok: true, id: loan.id };
   }
 
   async findOne(id: string) {
@@ -122,12 +189,21 @@ export class LoansService {
             orderBy: { openedAt: 'desc' },
           });
           const active = loans.filter((l) => l.status === 'ACTIVE');
-          if (active.length > 1) {
-            throw new BadRequestException(
-              'This person already has more than one open plan',
-            );
+          const extras = active.slice(1).filter(
+            (l) =>
+              Number(l.amountCollected) <= 0.001,
+          );
+          if (extras.length) {
+            const extraIds = extras.map((l) => l.id);
+            await tx.notification.deleteMany({
+              where: { loanId: { in: extraIds } },
+            });
+            await tx.loan.deleteMany({ where: { id: { in: extraIds } } });
           }
-          const current = active[0] ?? loans[0] ?? null;
+          const current =
+            active.find((l) => !extras.some((x) => x.id === l.id)) ??
+            loans[0] ??
+            null;
 
           let collectedToClose = 0;
           let closedLoanId: string | null = null;
@@ -232,6 +308,10 @@ export class LoansService {
             collectedToClose,
             settlementReceipt,
             cashGiven: recordCashGiven ? principal : 0,
+            wallet: closeoutWallet({
+              collectedNow: collectedToClose,
+              payoutPrincipal: recordCashGiven ? principal : 0,
+            }),
           };
         },
         { maxWait: 10_000, timeout: 25_000 },
@@ -263,6 +343,7 @@ export class LoansService {
       remainingClosed: 0,
       cashGiven: result.cashGiven,
       settlementReceipt: result.settlementReceipt,
+      wallet: result.wallet,
       newPlan: {
         principal,
         totalPayable,

@@ -265,8 +265,8 @@ function CollectionsPageContent() {
       }
       setMessage(
         result.status === 'COMPLETED'
-          ? `Collected ${money(result.amount || amountNum)}. Account closed.${waNote}`
-          : `Collected ${money(result.amount || amountNum)}. Balance ${money(result.remaining)} of ${money(target)}.${waNote}`,
+          ? `Collected ${money(result.amount || amountNum)} into the wallet. Account closed. Remaining ${money(0)}.${waNote}`
+          : `Collected ${money(result.amount || amountNum)} into the wallet. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setAmount('100');
       setNotes('');
@@ -540,6 +540,18 @@ function CollectionsPageContent() {
                     />
                   </label>
 
+                  {remaining > 0.001 ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        setAmount(String(Math.round(remaining * 100) / 100))
+                      }
+                      className="w-full rounded-lg border border-teal-700 px-4 py-3 text-sm font-medium text-teal-800 hover:bg-teal-50 disabled:opacity-60"
+                    >
+                      Collect remaining {money(remaining)} and close
+                    </button>
+                  ) : null}
                   <button
                     type="submit"
                     disabled={saving}

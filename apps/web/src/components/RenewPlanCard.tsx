@@ -92,11 +92,11 @@ export function RenewPlanCard({
       }
       const bits = [
         result.collectedToClose > 0
-          ? `Collected ${money(result.collectedToClose)} to close the old plan.`
-          : 'Previous plan closed.',
+          ? `Collected remaining ${money(result.collectedToClose)} into the wallet and closed the old plan.`
+          : 'Previous plan closed with nothing left to collect.',
         `Opened ${plan.label} (${money(result.newPlan.totalPayable)}).`,
         result.cashGiven > 0
-          ? `${money(result.cashGiven)} taken from the wallet.`
+          ? `Paid the customer ${money(result.cashGiven)} from the wallet (cash given only, not the plan total).`
           : null,
       ].filter(Boolean);
       setMessage(bits.join(' '));

@@ -461,16 +461,23 @@ export class RepaymentsService {
     },
     repayment: { id: string; receiptNumber: string; amount: Prisma.Decimal },
   ) {
+    const amount = Number(repayment.amount);
+    const remaining = Number(loan.remainingAmount);
+    const closed =
+      loan.status === 'COMPLETED' || loan.status === 'CLOSED';
     return {
       repaymentId: repayment.id,
       receiptNumber: repayment.receiptNumber,
-      amount: Number(repayment.amount),
+      amount,
       collected: Number(loan.amountCollected),
-      remaining: Number(loan.remainingAmount),
+      remaining,
       principal: Number(loan.principalAmount),
       total: Math.max(Number(loan.totalPayable), Number(loan.principalAmount)),
       status: loan.status,
       completedAt: loan.completedAt,
+      closed,
+      walletAdded: amount,
+      walletPaidOut: 0,
     };
   }
 }

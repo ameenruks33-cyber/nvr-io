@@ -172,8 +172,8 @@ export default function CustomerDetailPage() {
       }
       setMessage(
         result.status === 'COMPLETED'
-          ? `Saved: paid ${money(result.amount ?? amount)}. Account closed.${waNote}`
-          : `Saved: paid ${money(result.amount ?? amount)}. Balance ${money(result.remaining)} of ${money(target)}.${waNote}`,
+          ? `Collected ${money(result.amount ?? amount)} into the wallet. Account closed. Remaining ${money(0)}.${waNote}`
+          : `Collected ${money(result.amount ?? amount)} into the wallet. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setNotes('');
       setAmount('100');
@@ -431,6 +431,15 @@ export default function CustomerDetailPage() {
                     >
                       Save payment
                     </button>
+                    {remaining > 0.001 ? (
+                      <button
+                        type="button"
+                        className="rounded-lg border border-teal-700 px-4 py-2 text-sm font-medium text-teal-800"
+                        onClick={() => setAmount(String(Math.round(remaining * 100) / 100))}
+                      >
+                        Collect remaining {money(remaining)} and close
+                      </button>
+                    ) : null}
                   </div>
                   <label className="block text-sm">
                     <span className="text-slate-500">Note (optional)</span>
