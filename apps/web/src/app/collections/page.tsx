@@ -48,7 +48,7 @@ type RecentRow = {
   loan: {
     totalPayable?: string | number;
     principalAmount?: string | number;
-    customer: { name: string; customerCode: string };
+    customer: { id?: string; name: string; customerCode: string };
   };
 };
 
@@ -117,6 +117,36 @@ function CollectionsPageContent() {
     () => rows.find((r) => r.id === selectedId) || null,
     [rows, selectedId],
   );
+
+  const focusedRows = useMemo(
+    () => (selectedId ? rows.filter((r) => r.id === selectedId) : rows),
+    [rows, selectedId],
+  );
+
+  const focusedRecent = useMemo(() => {
+    if (!selected) return recent;
+    return recent.filter(
+      (r) =>
+        r.loan.customer.id === selected.id ||
+        r.loan.customer.customerCode === selected.customerCode,
+    );
+  }, [recent, selected]);
+
+  function choosePerson(id: string) {
+    setSelectedId(id);
+    setError('');
+    setMessage('');
+    setWaLink(null);
+  }
+
+  function showAllPeople() {
+    setSelectedId('');
+    setAmount('100');
+    setNotes('');
+    setMessage('');
+    setError('');
+    setWaLink(null);
+  }
 
   const collected = Number(selected?.loan?.amountCollected || 0);
   const { principal, total } = loanTotals(selected?.loan);
@@ -276,7 +306,7 @@ function CollectionsPageContent() {
         <h1 className="font-display text-3xl text-slate-900">Collection</h1>
       </header>
 
-      <form onSubmit={onSearch} className="mb-4 flex gap-2">
+      <form onSubmit={onSearch} className="mb-4 flex flex-wrap gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -289,7 +319,26 @@ function CollectionsPageContent() {
         >
           Search
         </button>
+        {selectedId ? (
+          <button
+            type="button"
+            onClick={showAllPeople}
+            className="rounded-lg border border-teal-600 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-900 hover:bg-teal-100"
+          >
+            Show all people
+          </button>
+        ) : null}
       </form>
+      {selected ? (
+        <p className="mb-3 text-sm text-slate-600">
+          Showing only <span className="font-medium text-slate-900">{selected.name}</span>
+          . Tap Show all people to pick someone else.
+        </p>
+      ) : (
+        <p className="mb-3 text-sm text-slate-500">
+          Tap a person to open only that account.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
@@ -304,7 +353,7 @@ function CollectionsPageContent() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {focusedRows.map((row) => {
                 const rowCollected = Number(row.loan?.amountCollected || 0);
                 const { total: rowTotal } = loanTotals(row.loan);
                 const rowRemaining = Number(
@@ -317,7 +366,7 @@ function CollectionsPageContent() {
                 return (
                   <tr
                     key={row.id}
-                    onClick={() => setSelectedId(row.id)}
+                    onClick={() => choosePerson(row.id)}
                     className={`cursor-pointer border-t border-slate-100 ${
                       active
                         ? 'bg-blue-100'
@@ -357,12 +406,27 @@ function CollectionsPageContent() {
               })}
             </tbody>
           </table>
-          {!rows.length ? (
+          {!focusedRows.length ? (
             <p className="p-6 text-center text-sm text-slate-500">
-              No registered customers.{' '}
-              <Link href="/customers/new" className="text-teal-700 underline">
-                Add a person
-              </Link>
+              {rows.length ? (
+                <>
+                  That person is not in this list.{' '}
+                  <button
+                    type="button"
+                    onClick={showAllPeople}
+                    className="text-teal-700 underline"
+                  >
+                    Show all people
+                  </button>
+                </>
+              ) : (
+                <>
+                  No registered customers.{' '}
+                  <Link href="/customers/new" className="text-teal-700 underline">
+                    Add a person
+                  </Link>
+                </>
+              )}
             </p>
           ) : null}
         </div>
@@ -556,7 +620,7 @@ function CollectionsPageContent() {
               </tr>
             </thead>
             <tbody>
-              {recent.map((row) => {
+              {focusedRecent.map((row) => {
                 const a = Number(row.amount);
                 const payTotal = loanTotals(row.loan).total;
                 const ok = a >= MIN_AED && a <= payTotal;
@@ -609,9 +673,11 @@ function CollectionsPageContent() {
               })}
             </tbody>
           </table>
-          {!recent.length ? (
+          {!focusedRecent.length ? (
             <p className="p-5 text-center text-sm text-slate-500">
-              No collections yet.
+              {selected
+                ? `No collections yet for ${selected.name}.`
+                : 'No collections yet.'}
             </p>
           ) : null}
         </div>
