@@ -17,6 +17,7 @@ import {
   retryPrisma,
 } from '../common/prisma-retry';
 import { loanBalanceFromCollected, loanCycle } from '../loans/loan-balance';
+import { uaeDateTimeToInstant } from '../restore/uae-instant';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -26,6 +27,8 @@ export interface RecordRepaymentInput {
   longitude?: number;
   notes?: string;
   idempotencyKey?: string;
+  collectedDate?: string;
+  collectedTime?: string;
 }
 
 /**
@@ -44,10 +47,31 @@ export class RepaymentsService {
     private readonly crypto: FieldEncryptionService,
   ) {}
 
+  private collectedAtFromInput(input: RecordRepaymentInput) {
+    const date = String(input.collectedDate || '').trim();
+    const time = String(input.collectedTime || '').trim().slice(0, 5);
+    if (!date && !time) return new Date();
+    if (!date || !time) {
+      throw new BadRequestException('Set both the collection date and time');
+    }
+    try {
+      const at = uaeDateTimeToInstant(date, time);
+      if (at.getTime() > Date.now() + 5 * 60_000) {
+        throw new BadRequestException('Collection time cannot be in the future');
+      }
+      return at;
+    } catch (err) {
+      throw new BadRequestException(
+        err instanceof Error ? err.message : 'Invalid collection date or time',
+      );
+    }
+  }
+
   async recordRepayment(input: RecordRepaymentInput) {
     if (input.amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
+    const collectedAt = this.collectedAtFromInput(input);
 
     if (input.idempotencyKey) {
       const existing = await this.prisma.repayment.findUnique({
@@ -95,6 +119,8 @@ export class RepaymentsService {
               cycle,
               amount: new Prisma.Decimal(input.amount),
               collectedById: input.collectorId,
+              collectedAt,
+              createdAt: collectedAt,
               latitude: input.latitude ?? null,
               longitude: input.longitude ?? null,
               notes: this.crypto.encryptOptional(input.notes),

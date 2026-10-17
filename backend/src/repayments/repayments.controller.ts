@@ -35,6 +35,8 @@ export class RepaymentsController {
       longitude: dto.longitude,
       notes: dto.notes,
       idempotencyKey: dto.idempotencyKey || idempotencyHeader,
+      collectedDate: dto.collectedDate,
+      collectedTime: dto.collectedTime,
     });
   }
 

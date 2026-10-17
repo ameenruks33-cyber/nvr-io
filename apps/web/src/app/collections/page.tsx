@@ -13,7 +13,7 @@ import { api, getSession, money } from '@/lib/api';
 import { isSuperAdminRole } from '@/lib/roles';
 import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
-import { formatUaeDateTime } from '@/lib/uae-datetime';
+import { formatUaeDateTime, uaeNowTime, uaeToday } from '@/lib/uae-datetime';
 
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
@@ -100,6 +100,8 @@ function CollectionsPageContent() {
   const [selectedId, setSelectedId] = useState('');
   const [amount, setAmount] = useState('100');
   const [notes, setNotes] = useState('');
+  const [collectedDate, setCollectedDate] = useState(uaeToday);
+  const [collectedTime, setCollectedTime] = useState(uaeNowTime);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
@@ -138,6 +140,8 @@ function CollectionsPageContent() {
     setError('');
     setMessage('');
     setWaLink(null);
+    setCollectedDate(uaeToday());
+    setCollectedTime(uaeNowTime());
   }
 
   function showAllPeople() {
@@ -246,6 +250,8 @@ function CollectionsPageContent() {
           amount: amountNum,
           notes: notes.trim() || undefined,
           idempotencyKey: idempotencyKey.current,
+          collectedDate,
+          collectedTime,
         }),
       });
       const target =
@@ -271,6 +277,8 @@ function CollectionsPageContent() {
       );
       setAmount('100');
       setNotes('');
+      setCollectedDate(uaeToday());
+      setCollectedTime(uaeNowTime());
       idempotencyKey.current = newIdempotencyKey();
       const savedId = selected.id;
       setRows((prev) =>
@@ -519,6 +527,29 @@ function CollectionsPageContent() {
 
               {open ? (
                 <form onSubmit={onCollect} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block text-sm">
+                      <span className="text-slate-600">Date</span>
+                      <input
+                        type="date"
+                        value={collectedDate}
+                        max={uaeToday()}
+                        onChange={(e) => setCollectedDate(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                        required
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="text-slate-600">Time</span>
+                      <input
+                        type="time"
+                        value={collectedTime}
+                        onChange={(e) => setCollectedTime(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                        required
+                      />
+                    </label>
+                  </div>
                   <label className="block text-sm">
                     <span className="text-slate-600">Amount (AED)</span>
                     <input

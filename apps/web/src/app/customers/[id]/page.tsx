@@ -12,7 +12,7 @@ import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
-import { formatUaeDateTime } from '@/lib/uae-datetime';
+import { formatUaeDateTime, uaeNowTime, uaeToday } from '@/lib/uae-datetime';
 import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
@@ -64,6 +64,8 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [amount, setAmount] = useState('100');
   const [notes, setNotes] = useState('');
+  const [collectedDate, setCollectedDate] = useState(uaeToday);
+  const [collectedTime, setCollectedTime] = useState(uaeNowTime);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [waLink, setWaLink] = useState<string | null>(null);
@@ -155,6 +157,8 @@ export default function CustomerDetailPage() {
           amount: Number(amount),
           notes: notes.trim() || undefined,
           idempotencyKey: newIdempotencyKey(),
+          collectedDate,
+          collectedTime,
         }),
       });
       const target = Number(result.total || result.principal) || loanTotal;
@@ -178,6 +182,8 @@ export default function CustomerDetailPage() {
           : `Collected ${money(result.amount ?? amount)} into the wallet. Remaining ${money(result.remaining)} of ${money(target)}.${waNote}`,
       );
       setNotes('');
+      setCollectedDate(uaeToday());
+      setCollectedTime(uaeNowTime());
       setAmount('100');
       setCustomer((prev) => {
         if (!prev?.loans?.length) return prev;
@@ -395,6 +401,29 @@ export default function CustomerDetailPage() {
 
               {open ? (
                 <form onSubmit={collect} className="mt-5 space-y-3">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className="block text-sm">
+                      <span className="text-slate-500">Date</span>
+                      <input
+                        type="date"
+                        value={collectedDate}
+                        max={uaeToday()}
+                        onChange={(e) => setCollectedDate(e.target.value)}
+                        className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        required
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="text-slate-500">Time</span>
+                      <input
+                        type="time"
+                        value={collectedTime}
+                        onChange={(e) => setCollectedTime(e.target.value)}
+                        className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        required
+                      />
+                    </label>
+                  </div>
                   <div className="flex flex-wrap items-end gap-2">
                     <label className="block text-sm">
                       <span className="text-slate-500">Amount (AED)</span>
