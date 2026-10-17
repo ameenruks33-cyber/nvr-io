@@ -137,7 +137,6 @@ export default function RestorePage() {
           petty-cash payouts, and plan renewals — is listed, then removed, and
           each remaining account then works as it did from that moment. Staff
           logins, gallery PIN, WhatsApp, and app updates are not changed.
-          You can also restore one person from their profile.
         </p>
 
         <form

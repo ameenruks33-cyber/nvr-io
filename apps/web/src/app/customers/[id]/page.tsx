@@ -17,7 +17,6 @@ import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 import { RenewPlanCard } from '@/components/RenewPlanCard';
-import { RestorePersonCard } from '@/components/RestorePersonCard';
 
 type CustomerDetail = {
   id: string;
@@ -246,15 +245,7 @@ export default function CustomerDetailPage() {
               {closed ? <ClosedBadge /> : null}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="#restore-account"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Restore
-            </a>
-            {showDeletePerson ? <DeleteCustomerButton {...deleteProps} /> : null}
-          </div>
+          {showDeletePerson ? <DeleteCustomerButton {...deleteProps} /> : null}
         </div>
         <p className="mt-1 text-slate-600">
           {[
@@ -369,12 +360,6 @@ export default function CustomerDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <RestorePersonCard
-            customerId={customer.id}
-            customerName={customer.name}
-            onDone={load}
-          />
-
           {loan ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="font-display text-xl text-slate-900">Payments</h2>
