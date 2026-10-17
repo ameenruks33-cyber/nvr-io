@@ -1,39 +1,32 @@
-import { remainingCash, samePlanRenewalPayout } from './renew-plan';
+import { samePlanCashRenewal } from './renew-plan';
 
-describe('samePlanRenewalPayout', () => {
-  it('deducts outstanding from the wallet as petty cash', () => {
+describe('samePlanCashRenewal', () => {
+  it('puts 700 previous balance into the wallet and pays out 1100', () => {
     expect(
-      samePlanRenewalPayout({
+      samePlanCashRenewal({
         outstanding: 700,
-        newPrincipal: 1800,
-        payNewCash: false,
+        principal: 1800,
+        payNewCash: true,
       }),
     ).toEqual({
-      outstanding: 700,
-      pettyCashOutstanding: 700,
-      pettyCashNewCash: 0,
-      walletOut: 700,
+      previousBalance: 700,
+      renewalBalance: 1100,
+      walletIn: 700,
+      pettyCashPrevious: 700,
+      pettyCashRenewal: 1100,
+      walletOut: 1800,
+      walletNet: -1100,
+      oldPlanCloses: true,
     });
   });
 
-  it('can also pay new plan cash in the same renewal', () => {
+  it('pays full principal when nothing is outstanding', () => {
     expect(
-      samePlanRenewalPayout({
-        outstanding: 700,
-        newPrincipal: 1800,
-        payNewCash: true,
-      }).walletOut,
-    ).toBe(2500);
-  });
-
-  it('treats a fully paid plan as nothing outstanding', () => {
-    expect(remainingCash(0)).toBe(0);
-    expect(
-      samePlanRenewalPayout({
+      samePlanCashRenewal({
         outstanding: 0,
-        newPrincipal: 1800,
+        principal: 1800,
         payNewCash: true,
-      }),
-    ).toMatchObject({ pettyCashOutstanding: 0, pettyCashNewCash: 1800 });
+      }).renewalBalance,
+    ).toBe(1800);
   });
 });

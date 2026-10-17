@@ -1,4 +1,4 @@
-/** Same-account renewal: outstanding is paid from the wallet, not collected again. */
+/** Cash renewal: outstanding goes into the wallet; net cash given is principal − outstanding. */
 
 export function roundMoney(n: number) {
   return Math.round((Number(n) || 0) * 100) / 100;
@@ -8,23 +8,31 @@ export function remainingCash(remainingAmount: number) {
   return roundMoney(Math.max(0, Number(remainingAmount) || 0));
 }
 
-export const RENEW_OUTSTANDING_PURPOSE =
-  'Plan renewal — outstanding paid from wallet';
-export const RENEW_CASH_PURPOSE = 'Plan renewal — cash paid to customer';
+export const PREVIOUS_BALANCE_PURPOSE = 'Previous balance';
+export const RENEWAL_BALANCE_PURPOSE = 'Renewal balance';
 
-export function samePlanRenewalPayout(input: {
+/**
+ * 2000 plan, 700 still due, 1800 cash given on a new cycle:
+ * previous 700 into the wallet (closes the old 2000), 1100 paid out.
+ */
+export function samePlanCashRenewal(input: {
   outstanding: number;
-  newPrincipal: number;
+  principal: number;
   payNewCash: boolean;
 }) {
-  const outstanding = remainingCash(input.outstanding);
-  const cashGiven = input.payNewCash
-    ? roundMoney(Math.max(0, Number(input.newPrincipal) || 0))
+  const previousBalance = remainingCash(input.outstanding);
+  const principal = roundMoney(Math.max(0, Number(input.principal) || 0));
+  const renewalBalance = input.payNewCash
+    ? roundMoney(Math.max(0, principal - previousBalance))
     : 0;
   return {
-    outstanding,
-    pettyCashOutstanding: outstanding,
-    pettyCashNewCash: cashGiven,
-    walletOut: roundMoney(outstanding + cashGiven),
+    previousBalance,
+    renewalBalance,
+    walletIn: previousBalance,
+    pettyCashPrevious: previousBalance,
+    pettyCashRenewal: renewalBalance,
+    walletOut: roundMoney(previousBalance + renewalBalance),
+    walletNet: roundMoney(previousBalance - (previousBalance + renewalBalance)),
+    oldPlanCloses: previousBalance > 0.001,
   };
 }

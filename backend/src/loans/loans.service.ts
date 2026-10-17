@@ -6,18 +6,19 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { attachArrears } from '../collections/daily-collection';
 import { uaeCalendarDay } from '../collections/uae-day';
-import { retryPrisma } from '../common/prisma-retry';
+import { nextReceiptFromLatest, retryPrisma } from '../common/prisma-retry';
 import { resolveLoanAmounts } from './loan-plans';
-import { loanCycle } from './loan-balance';
+import { loanBalanceFromCollected, loanCycle } from './loan-balance';
 import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 import { RenewPlanDto } from './dto/renew-plan.dto';
 import {
-  RENEW_CASH_PURPOSE,
-  RENEW_OUTSTANDING_PURPOSE,
+  PREVIOUS_BALANCE_PURPOSE,
+  RENEWAL_BALANCE_PURPOSE,
   remainingCash,
-  samePlanRenewalPayout,
+  samePlanCashRenewal,
 } from './renew-plan';
 import { closeoutWallet } from './closeout-wallet';
 
@@ -26,6 +27,7 @@ export class LoansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly crypto: FieldEncryptionService,
   ) {}
 
   async findAll(status?: string) {
@@ -168,8 +170,9 @@ export class LoansService {
   }
 
   /**
-   * Continue the same person on the existing loan row.
-   * Outstanding is deducted from the wallet and stored as petty-cash paid out.
+   * Cash renewal on the same account:
+   * outstanding is posted as Previous balance (into the wallet, closes the old
+   * 2,000 / 1,000 cycle), then Renewal balance = principal − outstanding is paid out.
    */
   async renew(customerId: string, dto: RenewPlanDto, userId: string) {
     const recordCashGiven = dto.recordCashGiven !== false;
@@ -210,25 +213,53 @@ export class LoansService {
           const outstanding = remainingCash(
             Number(current?.remainingAmount || 0),
           );
-          const payout = samePlanRenewalPayout({
+          const split = samePlanCashRenewal({
             outstanding,
-            newPrincipal: principal,
+            principal,
             payNewCash: recordCashGiven,
           });
           const paidTo = `${customer.customerCode} · ${customer.name}`;
           const spentOn = uaeCalendarDay();
 
-          if (payout.pettyCashOutstanding > 0) {
-            await tx.pettyCashExpense.create({
+          if (current && split.previousBalance > 0) {
+            const cycle = loanCycle(current.cycle);
+            const latest = await tx.repayment.findFirst({
+              where: { receiptNumber: { startsWith: 'JB-RCP-' } },
+              orderBy: { receiptNumber: 'desc' },
+              select: { receiptNumber: true },
+            });
+            await tx.repayment.create({
               data: {
-                amount: new Prisma.Decimal(payout.pettyCashOutstanding),
-                spentOn,
-                purpose: dto.notes?.trim()
-                  ? `${RENEW_OUTSTANDING_PURPOSE} · ${dto.notes.trim()}`
-                  : RENEW_OUTSTANDING_PURPOSE,
-                paidToName: paidTo,
-                customerId: customer.id,
-                recordedById: userId,
+                loanId: current.id,
+                cycle,
+                amount: new Prisma.Decimal(split.previousBalance),
+                collectedById: userId,
+                notes: this.crypto.encryptOptional(PREVIOUS_BALANCE_PURPOSE),
+                receiptNumber: nextReceiptFromLatest(latest?.receiptNumber),
+              },
+            });
+            const paidAgg = await tx.repayment.aggregate({
+              where: { loanId: current.id, cycle },
+              _sum: { amount: true },
+            });
+            const closed = loanBalanceFromCollected(
+              Number(current.totalPayable),
+              Number(current.principalAmount),
+              Number(paidAgg._sum.amount || 0),
+            );
+            if (closed.remaining > 0.001) {
+              throw new BadRequestException(
+                `Old plan still has ${closed.remaining.toFixed(2)} remaining — it closes only when the full ${Number(current.totalPayable)} is paid.`,
+              );
+            }
+            await tx.loan.update({
+              where: { id: current.id },
+              data: {
+                amountCollected: new Prisma.Decimal(closed.collected),
+                remainingAmount: new Prisma.Decimal(0),
+                status: 'COMPLETED',
+                completedAt: new Date(),
+                closedAt: new Date(),
               },
             });
           }
@@ -263,12 +294,24 @@ export class LoansService {
                 },
               });
 
-          if (payout.pettyCashNewCash > 0) {
+          if (split.pettyCashPrevious > 0) {
             await tx.pettyCashExpense.create({
               data: {
-                amount: new Prisma.Decimal(payout.pettyCashNewCash),
+                amount: new Prisma.Decimal(split.pettyCashPrevious),
                 spentOn,
-                purpose: RENEW_CASH_PURPOSE,
+                purpose: PREVIOUS_BALANCE_PURPOSE,
+                paidToName: paidTo,
+                customerId: customer.id,
+                recordedById: userId,
+              },
+            });
+          }
+          if (split.pettyCashRenewal > 0) {
+            await tx.pettyCashExpense.create({
+              data: {
+                amount: new Prisma.Decimal(split.pettyCashRenewal),
+                spentOn,
+                purpose: RENEWAL_BALANCE_PURPOSE,
                 paidToName: paidTo,
                 customerId: customer.id,
                 recordedById: userId,
@@ -276,26 +319,15 @@ export class LoansService {
             });
           }
 
-          const paidAgg = await tx.repayment.aggregate({
-            where: { loanId: loan.id, cycle: loan.cycle },
-            _sum: { amount: true },
-          });
-          const collected = Number(paidAgg._sum.amount || 0);
-          if (collected > 0.001) {
-            throw new BadRequestException(
-              'New cycle still has collections — account was not reset',
-            );
-          }
-
           return {
             customer,
             loan,
-            outstandingSettled: payout.pettyCashOutstanding,
-            cashGiven: payout.pettyCashNewCash,
+            previousBalance: split.previousBalance,
+            renewalBalance: split.renewalBalance,
             cycle: loan.cycle,
             wallet: closeoutWallet({
-              collectedNow: 0,
-              payoutPrincipal: payout.walletOut,
+              collectedNow: split.walletIn,
+              payoutPrincipal: split.walletOut,
             }),
           };
         },
@@ -311,10 +343,10 @@ export class LoansService {
       metadata: {
         customerId,
         planId: dto.planId,
-        outstandingSettled: result.outstandingSettled,
-        cashGiven: result.cashGiven,
+        previousBalance: result.previousBalance,
+        renewalBalance: result.renewalBalance,
         cycle: result.cycle,
-        walletOut: result.wallet.walletOut,
+        walletNet: result.wallet.walletNet,
       },
     });
 
@@ -324,12 +356,15 @@ export class LoansService {
       loanId: result.loan.id,
       newLoanId: result.loan.id,
       planId: dto.planId,
-      outstandingSettled: result.outstandingSettled,
-      collectedToClose: 0,
+      previousBalance: result.previousBalance,
+      outstandingSettled: result.previousBalance,
+      renewalBalance: result.renewalBalance,
+      collectedToClose: result.previousBalance,
       remainingClosed: 0,
-      cashGiven: result.cashGiven,
+      cashGiven: result.renewalBalance,
       cycle: result.cycle,
       wallet: result.wallet,
+      oldPlanClosedAtFullTotal: true,
       newPlan: {
         principal,
         totalPayable,

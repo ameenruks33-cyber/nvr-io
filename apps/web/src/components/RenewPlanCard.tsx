@@ -14,10 +14,10 @@ type LoanLite = {
 };
 
 type RenewResult = {
-  outstandingSettled: number;
-  cashGiven: number;
+  previousBalance: number;
+  renewalBalance: number;
   cycle: number;
-  wallet?: { walletOut: number };
+  wallet?: { walletIn: number; walletOut: number; walletNet: number };
   newPlan: {
     principal: number;
     totalPayable: number;
@@ -42,7 +42,7 @@ export function RenewPlanCard({
 
   const [planId, setPlanId] = useState<LoanPlanId>(defaultPlan);
   const [daily, setDaily] = useState(String(LOAN_PLANS[defaultPlan].defaultDaily));
-  const [cashFromWallet, setCashFromWallet] = useState(remaining <= 0.001);
+  const [cashFromWallet, setCashFromWallet] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -51,10 +51,12 @@ export function RenewPlanCard({
   const dailyNum = Number(daily);
   const hasOutstanding = remaining > 0.001;
 
-  const summary = useMemo(() => {
-    const outstanding = hasOutstanding ? remaining : 0;
-    const given = cashFromWallet ? plan.principal : 0;
-    return { outstanding, given, out: outstanding + given };
+  const split = useMemo(() => {
+    const previous = hasOutstanding ? remaining : 0;
+    const renewal = cashFromWallet
+      ? Math.max(0, Math.round((plan.principal - previous) * 100) / 100)
+      : 0;
+    return { previous, renewal, netOut: renewal };
   }, [hasOutstanding, remaining, cashFromWallet, plan.principal]);
 
   async function onSubmit(e: FormEvent) {
@@ -77,12 +79,12 @@ export function RenewPlanCard({
       });
       notifyDataChanged();
       const bits = [
-        result.outstandingSettled > 0
-          ? `Outstanding ${money(result.outstandingSettled)} taken from the wallet and recorded as petty-cash paid out.`
-          : 'No outstanding on this account.',
-        `Same person, existing account — ${plan.label} restarted (cycle ${result.cycle}). Remaining ${money(result.newPlan.totalPayable)}.`,
-        result.cashGiven > 0
-          ? `Also paid the customer ${money(result.cashGiven)} from the wallet.`
+        result.previousBalance > 0
+          ? `Previous balance ${money(result.previousBalance)} added to the wallet. The old ${money(plan.totalPayable)} plan is closed (full total paid on the books).`
+          : `Old plan had nothing outstanding.`,
+        `Existing account restarted — remaining ${money(result.newPlan.totalPayable)}.`,
+        result.renewalBalance > 0
+          ? `Renewal balance ${money(result.renewalBalance)} paid from the wallet to the customer.`
           : null,
       ].filter(Boolean);
       setMessage(bits.join(' '));
@@ -100,24 +102,28 @@ export function RenewPlanCard({
       className="rounded-2xl border border-teal-200 bg-teal-50/40 p-5"
     >
       <h2 className="font-display text-xl text-slate-900">Renew plan</h2>
-      <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-slate-600">
-        <li>
-          {hasOutstanding
-            ? `Deduct outstanding ${money(remaining)} from the wallet (petty-cash payout).`
-            : 'No leftover balance to settle.'}
-        </li>
-        <li>Continue this person on the same account with a fresh plan cycle.</li>
-        <li>Optionally pay new cash from the wallet (principal only).</li>
-      </ol>
+      <p className="mt-2 text-sm text-slate-600">
+        The old plan closes only when the full {money(plan.totalPayable)} is on
+        the books. Outstanding is posted as <strong>Previous balance</strong>{' '}
+        into the wallet. Cash given is{' '}
+        <strong>Renewal balance</strong> ({money(plan.principal)} minus
+        outstanding).
+      </p>
 
       {hasOutstanding ? (
-        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Outstanding {money(remaining)} will leave the wallet and appear under
-          Petty Cash as paid to this customer. It is not collected again.
-        </p>
+        <div className="mt-4 rounded-lg border border-teal-200 bg-white px-3 py-2 text-sm text-slate-800">
+          <p>
+            Previous balance {money(split.previous)} → wallet (closes this{' '}
+            {money(plan.totalPayable)} cycle).
+          </p>
+          <p className="mt-1">
+            Renewal balance {money(split.renewal)} → paid to the customer (
+            {money(plan.principal)} − {money(split.previous)}).
+          </p>
+        </div>
       ) : (
         <p className="mt-4 text-sm text-teal-800">
-          This account has no leftover cash.
+          Nothing outstanding. Renewal cash is {money(plan.principal)}.
         </p>
       )}
 
@@ -142,10 +148,6 @@ export function RenewPlanCard({
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Fresh cycle total {money(plan.totalPayable)}. Cash given if paid out is{' '}
-          {money(plan.principal)}.
-        </p>
       </fieldset>
 
       <label className="mt-3 block text-sm">
@@ -168,21 +170,16 @@ export function RenewPlanCard({
           onChange={(e) => setCashFromWallet(e.target.checked)}
         />
         <span>
-          Also pay {money(plan.principal)} new cash from the wallet.
+          Pay renewal balance {money(split.renewal)} from the wallet (cash
+          renewal).
         </span>
       </label>
 
       <p className="mt-3 text-xs text-slate-500">
-        Wallet payout: {money(summary.out)}
-        {summary.outstanding > 0
-          ? ` (outstanding ${money(summary.outstanding)}`
-          : ' ('}
-        {summary.given > 0
-          ? `${summary.outstanding > 0 ? ' + ' : ''}new cash ${money(summary.given)})`
-          : summary.outstanding > 0
-            ? ')'
-            : 'none)'}
-        .
+        Wallet: +{money(split.previous)} previous balance, then −
+        {money(split.previous + split.renewal)} on petty cash (previous{' '}
+        {money(split.previous)} + renewal {money(split.renewal)}). Customer
+        receives {money(split.netOut)}.
       </p>
 
       {error ? (
@@ -204,8 +201,8 @@ export function RenewPlanCard({
         {saving
           ? 'Renewing…'
           : hasOutstanding
-            ? `Deduct ${money(remaining)} from wallet and renew ${plan.label}`
-            : `Renew ${plan.label} on this account`}
+            ? `Add ${money(split.previous)} previous balance and pay ${money(split.renewal)} renewal`
+            : `Renew ${plan.label}`}
       </button>
     </form>
   );
