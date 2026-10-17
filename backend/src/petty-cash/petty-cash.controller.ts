@@ -27,23 +27,26 @@ export class PettyCashController {
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  create(@Body() dto: CreateExpenseDto, @CurrentUser() user: AuthUser) {
-    return this.pettyCash.create(dto, user.id);
+  async create(@Body() dto: CreateExpenseDto, @CurrentUser() user: AuthUser) {
+    await this.pettyCash.create(dto, user.id);
+    return this.pettyCash.summary();
   }
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateExpenseDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.pettyCash.update(assertSafeId(String(id)), dto, user.id);
+    await this.pettyCash.update(assertSafeId(String(id)), dto, user.id);
+    return this.pettyCash.summary();
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
-  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.pettyCash.remove(assertSafeId(String(id)), user.id);
+  async remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    await this.pettyCash.remove(assertSafeId(String(id)), user.id);
+    return this.pettyCash.summary();
   }
 }

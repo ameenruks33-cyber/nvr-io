@@ -152,6 +152,7 @@ async function authFetch(
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...options,
+      cache: 'no-store',
       headers,
     });
   } catch {
@@ -163,7 +164,11 @@ async function authFetch(
     if (refreshed) {
       headers.set('Authorization', `Bearer ${refreshed.accessToken}`);
       try {
-        res = await fetch(`${API_URL}${path}`, { ...options, headers });
+        res = await fetch(`${API_URL}${path}`, {
+          ...options,
+          cache: 'no-store',
+          headers,
+        });
       } catch {
         throw new Error('Can’t reach the server. Check internet and try again.');
       }

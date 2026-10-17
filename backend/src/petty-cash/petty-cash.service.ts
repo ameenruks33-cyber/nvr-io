@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { assertSafeId } from '../common/safe-input';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { roundMoney, walletBalance } from './wallet';
 
 const TIME_ZONE = 'Asia/Dubai';
 const HISTORY_DAYS = 90;
@@ -106,9 +107,9 @@ export class PettyCashService {
       });
     }
 
-    const totalCollected = Number(collectedAgg._sum.amount ?? 0);
-    const totalSpent = Number(spentAgg._sum.amount ?? 0);
-    const totalPersonPaid = Number(personSpentAgg._sum.amount ?? 0);
+    const totalCollected = roundMoney(Number(collectedAgg._sum.amount ?? 0));
+    const totalSpent = roundMoney(Number(spentAgg._sum.amount ?? 0));
+    const totalPersonPaid = roundMoney(Number(personSpentAgg._sum.amount ?? 0));
     const todayRow = days.get(today);
 
     return {
@@ -117,7 +118,7 @@ export class PettyCashService {
       totalSpent,
       totalPersonPaid,
       totalGeneralSpent: Math.max(totalSpent - totalPersonPaid, 0),
-      balance: totalCollected - totalSpent,
+      balance: walletBalance(totalCollected, totalSpent),
       todayCollected: todayRow?.collected ?? 0,
       todaySpent: todayRow?.spent ?? 0,
       days: [...days.values()].sort((a, b) => b.date.localeCompare(a.date)),

@@ -4,7 +4,12 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { PettyCashCalculator } from '@/components/PettyCashCalculator';
 import { api, getSession, money } from '@/lib/api';
-import { useLiveRefresh } from '@/lib/live-sync';
+import {
+  COLLECTION_SAVED,
+  type CollectionSavedDetail,
+  notifyDataChanged,
+  useLiveRefresh,
+} from '@/lib/live-sync';
 import { formatUaeCalendarDay, formatUaeTime } from '@/lib/uae-datetime';
 
 type ExpenseKind = 'general' | 'customer';
@@ -62,6 +67,47 @@ function customerLabel(e: Expense) {
   return e.paidToName || 'Customer';
 }
 
+function roundMoney(n: number) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+function applyExpenseToWallet(
+  prev: Summary,
+  amount: number,
+  spentOn: string,
+  kind: ExpenseKind,
+) {
+  const spent = roundMoney(amount);
+  const onToday = spentOn === prev.today;
+  const totalSpent = roundMoney(prev.totalSpent + spent);
+  const totalCollected = prev.totalCollected;
+  return {
+    ...prev,
+    totalSpent,
+    totalPersonPaid:
+      kind === 'customer'
+        ? roundMoney(prev.totalPersonPaid + spent)
+        : prev.totalPersonPaid,
+    totalGeneralSpent:
+      kind === 'general'
+        ? roundMoney(prev.totalGeneralSpent + spent)
+        : prev.totalGeneralSpent,
+    balance: roundMoney(roundMoney(totalCollected) - totalSpent),
+    todaySpent: onToday ? roundMoney(prev.todaySpent + spent) : prev.todaySpent,
+  };
+}
+
+function applyCollectionToWallet(prev: Summary, amount: number) {
+  const collected = roundMoney(amount);
+  const totalCollected = roundMoney(prev.totalCollected + collected);
+  return {
+    ...prev,
+    totalCollected,
+    todayCollected: roundMoney(prev.todayCollected + collected),
+    balance: roundMoney(totalCollected - roundMoney(prev.totalSpent)),
+  };
+}
+
 function splitExpenses(expenses: Expense[]) {
   const customerPayments: Expense[] = [];
   const generalExpenses: Expense[] = [];
@@ -101,7 +147,7 @@ export default function PettyCashPage() {
 
   const load = useCallback(async () => {
     try {
-      const s = await api<Summary>('/petty-cash');
+      const s = await api<Summary>(`/petty-cash?t=${Date.now()}`);
       setData(s);
       setSpentOn((prev) => prev || s.today);
     } catch (e) {
@@ -118,6 +164,20 @@ export default function PettyCashPage() {
   }, [load]);
 
   useLiveRefresh(() => void load());
+
+  useEffect(() => {
+    const onCollected = (event: Event) => {
+      const detail = (event as CustomEvent<CollectionSavedDetail>).detail;
+      if (detail?.amount > 0) {
+        setData((prev) =>
+          prev ? applyCollectionToWallet(prev, detail.amount) : prev,
+        );
+      }
+      void load();
+    };
+    window.addEventListener(COLLECTION_SAVED, onCollected);
+    return () => window.removeEventListener(COLLECTION_SAVED, onCollected);
+  }, [load]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -151,20 +211,29 @@ export default function PettyCashPage() {
               spentOn,
               purpose: purpose.trim(),
             };
-      await api('/petty-cash', { method: 'POST', body: JSON.stringify(body) });
+      const nextAmount = Math.round(value * 100) / 100;
+      setData((prev) =>
+        prev ? applyExpenseToWallet(prev, nextAmount, spentOn, expenseKind) : prev,
+      );
+      const summary = await api<Summary>('/petty-cash', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      setData(summary);
+      notifyDataChanged();
       const picked = customers.find((c) => c.id === customerId);
       setMessage(
         expenseKind === 'customer'
-          ? `Recorded ${money(value)} cash to ${picked?.name ?? 'customer'}.`
-          : `Recorded ${money(value)} for ${purpose.trim()}.`,
+          ? `Paid ${money(value)} to ${picked?.name ?? 'customer'}. Wallet is now ${money(summary.balance)}.`
+          : `Recorded ${money(value)} for ${purpose.trim()}. Wallet is now ${money(summary.balance)}.`,
       );
       setAmount('');
       setPurpose('');
       setCustomerId('');
       setExpenseKind('general');
-      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save expense');
+      await load();
     } finally {
       setSaving(false);
     }
@@ -216,13 +285,14 @@ export default function PettyCashPage() {
               spentOn: editSpentOn,
               purpose: editPurpose.trim(),
             };
-      await api(`/petty-cash/${expenseId}`, {
+      const summary = await api<Summary>(`/petty-cash/${expenseId}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
-      setMessage('Expense updated.');
+      setData(summary);
+      notifyDataChanged();
+      setMessage(`Expense updated. Wallet is now ${money(summary.balance)}.`);
       cancelEdit();
-      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update expense');
     } finally {
@@ -245,9 +315,14 @@ export default function PettyCashPage() {
     setError('');
     setMessage('');
     try {
-      await api(`/petty-cash/${expense.id}`, { method: 'DELETE' });
-      setMessage('Expense deleted.');
-      await load();
+      const summary = await api<Summary>(`/petty-cash/${expense.id}`, {
+        method: 'DELETE',
+      });
+      setData(summary);
+      notifyDataChanged();
+      setMessage(
+        `Expense deleted. ${money(expense.amount)} returned to the wallet (${money(summary.balance)}).`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete');
     } finally {
@@ -419,8 +494,8 @@ export default function PettyCashPage() {
     <AppShell>
       <h1 className="font-display text-3xl text-slate-900">Petty Cash</h1>
       <p className="mt-1 max-w-xl text-sm text-slate-500">
-        General expenses (fuel, tea, etc.) are separate from cash paid to
-        customers from the wallet.
+        Collections add to this wallet. Every petty-cash expense or customer
+        cash payment is deducted immediately.
       </p>
 
       <section className="mt-6 grid max-w-3xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -443,7 +518,7 @@ export default function PettyCashPage() {
           </p>
           <p className={`mt-1 text-xs ${negative ? 'text-red-700' : 'text-blue-100'}`}>
             {data
-              ? `Total collected ${money(data.totalCollected)} − Total expenses ${money(data.totalSpent)}`
+              ? `Collections ${money(data.totalCollected)} − Expenses ${money(data.totalSpent)}`
               : ''}
           </p>
         </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { api, GALLERY_UNLOCK_KEY, money } from '@/lib/api';
+import { notifyDataChanged } from '@/lib/live-sync';
 import { LOAN_PLAN_IDS, LOAN_PLANS, type LoanPlanId } from '@/lib/loan-plans';
 import { shrinkImage } from '@/lib/image';
 
@@ -516,8 +517,9 @@ export default function NewCustomerPage() {
           ...(cashNote.trim() ? { purpose: cashNote.trim() } : {}),
         }),
       });
+      notifyDataChanged();
       setCashMessage(
-        `Recorded ${money(value)} cash to ${savedCustomer.name}. It appears under Pay customer (cash) on Petty Cash.`,
+        `Recorded ${money(value)} cash to ${savedCustomer.name}. That amount is deducted from the Petty Cash wallet.`,
       );
       setCashAmount('');
       setCashNote('');
