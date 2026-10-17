@@ -46,6 +46,12 @@ export function uaeToday(): string {
   );
 }
 
+/** Current UAE clock `HH:mm` for time inputs. */
+export function uaeNowTime(): string {
+  const { hours, minutes } = uaeClockParts();
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
 export function addUaeCalendarDays(day: string, delta: number): string {
   const d = new Date(`${day}T12:00:00+04:00`);
   d.setDate(d.getDate() + delta);

@@ -5,7 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { AdminOnly } from '@/components/AdminOnly';
 import { api, money } from '@/lib/api';
 import { notifyDataChanged } from '@/lib/live-sync';
-import { formatUaeDateTime, uaeToday } from '@/lib/uae-datetime';
+import { formatUaeDateTime, uaeNowTime, uaeToday } from '@/lib/uae-datetime';
 
 type Preview = {
   at: string;
@@ -36,29 +36,24 @@ type Preview = {
     at: string;
     person: string;
   }>;
+  files?: Array<{
+    id: string;
+    at: string;
+    kind: 'document' | 'photo';
+    person: string;
+  }>;
   totals: {
     repayments: number;
     expenses: number;
     renewals: number;
     newPeople: number;
+    files?: number;
   };
 };
 
-function nowUaeTime() {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Dubai',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date());
-  const h = parts.find((p) => p.type === 'hour')?.value || '00';
-  const m = parts.find((p) => p.type === 'minute')?.value || '00';
-  return `${h}:${m}`;
-}
-
 export default function RestorePage() {
   const [date, setDate] = useState(uaeToday());
-  const [time, setTime] = useState(nowUaeTime);
+  const [time, setTime] = useState(uaeNowTime);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -89,7 +84,8 @@ export default function RestorePage() {
       preview.totals.repayments +
       preview.totals.expenses +
       preview.totals.renewals +
-      (preview.totals.newPeople || 0);
+      (preview.totals.newPeople || 0) +
+      (preview.totals.files || 0);
     if (
       !window.confirm(
         `Restore to ${date} ${time} UAE? This undoes ${total} change(s) after that exact time. It cannot be undone automatically.`,
@@ -105,6 +101,7 @@ export default function RestorePage() {
         repaymentsRemoved: number;
         expensesRemoved: number;
         peopleRemoved?: number;
+        filesRemoved?: number;
         accountsReconciled: number;
       }>('/restore/to', {
         method: 'POST',
@@ -112,7 +109,7 @@ export default function RestorePage() {
       });
       notifyDataChanged();
       setMessage(
-        `Restored customer accounts to ${date} ${time} UAE. Removed ${result.peopleRemoved ?? 0} person(s), ${result.repaymentsRemoved} collection(s), and ${result.expensesRemoved} account petty-cash payout(s). Reconciled ${result.accountsReconciled} account(s). Staff, settings, and app updates were not changed.`,
+        `Restored customer accounts to ${date} ${time} UAE. Removed ${result.peopleRemoved ?? 0} person(s), ${result.repaymentsRemoved} collection(s), ${result.filesRemoved ?? 0} file(s), and ${result.expensesRemoved} account petty-cash payout(s). Reconciled ${result.accountsReconciled} account(s). Staff, settings, and app updates were not changed.`,
       );
       await loadPreview();
     } catch (err) {
@@ -126,7 +123,8 @@ export default function RestorePage() {
     ? preview.totals.repayments +
       preview.totals.expenses +
       preview.totals.renewals +
-      (preview.totals.newPeople || 0)
+      (preview.totals.newPeople || 0) +
+      (preview.totals.files || 0)
     : 0;
 
   return (
@@ -135,10 +133,11 @@ export default function RestorePage() {
         <h1 className="font-display text-3xl text-slate-900">Undo / Restore</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-500">
           Choose the exact UAE date and time. Customer account data recorded
-          after that moment — people added, collections, account petty-cash
-          payouts, and plan renewals — is listed, then removed, and each
-          remaining account is reconciled. Staff logins, gallery PIN, WhatsApp,
-          and app updates are not changed.
+          after that moment — people added, collections, files, photos, account
+          petty-cash payouts, and plan renewals — is listed, then removed, and
+          each remaining account then works as it did from that moment. Staff
+          logins, gallery PIN, WhatsApp, and app updates are not changed.
+          You can also restore one person from their profile.
         </p>
 
         <form
@@ -193,7 +192,8 @@ export default function RestorePage() {
               {preview.totals.newPeople || 0} new person(s),{' '}
               {preview.totals.repayments} collection(s),{' '}
               {preview.totals.expenses} account petty-cash payout(s),{' '}
-              {preview.totals.renewals} renewal(s).
+              {preview.totals.files || 0} file(s), {preview.totals.renewals}{' '}
+              renewal(s).
             </p>
 
             {preview.newPeople?.length ? (
@@ -240,6 +240,22 @@ export default function RestorePage() {
                       <span>
                         {money(e.amount)} · {formatUaeDateTime(e.at)}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {preview.files?.length ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h2 className="font-medium text-slate-900">Files and photos</h2>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {preview.files.map((f) => (
+                    <li key={`${f.kind}-${f.id}`} className="flex flex-wrap justify-between gap-2">
+                      <span>
+                        {f.person} · {f.kind === 'photo' ? 'Photo' : 'File'}
+                      </span>
+                      <span>{formatUaeDateTime(f.at)}</span>
                     </li>
                   ))}
                 </ul>

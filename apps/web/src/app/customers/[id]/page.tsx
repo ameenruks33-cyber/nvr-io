@@ -8,7 +8,7 @@ import { ClosedBadge } from '@/components/ClosedBadge';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { DeleteCustomerButton } from '@/components/DeleteCustomerButton';
 import { api, getSession, money } from '@/lib/api';
-import { isSuperAdminRole } from '@/lib/roles';
+import { isAdminRole, isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
@@ -17,6 +17,7 @@ import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
 import { RenewPlanCard } from '@/components/RenewPlanCard';
+import { RestorePersonCard } from '@/components/RestorePersonCard';
 
 type CustomerDetail = {
   id: string;
@@ -224,6 +225,7 @@ export default function CustomerDetailPage() {
   const repaymentCount =
     loans.reduce((n, row) => n + (row.repayments?.length ?? 0), 0);
   const isSuperAdmin = isSuperAdminRole(staffRole ?? undefined);
+  const isAdmin = isAdminRole(staffRole);
   const showDeletePerson = staffRole !== null && isSuperAdmin;
   const hasCollectionHistory = collected > 0 || repaymentCount > 0;
 
@@ -484,6 +486,14 @@ export default function CustomerDetailPage() {
             loan={loan}
             onDone={load}
           />
+
+          {isAdmin ? (
+            <RestorePersonCard
+              customerId={customer.id}
+              customerName={customer.name}
+              onDone={load}
+            />
+          ) : null}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-display text-xl text-slate-900">History</h2>
