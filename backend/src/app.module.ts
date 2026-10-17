@@ -23,6 +23,7 @@ import { SyncModule } from './sync/sync.module';
 import { CollectionsModule } from './collections/collections.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { MonthlyAuditModule } from './monthly-audit/monthly-audit.module';
+import { RestoreModule } from './restore/restore.module';
 import { HealthController } from './health.controller';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -56,6 +57,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     CollectionsModule,
     CalendarModule,
     MonthlyAuditModule,
+    RestoreModule,
   ],
   controllers: [HealthController],
   providers: [

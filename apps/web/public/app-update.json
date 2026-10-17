@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610171423",
-  "releasedAt": "2026-10-17T10:23:36.154Z",
+  "version": "1.1.2610171439",
+  "releasedAt": "2026-10-17T10:39:03.437Z",
   "title": "CrickHerose update available",
-  "message": "Renew same plan on existing account; outstanding from wallet",
+  "message": "Admin restore by exact UAE date and time",
   "notes": [
+    "Admin restore by exact UAE date and time",
     "Renew same plan on existing account; outstanding from wallet",
     "Close remaining into wallet and admin delete on Records",
     "Renew plan after settling remaining cash",
     "Wallet deducts petty cash and adds collections immediately",
     "Open one customer account on Collection tap",
     "Search receipts and collection reports by person",
-    "Keep live app on Vercel with no Cursor runtime dependency",
-    "Deduct overdue banner amounts as soon as a collection is saved"
+    "Keep live app on Vercel with no Cursor runtime dependency"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610171423/favicon.png",
-    "icon192": "/icons/v1.1.2610171423/icon-192.png",
-    "icon512": "/icons/v1.1.2610171423/icon-512.png",
-    "apple": "/icons/v1.1.2610171423/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610171423/logo.jpg"
+    "favicon": "/icons/v1.1.2610171439/favicon.png",
+    "icon192": "/icons/v1.1.2610171439/icon-192.png",
+    "icon512": "/icons/v1.1.2610171439/icon-512.png",
+    "apple": "/icons/v1.1.2610171439/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610171439/logo.jpg"
   }
 }

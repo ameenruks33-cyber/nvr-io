@@ -37,6 +37,7 @@ const links: NavLink[] = [
     label: 'Monthly audit',
     adminOnly: true,
   },
+  { href: '/restore', label: 'Undo', adminOnly: true },
   { href: '/users', label: 'Users', superAdminOnly: true },
   { href: '/audit', label: 'Activity', superAdminOnly: true, desktopOnly: true },
   { href: '/settings', label: 'Settings', superAdminOnly: true },

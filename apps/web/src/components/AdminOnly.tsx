@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import { isAdminRole } from '@/lib/roles';
 
-/** Blocks non-admin accounts (Admin + Super Admin only). */
+/** Admin and Super Admin only. */
 export function AdminOnly({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ok, setOk] = useState(false);
