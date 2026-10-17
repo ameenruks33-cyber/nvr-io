@@ -124,13 +124,15 @@ export function RestorePersonCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="font-display text-xl text-slate-900">Restore this account</h2>
+    <div
+      id="restore-account"
+      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5"
+    >
+      <h2 className="font-display text-xl text-slate-900">Restore</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Choose the exact UAE date and time. Everything on this profile from that
-        moment onward — collections, files, photos, and renewals — is undone.
-        Remaining, status, and history then match that moment, and you continue
-        from there.
+        Restore this person to any past UAE date and time. Collections, files,
+        photos, and renewals after that moment are undone. The account then
+        works as it did from that time forward.
       </p>
       <form
         onSubmit={(e) => void loadPreview(e)}

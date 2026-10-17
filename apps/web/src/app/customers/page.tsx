@@ -95,6 +95,7 @@ export default function CustomersPage() {
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">WhatsApp</th>
               <th className="px-4 py-3 font-medium">Collected</th>
+              <th className="px-4 py-3 font-medium"> </th>
             </tr>
           </thead>
           <tbody>
@@ -126,6 +127,14 @@ export default function CustomersPage() {
                         <ArrearsBadge days={loanDaysInArrears(row.loan)} />
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/customers/${row.id}#restore-account`}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                    >
+                      Restore
+                    </Link>
                   </td>
                 </tr>
               );

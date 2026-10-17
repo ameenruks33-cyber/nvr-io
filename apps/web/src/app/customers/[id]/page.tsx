@@ -8,7 +8,7 @@ import { ClosedBadge } from '@/components/ClosedBadge';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { DeleteCustomerButton } from '@/components/DeleteCustomerButton';
 import { api, getSession, money } from '@/lib/api';
-import { isAdminRole, isSuperAdminRole } from '@/lib/roles';
+import { isSuperAdminRole } from '@/lib/roles';
 import { shrinkImage } from '@/lib/image';
 import { openWhatsApp, privateWhatsAppLink } from '@/lib/privacy';
 import { notifyCollectionSaved, useLiveRefresh } from '@/lib/live-sync';
@@ -225,7 +225,6 @@ export default function CustomerDetailPage() {
   const repaymentCount =
     loans.reduce((n, row) => n + (row.repayments?.length ?? 0), 0);
   const isSuperAdmin = isSuperAdminRole(staffRole ?? undefined);
-  const isAdmin = isAdminRole(staffRole);
   const showDeletePerson = staffRole !== null && isSuperAdmin;
   const hasCollectionHistory = collected > 0 || repaymentCount > 0;
 
@@ -247,7 +246,15 @@ export default function CustomerDetailPage() {
               {closed ? <ClosedBadge /> : null}
             </h1>
           </div>
-          {showDeletePerson ? <DeleteCustomerButton {...deleteProps} /> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="#restore-account"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Restore
+            </a>
+            {showDeletePerson ? <DeleteCustomerButton {...deleteProps} /> : null}
+          </div>
         </div>
         <p className="mt-1 text-slate-600">
           {[
@@ -362,6 +369,12 @@ export default function CustomerDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <RestorePersonCard
+            customerId={customer.id}
+            customerName={customer.name}
+            onDone={load}
+          />
+
           {loan ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="font-display text-xl text-slate-900">Payments</h2>
@@ -486,14 +499,6 @@ export default function CustomerDetailPage() {
             loan={loan}
             onDone={load}
           />
-
-          {isAdmin ? (
-            <RestorePersonCard
-              customerId={customer.id}
-              customerName={customer.name}
-              onDone={load}
-            />
-          ) : null}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-display text-xl text-slate-900">History</h2>
