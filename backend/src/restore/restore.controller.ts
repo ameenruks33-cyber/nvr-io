@@ -13,7 +13,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeId } from '../common/safe-input';
 
-function isAdminRole(role: UserRole) {
+function isAdminRole(role: string | undefined) {
   return role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN;
 }
 
