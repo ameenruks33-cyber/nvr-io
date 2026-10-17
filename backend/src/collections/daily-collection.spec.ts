@@ -1,4 +1,9 @@
-import { daysInArrears, dueTodayAed, overdueAed } from './daily-collection';
+import {
+  daysInArrears,
+  dueTodayAed,
+  nextDueAtFromRepayments,
+  overdueAed,
+} from './daily-collection';
 
 function loan(partial: {
   openedAt: string;
@@ -138,5 +143,26 @@ describe('days in arrears', () => {
 describe('due today', () => {
   it('uses the account daily amount', () => {
     expect(dueTodayAed(800, 50)).toBe(50);
+  });
+});
+
+describe('prepaid next due', () => {
+  it('starts a 10-day clock from a lump at 8:41 AM and extends with the next lump', () => {
+    const due = nextDueAtFromRepayments(
+      {
+        status: 'ACTIVE',
+        remainingAmount: 700,
+        dailyPayment: 100,
+        cycle: 1,
+      },
+      [
+        { amount: 100, collectedAt: '2026-10-10T11:02:47.112Z', cycle: 1 },
+        { amount: 100, collectedAt: '2026-10-11T16:51:30.453Z', cycle: 1 },
+        { amount: 100, collectedAt: '2026-10-13T13:42:28.203Z', cycle: 1 },
+        { amount: 500, collectedAt: '2026-10-14T04:41:04.467Z', cycle: 1 },
+        { amount: 500, collectedAt: '2026-10-17T11:03:38.637Z', cycle: 1 },
+      ],
+    );
+    expect(due?.toISOString()).toBe('2026-10-24T04:41:04.467Z');
   });
 });

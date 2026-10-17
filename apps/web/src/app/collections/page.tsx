@@ -35,6 +35,7 @@ type CustomerRow = {
     openedAt?: string;
     status: string;
     daysInArrears?: number;
+    nextDueAt?: string | null;
   };
 };
 
@@ -500,6 +501,20 @@ function CollectionsPageContent() {
                 >
                   Open customer
                 </Link>
+                {selected.loan?.nextDueAt ? (
+                  <p
+                    className={`mt-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                      new Date(selected.loan.nextDueAt).getTime() <= Date.now()
+                        ? 'bg-amber-50 text-amber-900'
+                        : 'bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    {new Date(selected.loan.nextDueAt).getTime() <= Date.now()
+                      ? 'Due'
+                      : 'Next due'}
+                    : {formatUaeDateTime(selected.loan.nextDueAt)}
+                  </p>
+                ) : null}
               </div>
 
               {open ? (

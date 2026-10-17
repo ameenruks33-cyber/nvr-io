@@ -23,6 +23,20 @@ export function nextUaeCalendarDay(day: string): string {
   return uaeCalendarDay(d);
 }
 
+export function formatUaeDateTime(value: Date | string): string {
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-GB', {
+    timeZone: UAE_TIME_ZONE,
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 export function uaeDayBounds(day = uaeCalendarDay()) {
   const start = startOfUaeDayUtc(day);
   const end = startOfUaeDayUtc(nextUaeCalendarDay(day));

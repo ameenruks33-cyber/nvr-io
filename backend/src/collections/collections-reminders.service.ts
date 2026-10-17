@@ -46,6 +46,7 @@ export class CollectionsRemindersService {
         collectedTodayAed: row.collectedTodayAed,
         daysInArrears: row.daysInArrears,
         overdueAed: row.overdueAed,
+        nextDueAt: row.nextDueAt,
       });
       reminded++;
     }

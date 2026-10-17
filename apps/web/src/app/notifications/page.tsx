@@ -25,7 +25,7 @@ type Row = {
 function typeLabel(type: string) {
   switch (type) {
     case 'COLLECTION_REMINDER':
-      return 'Pending reminder';
+      return 'Due';
     case 'REPAYMENT_RECEIVED':
       return 'Collection saved';
     case 'LOAN_COMPLETED':

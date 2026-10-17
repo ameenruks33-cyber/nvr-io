@@ -78,7 +78,66 @@ export function overdueAed(loan: LoanArrearsInput, now: Date = new Date()): numb
   return arrearsShortfallAed(loan, now);
 }
 
-export function attachArrears<T extends LoanArrearsInput>(
+export type PrepaidRepayment = {
+  collectedAt: Date | string;
+  amount: unknown;
+  cycle?: unknown;
+};
+
+function cycleOf(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+}
+
+/**
+ * Next collection due instant from prepaid cover.
+ * A lump (more than one daily amount) starts a new clock at that payment’s
+ * time; later receipts while still covered extend that clock.
+ */
+export function nextDueAtFromRepayments(
+  loan: LoanArrearsInput & { cycle?: unknown },
+  repayments: PrepaidRepayment[],
+): Date | null {
+  if (loan.status && loan.status !== 'ACTIVE') return null;
+  if (asAmount(loan.remainingAmount) <= 0.001) return null;
+  const daily = dailyAmountOf(loan.dailyPayment);
+  const cycle = cycleOf(loan.cycle);
+  const rows = [...repayments]
+    .filter((r) => cycleOf(r.cycle) === cycle)
+    .sort(
+      (a, b) =>
+        new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
+    );
+  let coverEnd: Date | null = null;
+  let inPrepaid = false;
+  for (const row of rows) {
+    const amount = asAmount(row.amount);
+    if (amount <= 0) continue;
+    const days = amount / daily;
+    const at = new Date(row.collectedAt);
+    if (Number.isNaN(at.getTime())) continue;
+    const lump = amount > daily + 0.001;
+    let base: Date;
+    if (!coverEnd || at.getTime() > coverEnd.getTime()) {
+      base = at;
+      inPrepaid = lump;
+    } else if (lump) {
+      base = inPrepaid ? coverEnd : at;
+      inPrepaid = true;
+    } else {
+      base = coverEnd;
+      inPrepaid = false;
+    }
+    coverEnd = new Date(base.getTime() + days * 86_400_000);
+  }
+  return coverEnd;
+}
+
+export function prepaidIsDue(nextDueAt: Date | null, now: Date = new Date()) {
+  return Boolean(nextDueAt && now.getTime() >= nextDueAt.getTime());
+}
+
+export function attachArrears<T extends LoanArrearsInput & { cycle?: unknown; repayments?: PrepaidRepayment[] }>(
   loan: T,
   now: Date = new Date(),
 ): T & {
@@ -86,6 +145,7 @@ export function attachArrears<T extends LoanArrearsInput>(
   remainingAmount: number;
   daysInArrears: number;
   overdueAed: number;
+  nextDueAt: string | null;
 } {
   const collected = asAmount(loan.amountCollected);
   const remaining = asAmount(loan.remainingAmount);
@@ -98,9 +158,13 @@ export function attachArrears<T extends LoanArrearsInput>(
     dailyPayment: dailyAmountOf(loan.dailyPayment),
   };
   const days = daysInArrears(numbered, now);
+  const nextDue = Array.isArray(loan.repayments)
+    ? nextDueAtFromRepayments(numbered, loan.repayments)
+    : null;
   return {
     ...numbered,
     daysInArrears: days,
     overdueAed: overdueAed(numbered, now),
+    nextDueAt: nextDue ? nextDue.toISOString() : null,
   };
 }

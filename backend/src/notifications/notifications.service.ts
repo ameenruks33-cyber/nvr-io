@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { NotificationType, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { formatUaeDateTime } from '../collections/uae-day';
 
 type Audience = 'ALL' | 'ADMIN';
 
@@ -93,6 +94,7 @@ export class NotificationsService {
     collectedTodayAed: number;
     daysInArrears?: number;
     overdueAed?: number;
+    nextDueAt?: string | null;
   }) {
     const {
       customerId,
@@ -105,6 +107,7 @@ export class NotificationsService {
       collectedTodayAed,
       daysInArrears = 1,
       overdueAed,
+      nextDueAt,
     } = input;
     const stillDueToday = Math.max(dueTodayAed - collectedTodayAed, 0);
     const days = Math.max(1, daysInArrears);
@@ -117,19 +120,20 @@ export class NotificationsService {
         ? ` (AED ${collectedTodayAed.toFixed(0)} received today — AED ${stillDueToday.toFixed(0)} still due today)`
         : '';
 
+    const dueWhen = nextDueAt ? ` from ${formatUaeDateTime(nextDueAt)}` : '';
     await this.create({
       customerId,
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ALL',
-      message: `Collection overdue for ${customerName}: ${daysLabel} (AED ${arrearsAed.toFixed(0)})${partial}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)} (${customerCode}).`,
+      message: `Due for ${customerName}${dueWhen}: ${daysLabel} (AED ${arrearsAed.toFixed(0)})${partial}. Remaining balance AED ${remaining.toFixed(2)} of AED ${total.toFixed(2)} (${customerCode}).`,
     });
     await this.create({
       customerId,
       loanId,
       type: 'COLLECTION_REMINDER',
       audience: 'ADMIN',
-      message: `Admin: ${customerName} is ${daysLabel}. AED ${arrearsAed.toFixed(0)} overdue${partial}. Remaining AED ${remaining.toFixed(2)} (${customerCode}).`,
+      message: `Due: ${customerName}${dueWhen}. ${daysLabel}. AED ${arrearsAed.toFixed(0)} overdue${partial}. Remaining AED ${remaining.toFixed(2)} (${customerCode}).`,
     });
   }
 

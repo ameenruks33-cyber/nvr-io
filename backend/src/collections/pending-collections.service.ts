@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { daysInArrears, dueTodayAed, overdueAed } from './daily-collection';
+import {
+  daysInArrears,
+  dueTodayAed,
+  nextDueAtFromRepayments,
+  overdueAed,
+  prepaidIsDue,
+} from './daily-collection';
 import { uaeDayBounds } from './uae-day';
 
 export type PendingTodayItem = {
@@ -16,6 +22,7 @@ export type PendingTodayItem = {
   dailyPayment: number;
   remainingBalance: number;
   totalPayable: number;
+  nextDueAt: string | null;
 };
 
 @Injectable()
@@ -34,6 +41,9 @@ export class PendingCollectionsService {
         include: {
           customer: {
             select: { id: true, name: true, customerCode: true },
+          },
+          repayments: {
+            select: { amount: true, collectedAt: true, cycle: true },
           },
         },
         orderBy: { customer: { name: 'asc' } },
@@ -58,10 +68,14 @@ export class PendingCollectionsService {
       const collectedTodayAed = collectedByLoan.get(loan.id) || 0;
       const pendingTodayAed = Math.max(dueToday - collectedTodayAed, 0);
       const missedDays = daysInArrears(loan);
-      const overdue = Math.min(
+      const nextDue = nextDueAtFromRepayments(loan, loan.repayments);
+      let overdue = Math.min(
         remainingBalance,
         Math.max(overdueAed(loan), pendingTodayAed),
       );
+      if (overdue <= 0.001 && prepaidIsDue(nextDue)) {
+        overdue = dueToday;
+      }
       if (overdue <= 0.001) continue;
 
       items.push({
@@ -83,6 +97,7 @@ export class PendingCollectionsService {
           Number(loan.totalPayable),
           Number(loan.principalAmount),
         ),
+        nextDueAt: nextDue ? nextDue.toISOString() : null,
       });
     }
 

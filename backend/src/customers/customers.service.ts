@@ -133,16 +133,30 @@ export class CustomersService {
         loans: {
           orderBy: { openedAt: 'desc' },
           take: 1,
+          include: {
+            repayments: {
+              select: { amount: true, collectedAt: true, cycle: true },
+            },
+          },
         },
       },
     });
 
-    return customers.map((c) =>
-      this.toSafeCustomer(c, actor, {
+    return customers.map((c) => {
+      const loan = c.loans[0]
+        ? (() => {
+            const attached = attachArrears(c.loans[0]);
+            const { repayments: _repayments, ...rest } = attached as typeof attached & {
+              repayments?: unknown;
+            };
+            return rest;
+          })()
+        : undefined;
+      return this.toSafeCustomer(c, actor, {
         includeSensitive: false,
-        loan: c.loans[0] ? attachArrears(c.loans[0]) : undefined,
-      }),
-    );
+        loan,
+      });
+    });
   }
 
   async remove(id: string, actor: AuthUser, ip?: string) {
