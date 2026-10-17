@@ -20,6 +20,8 @@ import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
+import { LoansService } from '../loans/loans.service';
+import { RenewPlanDto } from '../loans/dto/renew-plan.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeId } from '../common/safe-input';
@@ -28,7 +30,10 @@ const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Controller('customers')
 export class CustomersController {
-  constructor(private readonly customers: CustomersService) {}
+  constructor(
+    private readonly customers: CustomersService,
+    private readonly loans: LoansService,
+  ) {}
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
@@ -44,6 +49,16 @@ export class CustomersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
   list(@Query('q') q: string | undefined, @CurrentUser() user: AuthUser) {
     return this.customers.findAll(q, user);
+  }
+
+  @Post(':id/renew')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
+  renew(
+    @Param('id') id: string,
+    @Body() dto: RenewPlanDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.loans.renew(assertSafeId(String(id)), dto, user.id);
   }
 
   @Delete(':id')

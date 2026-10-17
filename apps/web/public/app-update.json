@@ -1,28 +1,28 @@
 {
   "app": "CrickHerose",
-  "version": "1.1.2610171118",
-  "releasedAt": "2026-10-17T07:18:02.733Z",
+  "version": "1.1.2610171134",
+  "releasedAt": "2026-10-17T07:34:24.064Z",
   "title": "CrickHerose update available",
-  "message": "Wallet deducts petty cash and adds collections immediately",
+  "message": "Renew plan after settling remaining cash",
   "notes": [
+    "Renew plan after settling remaining cash",
     "Wallet deducts petty cash and adds collections immediately",
     "Open one customer account on Collection tap",
     "Search receipts and collection reports by person",
     "Keep live app on Vercel with no Cursor runtime dependency",
     "Deduct overdue banner amounts as soon as a collection is saved",
     "Auto-deduct remaining after each payment and sync all accounts",
-    "Fix collection save failures and overdue day display",
-    "Show total overdue days per customer not only today"
+    "Fix collection save failures and overdue day display"
   ],
   "minVersion": "1.0.0",
   "force": true,
   "updateUrl": "/updates",
   "iconsUpdated": true,
   "icons": {
-    "favicon": "/icons/v1.1.2610171118/favicon.png",
-    "icon192": "/icons/v1.1.2610171118/icon-192.png",
-    "icon512": "/icons/v1.1.2610171118/icon-512.png",
-    "apple": "/icons/v1.1.2610171118/apple-touch-icon.png",
-    "logo": "/icons/v1.1.2610171118/logo.jpg"
+    "favicon": "/icons/v1.1.2610171134/favicon.png",
+    "icon192": "/icons/v1.1.2610171134/icon-192.png",
+    "icon512": "/icons/v1.1.2610171134/icon-512.png",
+    "apple": "/icons/v1.1.2610171134/apple-touch-icon.png",
+    "logo": "/icons/v1.1.2610171134/logo.jpg"
   }
 }

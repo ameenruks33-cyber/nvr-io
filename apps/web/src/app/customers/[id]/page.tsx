@@ -16,6 +16,7 @@ import { formatUaeDateTime } from '@/lib/uae-datetime';
 import { ArrearsBadge } from '@/components/ArrearsBadge';
 import { loanDaysInArrears, newIdempotencyKey } from '@/lib/arrears';
 import { loanTotals } from '@/lib/loan-plans';
+import { RenewPlanCard } from '@/components/RenewPlanCard';
 
 type CustomerDetail = {
   id: string;
@@ -112,7 +113,9 @@ export default function CustomerDetailPage() {
     load().catch(() => undefined);
   });
 
-  const activeLoan = customer?.loans?.[0];
+  const activeLoan =
+    customer?.loans?.find((l) => l.status === 'ACTIVE') ||
+    customer?.loans?.[0];
   const { total: loanTotal } = loanTotals(activeLoan);
   const maxPay = Math.max(loanTotal - Number(activeLoan?.amountCollected || 0), 0);
   const amountNum = Number(amount);
@@ -124,7 +127,8 @@ export default function CustomerDetailPage() {
 
   async function collect(e: FormEvent) {
     e.preventDefault();
-    if (!customer?.loans?.[0]) return;
+    if (!activeLoan || !customer) return;
+    const personId = customer.id;
     setMessage('');
     setError('');
     setWaLink(null);
@@ -143,7 +147,7 @@ export default function CustomerDetailPage() {
           configured?: boolean;
           error?: string;
         };
-      }>(`/loans/${customer.loans[0].id}/repayments`, {
+      }>(`/loans/${activeLoan.id}/repayments`, {
         method: 'POST',
         body: JSON.stringify({
           amount: Number(amount),
@@ -174,23 +178,23 @@ export default function CustomerDetailPage() {
       setNotes('');
       setAmount('100');
       setCustomer((prev) => {
-        if (!prev?.loans?.[0]) return prev;
-        const [loan, ...rest] = prev.loans;
+        if (!prev?.loans?.length) return prev;
         return {
           ...prev,
-          loans: [
-            {
-              ...loan,
-              amountCollected: result.collected,
-              remainingAmount: result.remaining,
-              status: result.status || loan.status,
-            },
-            ...rest,
-          ],
+          loans: prev.loans.map((row) =>
+            row.id === activeLoan.id
+              ? {
+                  ...row,
+                  amountCollected: result.collected,
+                  remainingAmount: result.remaining,
+                  status: result.status || row.status,
+                }
+              : row,
+          ),
         };
       });
       notifyCollectionSaved({
-        customerId: customer.id,
+        customerId: personId,
         amount: result.amount || Number(amount),
       });
       await load();
@@ -207,13 +211,16 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const loan = customer.loans?.[0];
+  const loans = customer.loans || [];
+  const loan = loans.find((l) => l.status === 'ACTIVE') || loans[0];
+  const previousLoans = loans.filter((l) => l.id !== loan?.id);
   const collected = Number(loan?.amountCollected || 0);
   const { principal, total } = loanTotals(loan);
   const remaining = Number(loan?.remainingAmount || 0);
   const open = loan?.status === 'ACTIVE';
   const closed = Boolean(loan) && !open;
-  const repaymentCount = loan?.repayments?.length ?? 0;
+  const repaymentCount =
+    loans.reduce((n, row) => n + (row.repayments?.length ?? 0), 0);
   const isSuperAdmin = isSuperAdminRole(staffRole ?? undefined);
   const showDeletePerson = staffRole !== null && isSuperAdmin;
   const hasCollectionHistory = collected > 0 || repaymentCount > 0;
@@ -461,6 +468,12 @@ export default function CustomerDetailPage() {
             </div>
           ) : null}
 
+          <RenewPlanCard
+            customerId={customer.id}
+            loan={loan}
+            onDone={load}
+          />
+
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-display text-xl text-slate-900">History</h2>
             <ul className="mt-4 space-y-2 text-sm">
@@ -512,6 +525,32 @@ export default function CustomerDetailPage() {
                 <li className="text-slate-500">No payments yet</li>
               ) : null}
             </ul>
+            {previousLoans.length ? (
+              <div className="mt-6 space-y-4 border-t border-slate-100 pt-4">
+                <h3 className="text-sm font-medium text-slate-700">
+                  Previous plans
+                </h3>
+                {previousLoans.map((old) => {
+                  const totals = loanTotals(old);
+                  return (
+                    <div key={old.id} className="text-sm">
+                      <p className="text-slate-600">
+                        {money(Number(old.amountCollected))} of{' '}
+                        {money(totals.total)} · closed
+                      </p>
+                      <ul className="mt-1 space-y-1 text-xs text-slate-500">
+                        {(old.repayments || []).map((r) => (
+                          <li key={r.id}>
+                            {r.receiptNumber} · {money(Number(r.amount))} ·{' '}
+                            {formatUaeDateTime(r.collectedAt)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
