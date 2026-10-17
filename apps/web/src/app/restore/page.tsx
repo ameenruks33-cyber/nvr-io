@@ -31,7 +31,17 @@ type Preview = {
     cycle: number;
     person: string;
   }>;
-  totals: { repayments: number; expenses: number; renewals: number };
+  newPeople: Array<{
+    id: string;
+    at: string;
+    person: string;
+  }>;
+  totals: {
+    repayments: number;
+    expenses: number;
+    renewals: number;
+    newPeople: number;
+  };
 };
 
 function nowUaeTime() {
@@ -78,7 +88,8 @@ export default function RestorePage() {
     const total =
       preview.totals.repayments +
       preview.totals.expenses +
-      preview.totals.renewals;
+      preview.totals.renewals +
+      (preview.totals.newPeople || 0);
     if (
       !window.confirm(
         `Restore to ${date} ${time} UAE? This undoes ${total} change(s) after that exact time. It cannot be undone automatically.`,
@@ -93,6 +104,7 @@ export default function RestorePage() {
       const result = await api<{
         repaymentsRemoved: number;
         expensesRemoved: number;
+        peopleRemoved?: number;
         accountsReconciled: number;
       }>('/restore/to', {
         method: 'POST',
@@ -100,7 +112,7 @@ export default function RestorePage() {
       });
       notifyDataChanged();
       setMessage(
-        `Restored to ${date} ${time} UAE. Removed ${result.repaymentsRemoved} collection(s) and ${result.expensesRemoved} petty-cash payout(s). Reconciled ${result.accountsReconciled} account(s).`,
+        `Restored customer accounts to ${date} ${time} UAE. Removed ${result.peopleRemoved ?? 0} person(s), ${result.repaymentsRemoved} collection(s), and ${result.expensesRemoved} account petty-cash payout(s). Reconciled ${result.accountsReconciled} account(s). Staff, settings, and app updates were not changed.`,
       );
       await loadPreview();
     } catch (err) {
@@ -113,7 +125,8 @@ export default function RestorePage() {
   const total = preview
     ? preview.totals.repayments +
       preview.totals.expenses +
-      preview.totals.renewals
+      preview.totals.renewals +
+      (preview.totals.newPeople || 0)
     : 0;
 
   return (
@@ -121,9 +134,11 @@ export default function RestorePage() {
       <AdminOnly>
         <h1 className="font-display text-3xl text-slate-900">Undo / Restore</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-500">
-          Choose the exact UAE date and time. Everything recorded after that
-          moment — collections, petty-cash payouts, and plan renewals — is
-          listed, then removed, and each account is reconciled.
+          Choose the exact UAE date and time. Customer account data recorded
+          after that moment — people added, collections, account petty-cash
+          payouts, and plan renewals — is listed, then removed, and each
+          remaining account is reconciled. Staff logins, gallery PIN, WhatsApp,
+          and app updates are not changed.
         </p>
 
         <form
@@ -174,10 +189,26 @@ export default function RestorePage() {
         {preview ? (
           <section className="mt-6 max-w-3xl space-y-4">
             <p className="text-sm text-slate-600">
-              After {formatUaeDateTime(preview.at)}: {preview.totals.repayments}{' '}
-              collection(s), {preview.totals.expenses} petty-cash payout(s),{' '}
+              After {formatUaeDateTime(preview.at)}:{' '}
+              {preview.totals.newPeople || 0} new person(s),{' '}
+              {preview.totals.repayments} collection(s),{' '}
+              {preview.totals.expenses} account petty-cash payout(s),{' '}
               {preview.totals.renewals} renewal(s).
             </p>
+
+            {preview.newPeople?.length ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h2 className="font-medium text-slate-900">People added</h2>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {preview.newPeople.map((c) => (
+                    <li key={c.id} className="flex flex-wrap justify-between gap-2">
+                      <span>{c.person}</span>
+                      <span>{formatUaeDateTime(c.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {preview.repayments.length ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-4">

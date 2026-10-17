@@ -2,7 +2,11 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { loanBalanceFromCollected, loanCycle } from '../loans/loan-balance';
+import {
+  loanBalanceFromCollected,
+  loanCycle,
+  RECONCILE_LOAN_BALANCES_SQL,
+} from '../loans/loan-balance';
 import { uaeDateTimeToInstant } from './uae-instant';
 
 @Injectable()
@@ -28,7 +32,7 @@ export class RestoreService {
 
   async preview(date: string, time: string) {
     const at = this.parseAt(date, time);
-    const [repayments, expenses, renewals] = await Promise.all([
+    const [repayments, expenses, renewals, newPeople] = await Promise.all([
       this.prisma.repayment.findMany({
         where: { collectedAt: { gt: at } },
         orderBy: { collectedAt: 'desc' },
@@ -42,7 +46,10 @@ export class RestoreService {
         take: 200,
       }),
       this.prisma.pettyCashExpense.findMany({
-        where: { createdAt: { gt: at } },
+        where: {
+          createdAt: { gt: at },
+          customerId: { not: null },
+        },
         orderBy: { createdAt: 'desc' },
         include: {
           customer: { select: { name: true, customerCode: true } },
@@ -55,6 +62,11 @@ export class RestoreService {
           customer: { select: { name: true, customerCode: true } },
         },
         take: 100,
+      }),
+      this.prisma.customer.findMany({
+        where: { createdAt: { gt: at } },
+        select: { id: true, name: true, customerCode: true, createdAt: true },
+        take: 200,
       }),
     ]);
 
@@ -84,21 +96,28 @@ export class RestoreService {
         cycle: l.cycle,
         person: `${l.customer.customerCode} · ${l.customer.name}`,
       })),
+      newPeople: newPeople.map((c) => ({
+        id: c.id,
+        at: c.createdAt,
+        person: `${c.customerCode} · ${c.name}`,
+      })),
       totals: {
         repayments: repayments.length,
         expenses: expenses.length,
         renewals: renewals.length,
+        newPeople: newPeople.length,
       },
     };
   }
 
-  async restoreTo(date: string, time: string, userId: string) {
+  async restoreTo(date: string, time: string, userId?: string) {
     const at = this.parseAt(date, time);
     const preview = await this.preview(date, time);
     if (
       !preview.totals.repayments &&
       !preview.totals.expenses &&
-      !preview.totals.renewals
+      !preview.totals.renewals &&
+      !preview.totals.newPeople
     ) {
       throw new BadRequestException(
         'Nothing to undo after that date and time',
@@ -107,6 +126,45 @@ export class RestoreService {
 
     const result = await this.prisma.$transaction(
       async (tx) => {
+        const newPeople = await tx.customer.findMany({
+          where: { createdAt: { gt: at } },
+          select: { id: true, name: true },
+        });
+        const newIds = newPeople.map((c) => c.id);
+        if (newIds.length) {
+          const newLoans = await tx.loan.findMany({
+            where: { customerId: { in: newIds } },
+            select: { id: true },
+          });
+          const newLoanIds = newLoans.map((l) => l.id);
+          if (newLoanIds.length) {
+            await tx.repayment.deleteMany({
+              where: { loanId: { in: newLoanIds } },
+            });
+            await tx.notification.deleteMany({
+              where: { loanId: { in: newLoanIds } },
+            });
+            await tx.loan.deleteMany({ where: { id: { in: newLoanIds } } });
+          }
+          await tx.notification.deleteMany({
+            where: { customerId: { in: newIds } },
+          });
+          await tx.document.deleteMany({
+            where: { customerId: { in: newIds } },
+          });
+          await tx.customerPhoto.deleteMany({
+            where: { customerId: { in: newIds } },
+          });
+          await tx.pettyCashExpense.deleteMany({
+            where: { customerId: { in: newIds } },
+          });
+          await tx.galleryItem.updateMany({
+            where: { customerId: { in: newIds } },
+            data: { customerId: null },
+          });
+          await tx.customer.deleteMany({ where: { id: { in: newIds } } });
+        }
+
         const laterRepayments = await tx.repayment.findMany({
           where: { collectedAt: { gt: at } },
           select: { id: true, loanId: true },
@@ -117,7 +175,16 @@ export class RestoreService {
           where: { collectedAt: { gt: at } },
         });
         const expenses = await tx.pettyCashExpense.deleteMany({
+          where: {
+            createdAt: { gt: at },
+            customerId: { not: null },
+          },
+        });
+        await tx.document.deleteMany({
           where: { createdAt: { gt: at } },
+        });
+        await tx.notification.deleteMany({
+          where: { createdAt: { gt: at }, customerId: { not: null } },
         });
 
         const renewed = await tx.loan.findMany({
@@ -126,6 +193,17 @@ export class RestoreService {
         });
         for (const loan of renewed) loanIds.add(loan.id);
 
+        const leftoverLoans = await tx.loan.findMany({
+          where: { createdAt: { gt: at } },
+          select: { id: true, customerId: true },
+        });
+        for (const loan of leftoverLoans) {
+          await tx.repayment.deleteMany({ where: { loanId: loan.id } });
+          await tx.notification.deleteMany({ where: { loanId: loan.id } });
+          await tx.loan.delete({ where: { id: loan.id } });
+          loanIds.delete(loan.id);
+        }
+
         for (const loanId of loanIds) {
           await this.recalcLoan(tx, loanId, at);
         }
@@ -133,11 +211,18 @@ export class RestoreService {
         return {
           repaymentsRemoved: laterRepayments.length,
           expensesRemoved: expenses.count,
+          peopleRemoved: newIds.length,
           accountsReconciled: loanIds.size,
         };
       },
-      { maxWait: 15_000, timeout: 40_000 },
+      { maxWait: 20_000, timeout: 60_000 },
     );
+
+    try {
+      await this.prisma.$executeRawUnsafe(RECONCILE_LOAN_BALANCES_SQL);
+    } catch {
+      // Recalc above already set balances; this is a safety net.
+    }
 
     await this.audit.log({
       userId,
