@@ -192,6 +192,8 @@ model Loan {
   totalPayable     Decimal    @map("total_payable")
   amountCollected  Decimal    @default(0) @map("amount_collected")
   remainingAmount  Decimal    @map("remaining_amount")
+  /// Increments on same-account renewal so old receipts stay in history.
+  cycle            Int        @default(1)
   status           LoanStatus @default(ACTIVE)
   openedAt         DateTime   @default(now()) @map("opened_at")
   completedAt      DateTime?  @map("completed_at")
@@ -211,6 +213,8 @@ model Loan {
 model Repayment {
   id             String   @id @default(cuid())
   loanId         String   @map("loan_id")
+  /// Matches `Loan.cycle` so a renewed account does not double-count old receipts.
+  cycle          Int      @default(1)
   amount         Decimal  @map("amount")
   collectedById  String   @map("collected_by")
   collectedAt    DateTime @default(now()) @map("collected_at")

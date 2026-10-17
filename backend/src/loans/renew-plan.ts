@@ -1,4 +1,4 @@
-/** One account at a time: remaining cash must be collected before a new plan opens. */
+/** Same-account renewal: outstanding is paid from the wallet, not collected again. */
 
 export function roundMoney(n: number) {
   return Math.round((Number(n) || 0) * 100) / 100;
@@ -8,20 +8,23 @@ export function remainingCash(remainingAmount: number) {
   return roundMoney(Math.max(0, Number(remainingAmount) || 0));
 }
 
-export function renewalSettlement(remainingAmount: number, settleRemaining: boolean) {
-  const due = remainingCash(remainingAmount);
-  if (due > 0.001 && !settleRemaining) {
-    return {
-      ok: false as const,
-      due,
-      collect: 0,
-      error: 'Collect the remaining cash to close this plan, then renew.',
-    };
-  }
+export const RENEW_OUTSTANDING_PURPOSE =
+  'Plan renewal — outstanding paid from wallet';
+export const RENEW_CASH_PURPOSE = 'Plan renewal — cash paid to customer';
+
+export function samePlanRenewalPayout(input: {
+  outstanding: number;
+  newPrincipal: number;
+  payNewCash: boolean;
+}) {
+  const outstanding = remainingCash(input.outstanding);
+  const cashGiven = input.payNewCash
+    ? roundMoney(Math.max(0, Number(input.newPrincipal) || 0))
+    : 0;
   return {
-    ok: true as const,
-    due,
-    collect: due > 0.001 ? due : 0,
-    error: null as string | null,
+    outstanding,
+    pettyCashOutstanding: outstanding,
+    pettyCashNewCash: cashGiven,
+    walletOut: roundMoney(outstanding + cashGiven),
   };
 }

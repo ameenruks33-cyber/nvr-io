@@ -1,33 +1,39 @@
-import { remainingCash, renewalSettlement } from './renew-plan';
+import { remainingCash, samePlanRenewalPayout } from './renew-plan';
 
-describe('renewalSettlement', () => {
-  it('lets a fully paid plan renew with nothing to collect', () => {
-    expect(renewalSettlement(0, true)).toEqual({
-      ok: true,
-      due: 0,
-      collect: 0,
-      error: null,
+describe('samePlanRenewalPayout', () => {
+  it('deducts outstanding from the wallet as petty cash', () => {
+    expect(
+      samePlanRenewalPayout({
+        outstanding: 700,
+        newPrincipal: 1800,
+        payNewCash: false,
+      }),
+    ).toEqual({
+      outstanding: 700,
+      pettyCashOutstanding: 700,
+      pettyCashNewCash: 0,
+      walletOut: 700,
     });
   });
 
-  it('collects the leftover cash on an open plan', () => {
-    expect(renewalSettlement(300, true)).toEqual({
-      ok: true,
-      due: 300,
-      collect: 300,
-      error: null,
-    });
+  it('can also pay new plan cash in the same renewal', () => {
+    expect(
+      samePlanRenewalPayout({
+        outstanding: 700,
+        newPrincipal: 1800,
+        payNewCash: true,
+      }).walletOut,
+    ).toBe(2500);
   });
 
-  it('blocks renewal while leftover cash is unpaid', () => {
-    const result = renewalSettlement(150, false);
-    expect(result.ok).toBe(false);
-    expect(result.collect).toBe(0);
-    expect(result.due).toBe(150);
-  });
-
-  it('treats tiny leftovers as settled', () => {
-    expect(remainingCash(0.0004)).toBe(0);
-    expect(renewalSettlement(0.0004, false).ok).toBe(true);
+  it('treats a fully paid plan as nothing outstanding', () => {
+    expect(remainingCash(0)).toBe(0);
+    expect(
+      samePlanRenewalPayout({
+        outstanding: 0,
+        newPrincipal: 1800,
+        payNewCash: true,
+      }),
+    ).toMatchObject({ pettyCashOutstanding: 0, pettyCashNewCash: 1800 });
   });
 });

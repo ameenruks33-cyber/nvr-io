@@ -45,6 +45,7 @@ type CustomerDetail = {
     remainingAmount: string | number;
     dailyPayment: string | number;
     openedAt?: string;
+    cycle?: number;
     status: string;
     daysInArrears?: number;
     repayments: Array<{
@@ -53,6 +54,7 @@ type CustomerDetail = {
       collectedAt: string;
       receiptNumber: string;
       notes?: string | null;
+      cycle?: number;
     }>;
   }>;
 };
@@ -486,7 +488,9 @@ export default function CustomerDetailPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-display text-xl text-slate-900">History</h2>
             <ul className="mt-4 space-y-2 text-sm">
-              {(loan?.repayments || []).map((r, idx) => {
+              {(loan?.repayments || [])
+                .filter((r) => (r.cycle || 1) === (loan?.cycle || 1))
+                .map((r, idx) => {
                 const a = Number(r.amount);
                 const ok = a >= 100 && a <= loanTotals(loan).total;
                 return (
@@ -530,10 +534,31 @@ export default function CustomerDetailPage() {
                   </li>
                 );
               })}
-              {!loan?.repayments?.length ? (
-                <li className="text-slate-500">No payments yet</li>
+              {!(loan?.repayments || []).some(
+                (r) => (r.cycle || 1) === (loan?.cycle || 1),
+              ) ? (
+                <li className="text-slate-500">No payments yet this cycle</li>
               ) : null}
             </ul>
+            {(loan?.repayments || []).some(
+              (r) => (r.cycle || 1) !== (loan?.cycle || 1),
+            ) ? (
+              <div className="mt-6 space-y-2 border-t border-slate-100 pt-4">
+                <h3 className="text-sm font-medium text-slate-700">
+                  Previous cycle
+                </h3>
+                <ul className="space-y-1 text-xs text-slate-500">
+                  {(loan?.repayments || [])
+                    .filter((r) => (r.cycle || 1) !== (loan?.cycle || 1))
+                    .map((r) => (
+                      <li key={r.id}>
+                        {r.receiptNumber} · {money(Number(r.amount))} ·{' '}
+                        {formatUaeDateTime(r.collectedAt)}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
             {previousLoans.length ? (
               <div className="mt-6 space-y-4 border-t border-slate-100 pt-4">
                 <h3 className="text-sm font-medium text-slate-700">

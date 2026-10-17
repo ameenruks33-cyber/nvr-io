@@ -1,4 +1,4 @@
-/** Source of truth: sum of repayments vs plan total. */
+/** Source of truth: sum of this cycle’s collections vs plan total. */
 export function loanBalanceFromCollected(
   totalPayable: number,
   principal: number,
@@ -15,7 +15,12 @@ export function loanBalanceFromCollected(
   };
 }
 
-/** Recalculate every account from actual collection rows (skips manually CLOSED). */
+export function loanCycle(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+}
+
+/** Recalculate every account from the current cycle’s collection rows (skips manually CLOSED). */
 export const RECONCILE_LOAN_BALANCES_SQL = `
 UPDATE "loans" AS l
 SET
@@ -42,7 +47,9 @@ SET
 FROM (
   SELECT l2."id" AS id, COALESCE(SUM(r."amount"), 0) AS paid
   FROM "loans" l2
-  LEFT JOIN "repayments" r ON r."loan_id" = l2."id"
+  LEFT JOIN "repayments" r
+    ON r."loan_id" = l2."id"
+   AND COALESCE(r."cycle", 1) = COALESCE(l2."cycle", 1)
   GROUP BY l2."id"
 ) AS p
 WHERE l."id" = p.id;

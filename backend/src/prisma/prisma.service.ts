@@ -210,6 +210,17 @@ export class PrismaService
     }
 
     try {
+      await this.$executeRawUnsafe(`
+        ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "cycle" INTEGER NOT NULL DEFAULT 1;
+      `);
+      await this.$executeRawUnsafe(`
+        ALTER TABLE "repayments" ADD COLUMN IF NOT EXISTS "cycle" INTEGER NOT NULL DEFAULT 1;
+      `);
+    } catch {
+      // ignore if table not ready yet
+    }
+
+    try {
       await this.$executeRawUnsafe(RECONCILE_LOAN_BALANCES_SQL);
     } catch {
       // ignore if table not ready yet

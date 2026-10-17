@@ -22,13 +22,7 @@ export class RenewPlanDto {
   @Min(1)
   dailyPayment?: number;
 
-  /** Collect leftover cash on the current plan so it can close. Default true. */
-  @IsOptional()
-  @Transform(({ value }) => toBool(value))
-  @IsBoolean()
-  settleRemaining?: boolean;
-
-  /** Take the new plan cash out of the wallet. Default true. */
+  /** Take new plan cash out of the wallet. Outstanding is always a petty-cash payout. */
   @IsOptional()
   @Transform(({ value }) => toBool(value))
   @IsBoolean()

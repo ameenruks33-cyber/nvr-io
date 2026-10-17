@@ -16,7 +16,7 @@ import {
   prismaErrorCode,
   retryPrisma,
 } from '../common/prisma-retry';
-import { loanBalanceFromCollected } from '../loans/loan-balance';
+import { loanBalanceFromCollected, loanCycle } from '../loans/loan-balance';
 
 export interface RecordRepaymentInput {
   loanId: string;
@@ -87,10 +87,12 @@ export class RepaymentsService {
           }
 
           const receiptNumber = await this.nextReceiptNumber(tx);
+          const cycle = loanCycle(loan.cycle);
 
           const repayment = await tx.repayment.create({
             data: {
               loanId: input.loanId,
+              cycle,
               amount: new Prisma.Decimal(input.amount),
               collectedById: input.collectorId,
               latitude: input.latitude ?? null,
@@ -102,7 +104,7 @@ export class RepaymentsService {
           });
 
           const paidAgg = await tx.repayment.aggregate({
-            where: { loanId: input.loanId },
+            where: { loanId: input.loanId, cycle },
             _sum: { amount: true },
           });
           const balance = loanBalanceFromCollected(
@@ -310,7 +312,7 @@ export class RepaymentsService {
       await tx.repayment.delete({ where: { id: repaymentId } });
 
       const paidAgg = await tx.repayment.aggregate({
-        where: { loanId: loan.id },
+        where: { loanId: loan.id, cycle: loanCycle(loan.cycle) },
         _sum: { amount: true },
       });
       const balance = loanBalanceFromCollected(

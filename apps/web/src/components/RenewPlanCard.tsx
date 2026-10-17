@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import { api, money } from '@/lib/api';
-import { notifyCollectionSaved, notifyDataChanged } from '@/lib/live-sync';
+import { notifyDataChanged } from '@/lib/live-sync';
 import { LOAN_PLAN_IDS, LOAN_PLANS, type LoanPlanId } from '@/lib/loan-plans';
 
 type LoanLite = {
@@ -14,9 +14,10 @@ type LoanLite = {
 };
 
 type RenewResult = {
-  collectedToClose: number;
+  outstandingSettled: number;
   cashGiven: number;
-  settlementReceipt: string | null;
+  cycle: number;
+  wallet?: { walletOut: number };
   newPlan: {
     principal: number;
     totalPayable: number;
@@ -34,8 +35,6 @@ export function RenewPlanCard({
   onDone: () => Promise<void> | void;
 }) {
   const remaining = Math.max(0, Number(loan?.remainingAmount || 0));
-  const open = loan?.status === 'ACTIVE';
-  const needsSettle = open && remaining > 0.001;
   const defaultPlan: LoanPlanId =
     Number(loan?.totalPayable || loan?.principalAmount || 2000) <= 1000
       ? 'AED_1000'
@@ -43,28 +42,23 @@ export function RenewPlanCard({
 
   const [planId, setPlanId] = useState<LoanPlanId>(defaultPlan);
   const [daily, setDaily] = useState(String(LOAN_PLANS[defaultPlan].defaultDaily));
-  const [settle, setSettle] = useState(true);
-  const [cashFromWallet, setCashFromWallet] = useState(true);
+  const [cashFromWallet, setCashFromWallet] = useState(remaining <= 0.001);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
   const plan = LOAN_PLANS[planId];
   const dailyNum = Number(daily);
-  const canSubmit = !needsSettle || settle;
+  const hasOutstanding = remaining > 0.001;
 
   const summary = useMemo(() => {
-    const collect = needsSettle && settle ? remaining : 0;
+    const outstanding = hasOutstanding ? remaining : 0;
     const given = cashFromWallet ? plan.principal : 0;
-    return { collect, given, net: collect - given };
-  }, [needsSettle, settle, remaining, cashFromWallet, plan.principal]);
+    return { outstanding, given, out: outstanding + given };
+  }, [hasOutstanding, remaining, cashFromWallet, plan.principal]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!canSubmit) {
-      setError('Collect the remaining cash to close this plan, then renew.');
-      return;
-    }
     if (!Number.isFinite(dailyNum) || dailyNum < 1) {
       setError('Enter a daily amount');
       return;
@@ -78,25 +72,17 @@ export function RenewPlanCard({
         body: JSON.stringify({
           planId,
           dailyPayment: dailyNum,
-          settleRemaining: settle,
           recordCashGiven: cashFromWallet,
         }),
       });
-      if (result.collectedToClose > 0) {
-        notifyCollectionSaved({
-          customerId,
-          amount: result.collectedToClose,
-        });
-      } else {
-        notifyDataChanged();
-      }
+      notifyDataChanged();
       const bits = [
-        result.collectedToClose > 0
-          ? `Collected remaining ${money(result.collectedToClose)} into the wallet and closed the old plan.`
-          : 'Previous plan closed with nothing left to collect.',
-        `Opened ${plan.label} (${money(result.newPlan.totalPayable)}).`,
+        result.outstandingSettled > 0
+          ? `Outstanding ${money(result.outstandingSettled)} taken from the wallet and recorded as petty-cash paid out.`
+          : 'No outstanding on this account.',
+        `Same person, existing account — ${plan.label} restarted (cycle ${result.cycle}). Remaining ${money(result.newPlan.totalPayable)}.`,
         result.cashGiven > 0
-          ? `Paid the customer ${money(result.cashGiven)} from the wallet (cash given only, not the plan total).`
+          ? `Also paid the customer ${money(result.cashGiven)} from the wallet.`
           : null,
       ].filter(Boolean);
       setMessage(bits.join(' '));
@@ -116,35 +102,27 @@ export function RenewPlanCard({
       <h2 className="font-display text-xl text-slate-900">Renew plan</h2>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-slate-600">
         <li>
-          {needsSettle
-            ? `Collect remaining ${money(remaining)} and close this plan.`
-            : 'Close the current plan (nothing left to collect).'}
+          {hasOutstanding
+            ? `Deduct outstanding ${money(remaining)} from the wallet (petty-cash payout).`
+            : 'No leftover balance to settle.'}
         </li>
-        <li>Open the new plan on the same person.</li>
-        <li>Optionally pay the new cash from the wallet.</li>
+        <li>Continue this person on the same account with a fresh plan cycle.</li>
+        <li>Optionally pay new cash from the wallet (principal only).</li>
       </ol>
 
-      {needsSettle ? (
-        <label className="mt-4 flex items-start gap-2 text-sm text-slate-800">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={settle}
-            onChange={(e) => setSettle(e.target.checked)}
-          />
-          <span>
-            Collect remaining <strong>{money(remaining)}</strong> now so this
-            plan can close.
-          </span>
-        </label>
+      {hasOutstanding ? (
+        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Outstanding {money(remaining)} will leave the wallet and appear under
+          Petty Cash as paid to this customer. It is not collected again.
+        </p>
       ) : (
         <p className="mt-4 text-sm text-teal-800">
-          No leftover cash on the current plan.
+          This account has no leftover cash.
         </p>
       )}
 
       <fieldset className="mt-4">
-        <legend className="text-sm text-slate-600">New plan</legend>
+        <legend className="text-sm text-slate-600">Continue with plan</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {LOAN_PLAN_IDS.map((id) => (
             <button
@@ -165,8 +143,8 @@ export function RenewPlanCard({
           ))}
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Customer receives {money(plan.principal)}. New account total{' '}
-          {money(plan.totalPayable)}.
+          Fresh cycle total {money(plan.totalPayable)}. Cash given if paid out is{' '}
+          {money(plan.principal)}.
         </p>
       </fieldset>
 
@@ -190,18 +168,21 @@ export function RenewPlanCard({
           onChange={(e) => setCashFromWallet(e.target.checked)}
         />
         <span>
-          Pay {money(plan.principal)} from the wallet to the customer.
+          Also pay {money(plan.principal)} new cash from the wallet.
         </span>
       </label>
 
       <p className="mt-3 text-xs text-slate-500">
-        Wallet change:{' '}
-        {summary.net === 0
-          ? 'no change'
-          : summary.net > 0
-            ? `+${money(summary.net)}`
-            : `−${money(Math.abs(summary.net))}`}{' '}
-        (collect {money(summary.collect)}, pay out {money(summary.given)}).
+        Wallet payout: {money(summary.out)}
+        {summary.outstanding > 0
+          ? ` (outstanding ${money(summary.outstanding)}`
+          : ' ('}
+        {summary.given > 0
+          ? `${summary.outstanding > 0 ? ' + ' : ''}new cash ${money(summary.given)})`
+          : summary.outstanding > 0
+            ? ')'
+            : 'none)'}
+        .
       </p>
 
       {error ? (
@@ -217,14 +198,14 @@ export function RenewPlanCard({
 
       <button
         type="submit"
-        disabled={saving || !canSubmit}
+        disabled={saving}
         className="mt-4 w-full rounded-lg bg-teal-700 px-4 py-3 text-sm font-medium text-white hover:bg-teal-600 disabled:opacity-60"
       >
         {saving
           ? 'Renewing…'
-          : needsSettle
-            ? `Settle ${money(remaining)} and open ${plan.label}`
-            : `Open ${plan.label}`}
+          : hasOutstanding
+            ? `Deduct ${money(remaining)} from wallet and renew ${plan.label}`
+            : `Renew ${plan.label} on this account`}
       </button>
     </form>
   );

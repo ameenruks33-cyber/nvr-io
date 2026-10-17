@@ -6,14 +6,19 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { attachArrears } from '../collections/daily-collection';
 import { uaeCalendarDay } from '../collections/uae-day';
-import { nextReceiptFromLatest, retryPrisma } from '../common/prisma-retry';
+import { retryPrisma } from '../common/prisma-retry';
 import { resolveLoanAmounts } from './loan-plans';
+import { loanCycle } from './loan-balance';
 import { UpdateLoanPlanDto } from './dto/update-loan-plan.dto';
 import { RenewPlanDto } from './dto/renew-plan.dto';
-import { renewalSettlement } from './renew-plan';
+import {
+  RENEW_CASH_PURPOSE,
+  RENEW_OUTSTANDING_PURPOSE,
+  remainingCash,
+  samePlanRenewalPayout,
+} from './renew-plan';
 import { closeoutWallet } from './closeout-wallet';
 
 @Injectable()
@@ -21,7 +26,6 @@ export class LoansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly crypto: FieldEncryptionService,
   ) {}
 
   async findAll(status?: string) {
@@ -164,11 +168,10 @@ export class LoansService {
   }
 
   /**
-   * Close the current plan (collect leftover cash if any), then open a new plan
-   * for the same person. Wallet: settlement is a collection; cash given is spend.
+   * Continue the same person on the existing loan row.
+   * Outstanding is deducted from the wallet and stored as petty-cash paid out.
    */
   async renew(customerId: string, dto: RenewPlanDto, userId: string) {
-    const settleRemaining = dto.settleRemaining !== false;
     const recordCashGiven = dto.recordCashGiven !== false;
     const { principal, totalPayable, daily } = resolveLoanAmounts({
       planId: dto.planId,
@@ -190,8 +193,7 @@ export class LoansService {
           });
           const active = loans.filter((l) => l.status === 'ACTIVE');
           const extras = active.slice(1).filter(
-            (l) =>
-              Number(l.amountCollected) <= 0.001,
+            (l) => Number(l.amountCollected) <= 0.001,
           );
           if (extras.length) {
             const extraIds = extras.map((l) => l.id);
@@ -205,112 +207,95 @@ export class LoansService {
             loans[0] ??
             null;
 
-          let collectedToClose = 0;
-          let closedLoanId: string | null = null;
-          let settlementReceipt: string | null = null;
-
-          if (current?.status === 'ACTIVE') {
-            const remaining = Number(current.remainingAmount);
-            const step = renewalSettlement(remaining, settleRemaining);
-            if (!step.ok) {
-              throw new BadRequestException(step.error);
-            }
-
-            if (step.collect > 0) {
-              const latest = await tx.repayment.findFirst({
-                where: { receiptNumber: { startsWith: 'JB-RCP-' } },
-                orderBy: { receiptNumber: 'desc' },
-                select: { receiptNumber: true },
-              });
-              const receiptNumber = nextReceiptFromLatest(latest?.receiptNumber);
-              const note = dto.notes?.trim()
-                ? `Plan renewal · ${dto.notes.trim()}`
-                : 'Collected remaining cash to close plan for renewal';
-              await tx.repayment.create({
-                data: {
-                  loanId: current.id,
-                  amount: new Prisma.Decimal(step.collect),
-                  collectedById: userId,
-                  notes: this.crypto.encryptOptional(note),
-                  receiptNumber,
-                },
-              });
-              collectedToClose = step.collect;
-              settlementReceipt = receiptNumber;
-            }
-
-            const paidAgg = await tx.repayment.aggregate({
-              where: { loanId: current.id },
-              _sum: { amount: true },
-            });
-            const paid = Number(paidAgg._sum.amount || 0);
-            const total = Math.max(
-              Number(current.totalPayable),
-              Number(current.principalAmount),
-            );
-            if (step.collect > 0 && paid + 0.001 < total) {
-              throw new BadRequestException(
-                `Still AED ${(total - paid).toFixed(2)} remaining. Collect it to renew.`,
-              );
-            }
-
-            await tx.loan.update({
-              where: { id: current.id },
-              data: {
-                amountCollected: new Prisma.Decimal(Math.max(paid, 0)),
-                remainingAmount: new Prisma.Decimal(0),
-                status: 'COMPLETED',
-                completedAt: new Date(),
-                closedAt: new Date(),
-              },
-            });
-            closedLoanId = current.id;
-          }
-
-          const stillActive = await tx.loan.count({
-            where: { customerId, status: 'ACTIVE' },
+          const outstanding = remainingCash(
+            Number(current?.remainingAmount || 0),
+          );
+          const payout = samePlanRenewalPayout({
+            outstanding,
+            newPrincipal: principal,
+            payNewCash: recordCashGiven,
           });
-          if (stillActive > 0) {
-            throw new BadRequestException(
-              'Close the current plan before opening a new one',
-            );
-          }
+          const paidTo = `${customer.customerCode} · ${customer.name}`;
+          const spentOn = uaeCalendarDay();
 
-          const loan = await tx.loan.create({
-            data: {
-              customerId,
-              principalAmount: new Prisma.Decimal(principal),
-              dailyPayment: new Prisma.Decimal(daily),
-              totalPayable: new Prisma.Decimal(totalPayable),
-              remainingAmount: new Prisma.Decimal(totalPayable),
-              amountCollected: new Prisma.Decimal(0),
-              status: 'ACTIVE',
-            },
-          });
-
-          if (recordCashGiven && principal > 0) {
+          if (payout.pettyCashOutstanding > 0) {
             await tx.pettyCashExpense.create({
               data: {
-                amount: new Prisma.Decimal(principal),
-                spentOn: uaeCalendarDay(),
-                purpose: 'Plan renewal — cash paid to customer',
-                paidToName: `${customer.customerCode} · ${customer.name}`,
+                amount: new Prisma.Decimal(payout.pettyCashOutstanding),
+                spentOn,
+                purpose: dto.notes?.trim()
+                  ? `${RENEW_OUTSTANDING_PURPOSE} · ${dto.notes.trim()}`
+                  : RENEW_OUTSTANDING_PURPOSE,
+                paidToName: paidTo,
                 customerId: customer.id,
                 recordedById: userId,
               },
             });
           }
 
+          const nextCycle = current ? loanCycle(current.cycle) + 1 : 1;
+          const loan = current
+            ? await tx.loan.update({
+                where: { id: current.id },
+                data: {
+                  principalAmount: new Prisma.Decimal(principal),
+                  dailyPayment: new Prisma.Decimal(daily),
+                  totalPayable: new Prisma.Decimal(totalPayable),
+                  remainingAmount: new Prisma.Decimal(totalPayable),
+                  amountCollected: new Prisma.Decimal(0),
+                  cycle: nextCycle,
+                  status: 'ACTIVE',
+                  openedAt: new Date(),
+                  completedAt: null,
+                  closedAt: null,
+                },
+              })
+            : await tx.loan.create({
+                data: {
+                  customerId,
+                  principalAmount: new Prisma.Decimal(principal),
+                  dailyPayment: new Prisma.Decimal(daily),
+                  totalPayable: new Prisma.Decimal(totalPayable),
+                  remainingAmount: new Prisma.Decimal(totalPayable),
+                  amountCollected: new Prisma.Decimal(0),
+                  cycle: 1,
+                  status: 'ACTIVE',
+                },
+              });
+
+          if (payout.pettyCashNewCash > 0) {
+            await tx.pettyCashExpense.create({
+              data: {
+                amount: new Prisma.Decimal(payout.pettyCashNewCash),
+                spentOn,
+                purpose: RENEW_CASH_PURPOSE,
+                paidToName: paidTo,
+                customerId: customer.id,
+                recordedById: userId,
+              },
+            });
+          }
+
+          const paidAgg = await tx.repayment.aggregate({
+            where: { loanId: loan.id, cycle: loan.cycle },
+            _sum: { amount: true },
+          });
+          const collected = Number(paidAgg._sum.amount || 0);
+          if (collected > 0.001) {
+            throw new BadRequestException(
+              'New cycle still has collections — account was not reset',
+            );
+          }
+
           return {
             customer,
             loan,
-            closedLoanId,
-            collectedToClose,
-            settlementReceipt,
-            cashGiven: recordCashGiven ? principal : 0,
+            outstandingSettled: payout.pettyCashOutstanding,
+            cashGiven: payout.pettyCashNewCash,
+            cycle: loan.cycle,
             wallet: closeoutWallet({
-              collectedNow: collectedToClose,
-              payoutPrincipal: recordCashGiven ? principal : 0,
+              collectedNow: 0,
+              payoutPrincipal: payout.walletOut,
             }),
           };
         },
@@ -325,24 +310,25 @@ export class LoansService {
       recordId: result.loan.id,
       metadata: {
         customerId,
-        closedLoanId: result.closedLoanId,
         planId: dto.planId,
-        collectedToClose: result.collectedToClose,
+        outstandingSettled: result.outstandingSettled,
         cashGiven: result.cashGiven,
-        settlementReceipt: result.settlementReceipt,
+        cycle: result.cycle,
+        walletOut: result.wallet.walletOut,
       },
     });
 
     return {
       ok: true,
       customerId,
-      closedLoanId: result.closedLoanId,
+      loanId: result.loan.id,
       newLoanId: result.loan.id,
       planId: dto.planId,
-      collectedToClose: result.collectedToClose,
+      outstandingSettled: result.outstandingSettled,
+      collectedToClose: 0,
       remainingClosed: 0,
       cashGiven: result.cashGiven,
-      settlementReceipt: result.settlementReceipt,
+      cycle: result.cycle,
       wallet: result.wallet,
       newPlan: {
         principal,
