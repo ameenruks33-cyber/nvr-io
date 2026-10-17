@@ -105,6 +105,8 @@ function CollectionsPageContent() {
   const [saving, setSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const appliedSearch = useRef('');
+  const recentSearch = useRef('');
+  const [recentQ, setRecentQ] = useState('');
   const idempotencyKey = useRef(newIdempotencyKey());
 
   useEffect(() => {
@@ -143,9 +145,12 @@ function CollectionsPageContent() {
     }
   }
 
-  async function loadRecent() {
+  async function loadRecent(search = recentSearch.current) {
+    recentSearch.current = search;
     try {
-      const data = await api<RecentRow[]>('/repayments?limit=30');
+      const qs = new URLSearchParams({ limit: search.trim() ? '200' : '30' });
+      if (search.trim()) qs.set('q', search.trim());
+      const data = await api<RecentRow[]>(`/repayments?${qs}`);
       setRecent(data);
     } catch {
       /* optional panel */
@@ -518,6 +523,26 @@ function CollectionsPageContent() {
         <h2 className="mb-3 text-lg font-medium text-slate-900">
           Recent collections
         </h2>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void loadRecent(recentQ);
+          }}
+          className="mb-3 flex gap-2"
+        >
+          <input
+            value={recentQ}
+            onChange={(e) => setRecentQ(e.target.value)}
+            placeholder="Search one person or receipt…"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2"
+          />
+          <button
+            type="submit"
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-blue-50"
+          >
+            Search
+          </button>
+        </form>
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-white text-slate-500">

@@ -60,6 +60,7 @@ export default function MonthlyAuditPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [personQ, setPersonQ] = useState('');
 
   const load = useCallback(() => {
     api<AuditRow[]>('/monthly-audit')
@@ -76,6 +77,17 @@ export default function MonthlyAuditPage() {
 
   const current = rows.find((r) => r.id === selected) ?? rows[0];
   const report = current?.report;
+  const personNeedle = personQ.trim().toLowerCase();
+  const matchPerson = (name: string, code: string) =>
+    !personNeedle ||
+    name.toLowerCase().includes(personNeedle) ||
+    code.toLowerCase().includes(personNeedle);
+  const openAccounts = (report?.openAccounts || []).filter((a) =>
+    matchPerson(a.customerName, a.customerCode),
+  );
+  const pendingPeople = (report?.pendingDailyAtMonthEnd || []).filter((p) =>
+    matchPerson(p.customerName, p.customerCode),
+  );
 
   async function runNow() {
     setBusy(true);
@@ -150,6 +162,17 @@ export default function MonthlyAuditPage() {
 
             {report && current ? (
               <div className="min-w-0 flex-1 space-y-6">
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className="flex gap-2"
+                >
+                  <input
+                    value={personQ}
+                    onChange={(e) => setPersonQ(e.target.value)}
+                    placeholder="Search one person in this report…"
+                    className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                </form>
                 <section>
                   <h2 className="mb-3 font-display text-xl text-slate-900">Summary</h2>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -236,8 +259,8 @@ export default function MonthlyAuditPage() {
                     Pending at month end
                   </h2>
                   <ul className="space-y-2 text-sm">
-                    {report.pendingDailyAtMonthEnd.length ? (
-                      report.pendingDailyAtMonthEnd.map((p) => (
+                    {pendingPeople.length ? (
+                      pendingPeople.map((p) => (
                         <li
                           key={`${p.customerCode}-${p.pendingAed}`}
                           className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
@@ -257,7 +280,7 @@ export default function MonthlyAuditPage() {
                 <section>
                   <h2 className="mb-3 font-display text-xl text-slate-900">Open accounts</h2>
                   <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
-                    {report.openAccounts.map((a) => (
+                    {openAccounts.map((a) => (
                       <li
                         key={a.customerCode}
                         className="flex justify-between gap-2 rounded-lg border border-slate-100 px-3 py-1.5"

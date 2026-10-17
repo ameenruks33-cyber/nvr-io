@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { DeleteCollectionButton } from '@/components/DeleteCollectionButton';
 import { api, getSession, money } from '@/lib/api';
@@ -19,27 +19,56 @@ type Row = {
   loan: {
     totalPayable?: string | number;
     principalAmount?: string | number;
-    customer: { name: string; customerCode: string };
+    customer: { name: string; customerCode: string; phone?: string };
   };
 };
 
 export default function RepaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [q, setQ] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const applied = useRef('');
 
-  const load = () => {
-    api<Row[]>('/repayments?limit=50').then(setRows).catch(() => undefined);
+  const load = (search = '') => {
+    applied.current = search;
+    const qs = new URLSearchParams({ limit: search ? '200' : '50' });
+    if (search.trim()) qs.set('q', search.trim());
+    api<Row[]>(`/repayments?${qs}`)
+      .then(setRows)
+      .catch(() => undefined);
   };
 
-  useEffect(load, []);
+  useEffect(() => load(), []);
   useEffect(() => {
     setIsSuperAdmin(isSuperAdminRole(getSession()?.user.role));
   }, []);
-  useLiveRefresh(load);
+  useLiveRefresh(() => load(applied.current));
+
+  function onSearch(e: FormEvent) {
+    e.preventDefault();
+    load(q);
+  }
 
   return (
     <AppShell>
-      <h1 className="mb-6 font-display text-3xl text-slate-900">Receipts</h1>
+      <h1 className="mb-2 font-display text-3xl text-slate-900">Receipts</h1>
+      <p className="mb-4 text-sm text-slate-500">
+        Search one person by name, ID, phone, or receipt number
+      </p>
+      <form onSubmit={onSearch} className="mb-4 flex gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Name / ID / Phone / Receipt"
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2"
+        />
+        <button
+          type="submit"
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-blue-50"
+        >
+          Search
+        </button>
+      </form>
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-white text-slate-500">
@@ -92,7 +121,7 @@ export default function RepaymentsPage() {
                         repaymentId={row.id}
                         receiptNumber={row.receiptNumber}
                         compact
-                        onDeleted={load}
+                        onDeleted={() => load(applied.current)}
                       />
                     </td>
                   ) : null}
@@ -101,6 +130,13 @@ export default function RepaymentsPage() {
             })}
           </tbody>
         </table>
+        {!rows.length ? (
+          <p className="p-5 text-center text-sm text-slate-500">
+            {applied.current
+              ? 'No receipts match that person or receipt number.'
+              : 'No receipts yet.'}
+          </p>
+        ) : null}
       </div>
     </AppShell>
   );

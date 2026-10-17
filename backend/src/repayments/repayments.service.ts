@@ -358,9 +358,37 @@ export class RepaymentsService {
     };
   }
 
-  async listRecent(limit = 20) {
+  async listRecent(limit = 20, query?: string) {
+    const q = String(query || '').trim().slice(0, 80);
+    const take = q ? Math.min(Math.max(limit, 200), 400) : limit;
+    const where = q
+      ? {
+          OR: [
+            { receiptNumber: { contains: q, mode: 'insensitive' as const } },
+            {
+              loan: {
+                customer: { name: { contains: q, mode: 'insensitive' as const } },
+              },
+            },
+            {
+              loan: {
+                customer: {
+                  customerCode: { contains: q, mode: 'insensitive' as const },
+                },
+              },
+            },
+            {
+              loan: {
+                customer: { phone: { contains: q } },
+              },
+            },
+          ],
+        }
+      : undefined;
+
     const rows = await this.prisma.repayment.findMany({
-      take: limit,
+      where,
+      take,
       orderBy: { collectedAt: 'desc' },
       include: {
         collectedBy: { select: { id: true, name: true } },

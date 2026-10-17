@@ -46,10 +46,12 @@ export class RepaymentsController {
 
   @Get('repayments')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COLLECTOR)
-  listRecent(@Query('limit') limit?: string) {
+  listRecent(@Query('limit') limit?: string, @Query('q') q?: string) {
     const n = limit ? Number(limit) : 20;
-    const safe = Number.isFinite(n) ? Math.min(Math.max(Math.floor(n), 1), 100) : 20;
-    return this.repayments.listRecent(safe);
+    const safe = Number.isFinite(n)
+      ? Math.min(Math.max(Math.floor(n), 1), 400)
+      : 20;
+    return this.repayments.listRecent(safe, q);
   }
 
   @Delete('repayments/:id')
