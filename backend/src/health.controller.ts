@@ -78,6 +78,10 @@ export class HealthController {
         noIndex: true,
         referrerPolicy: 'no-referrer',
       },
+      runtime: {
+        independent: true,
+        hosts: ['https://nvr-io-web.vercel.app', 'https://nvr-io-api.vercel.app'],
+      },
       timestamp: new Date().toISOString(),
     };
   }

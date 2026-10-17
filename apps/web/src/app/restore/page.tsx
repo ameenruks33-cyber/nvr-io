@@ -132,11 +132,12 @@ export default function RestorePage() {
       <AdminOnly>
         <h1 className="font-display text-3xl text-slate-900">Undo / Restore</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-500">
-          Choose the exact UAE date and time. Customer account data recorded
-          after that moment — people added, collections, files, photos, account
-          petty-cash payouts, and plan renewals — is listed, then removed, and
-          each remaining account then works as it did from that moment. Staff
-          logins, gallery PIN, WhatsApp, and app updates are not changed.
+          Admin only. Collectors cannot use Undo. Choose the exact UAE date and
+          time. Customer account data recorded after that moment — people added,
+          collections, files, photos, account petty-cash payouts, and plan
+          renewals — is listed, then removed, and each remaining account then
+          works as it did from that moment. Staff logins, gallery PIN, WhatsApp,
+          and app updates are not changed.
         </p>
 
         <form

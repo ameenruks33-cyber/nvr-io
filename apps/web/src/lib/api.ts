@@ -10,6 +10,18 @@ function defaultApiUrl() {
 /** Live app talks only to Vercel. Cursor is never used at runtime. */
 const API_URL = process.env.NEXT_PUBLIC_API_URL || defaultApiUrl();
 
+function assertStandaloneHost() {
+  const blocked = /cursor\.com|cursor\.sh|anysphere/i;
+  if (blocked.test(API_URL)) {
+    throw new Error('This app runs on Vercel only');
+  }
+  if (typeof window !== 'undefined' && blocked.test(window.location.hostname)) {
+    throw new Error('This app runs on Vercel only');
+  }
+}
+
+assertStandaloneHost();
+
 /** Production website must never call a cleartext API. */
 function assertSecureTransport() {
   if (

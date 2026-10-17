@@ -80,7 +80,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       { href: '/customers', label: 'People' },
     ];
     if (isAdmin) {
-      return [...base, { href: '/admin/monthly-audit', label: 'Audit' }];
+      return [
+        ...base,
+        { href: '/restore', label: 'Undo' },
+        { href: '/admin/monthly-audit', label: 'Audit' },
+      ];
     }
     return [...base, { href: '/gallery', label: 'File' }];
   }, [isAdmin]);

@@ -32,7 +32,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "upgrade-insecure-requests; block-all-mixed-content"
+          "value": "upgrade-insecure-requests; block-all-mixed-content; connect-src 'self' https://nvr-io-api.vercel.app; frame-ancestors 'none'"
         }
       ]
     }
